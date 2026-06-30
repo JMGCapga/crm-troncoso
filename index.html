@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Remisión Digital — Materiales Troncoso</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --naranja: #E8500A;
+      --naranja-dark: #C44008;
+      --negro: #1A1A1A;
+      --gris-oscuro: #2A2A2A;
+      --gris-medio: #444;
+      --gris-claro: #888;
+      --blanco: #FAFAFA;
+      --verde: #22C55E;
+      --rojo: #EF4444;
+      --amarillo: #F59E0B;
+      --sombra: 0 2px 12px rgba(0,0,0,0.18);
+    }
+
+    html, body {
+      height: 100%;
+      background: #F0EFED;
+      font-family: 'Barlow', sans-serif;
+      color: var(--negro);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Pantallas ── */
+    .screen { display: none; flex-direction: column; min-height: 100vh; }
+    .screen.active { display: flex; }
+
+    /* ── Header ── */
+    .header {
+      background: var(--negro);
+      color: var(--blanco);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--sombra);
+    }
+    .header-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      color: var(--naranja);
+      letter-spacing: 1px;
+      line-height: 1;
+    }
+    .header-sub {
+      font-size: 11px;
+      color: var(--gris-claro);
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-back {
+      background: none;
+      border: none;
+      color: var(--blanco);
+      font-size: 26px;
+      cursor: pointer;
+      padding: 4px 8px 4px 0;
+      line-height: 1;
+    }
+    .badge-operador {
+      background: var(--naranja);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Login ── */
+    #screen-login {
+      background: var(--negro);
+      justify-content: center;
+      align-items: center;
+      padding: 32px 24px;
+    }
+    .login-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 52px;
+      color: var(--naranja);
+      letter-spacing: 3px;
+      text-align: center;
+      line-height: 1;
+    }
+    .login-sub {
+      color: var(--gris-claro);
+      font-size: 13px;
+      text-align: center;
+      margin-top: 4px;
+      margin-bottom: 40px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .pin-display {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+    .pin-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--gris-medio);
+      transition: all 0.15s;
+    }
+    .pin-dot.filled {
+      background: var(--naranja);
+      border-color: var(--naranja);
+      transform: scale(1.1);
+    }
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      width: 100%;
+      max-width: 280px;
+    }
+    .num-btn {
+      background: var(--gris-oscuro);
+      border: 1px solid var(--gris-medio);
+      border-radius: 14px;
+      color: var(--blanco);
+      font-family: 'Barlow', sans-serif;
+      font-size: 26px;
+      font-weight: 600;
+      height: 72px;
+      cursor: pointer;
+      transition: all 0.12s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+    .num-btn:active { background: var(--naranja); transform: scale(0.95); }
+    .num-btn.del { font-size: 20px; background: #3A2020; border-color: var(--rojo); }
+    .num-btn.del:active { background: var(--rojo); }
+    .login-error {
+      color: var(--rojo);
+      font-size: 13px;
+      text-align: center;
+      margin-top: 16px;
+      min-height: 18px;
+      font-weight: 600;
+    }
+    .btn-logout {
+      margin-top: 28px;
+      background: none;
+      border: 1px solid var(--gris-medio);
+      color: var(--gris-claro);
+      border-radius: 10px;
+      padding: 10px 24px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'Barlow', sans-serif;
+    }
+
+    /* ── Lista de entregas ── */
+    .content { flex: 1; padding: 16px; overflow-y: auto; }
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      color: var(--gris-oscuro);
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    .fecha-hoy {
+      font-size: 12px;
+      color: var(--gris-claro);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .tarjeta-pedido {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--sombra);
+      cursor: pointer;
+      border-left: 5px solid var(--naranja);
+      transition: transform 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tarjeta-pedido:active { transform: scale(0.98); }
+    .tarjeta-pedido.en-ruta { border-left-color: var(--amarillo); }
+    .pedido-id {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      color: var(--naranja);
+      letter-spacing: 1px;
+    }
+    .pedido-cliente {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--negro);
+      margin-top: 2px;
+    }
+    .pedido-dir {
+      font-size: 12px;
+      color: var(--gris-claro);
+      margin-top: 4px;
+      display: flex;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .pedido-productos {
+      font-size: 12px;
+      color: var(--gris-medio);
+      margin-top: 6px;
+      background: #F5F5F3;
+      border-radius: 8px;
+      padding: 6px 8px;
+    }
+    .badge-estado {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 8px;
+    }
+    .badge-confirmado { background: #FEF3C7; color: #92400E; }
+    .badge-en-ruta { background: #FFF7ED; color: #C2410C; }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--gris-claro);
+    }
+    .empty-icon { font-size: 56px; margin-bottom: 12px; }
+    .empty-text { font-size: 16px; font-weight: 600; margin-bottom: 4px; color: var(--gris-medio); }
+    .empty-sub { font-size: 13px; }
+
+    .loading-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--gris-claro);
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 4px solid #E5E5E5;
+      border-top-color: var(--naranja);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Detalle de pedido ── */
+    .detalle-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: var(--sombra);
+    }
+    .detalle-card h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 16px;
+      color: var(--gris-claro);
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #F0F0F0;
+      padding-bottom: 6px;
+    }
+    .info-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+      align-items: flex-start;
+    }
+    .info-label {
+      font-size: 12px;
+      color: var(--gris-claro);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      min-width: 80px;
+      margin-top: 1px;
+    }
+    .info-val {
+      font-size: 14px;
+      color: var(--negro);
+      font-weight: 600;
+      flex: 1;
+    }
+
+    /* Checklist */
+    .checklist-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .check-btn {
+      flex: 1;
+      padding: 14px 8px;
+      border-radius: 12px;
+      border: 2px solid #E5E5E5;
+      background: #F9F9F9;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: 'Barlow', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .check-btn.selected-si {
+      border-color: var(--verde);
+      background: #ECFDF5;
+      color: #15803D;
+    }
+    .check-btn.selected-no {
+      border-color: var(--rojo);
+      background: #FEF2F2;
+      color: #B91C1C;
+    }
+    .nota-incompleto {
+      width: 100%;
+      border: 2px solid #E5E5E5;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-family: 'Barlow', sans-serif;
+      font-size: 14px;
+      resize: vertical;
+      min-height: 70px;
+      outline: none;
+      transition: border-color 0.15s;
+      display: none;
+    }
+    .nota-incompleto:focus { border-color: var(--naranja); }
+    .nota-incompleto.visible { display: block; }
+
+    /* Firma */
+    .firma-container {
+      position: relative;
+      border: 2px dashed #D0D0D0;
+      border-radius: 12px;
+      background: #FAFAFA;
+      overflow: hidden;
+    }
+    #canvas-firma {
+      display: block;
+      width: 100%;
+      touch-action: none;
+      cursor: crosshair;
+    }
+    .firma-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      color: #C0C0C0;
+      font-weight: 600;
+      pointer-events: none;
+      text-align: center;
+      transition: opacity 0.2s;
+    }
+    .firma-label.hidden { opacity: 0; }
+    .btn-limpiar-firma {
+      background: none;
+      border: 1px solid #E0E0E0;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: 'Barlow', sans-serif;
+      color: var(--gris-claro);
+      margin-top: 8px;
+    }
+    .firma-ok-badge {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--verde);
+      font-weight: 700;
+      margin-top: 6px;
+    }
+    .firma-ok-badge.visible { display: flex; }
+
+    /* Foto */
+    .foto-area {
+      border: 2px dashed #D0D0D0;
+      border-radius: 12px;
+      overflow: hidden;
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: #FAFAFA;
+      position: relative;
+      transition: border-color 0.15s;
+    }
+    .foto-area:active { border-color: var(--naranja); }
+    .foto-placeholder {
+      text-align: center;
+      color: var(--gris-claro);
+      pointer-events: none;
+    }
+    .foto-placeholder .icon { font-size: 40px; }
+    .foto-placeholder p { font-size: 13px; font-weight: 600; margin-top: 6px; }
+    .foto-placeholder small { font-size: 11px; }
+    #foto-preview {
+      width: 100%;
+      display: none;
+      border-radius: 10px;
+      max-height: 240px;
+      object-fit: cover;
+    }
+    #foto-preview.visible { display: block; }
+    #input-foto { display: none; }
+    .foto-ok-badge {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--verde);
+      font-weight: 700;
+      margin-top: 6px;
+    }
+    .foto-ok-badge.visible { display: flex; }
+
+    /* Botón confirmar */
+    .btn-confirmar {
+      background: var(--naranja);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 1px;
+      padding: 18px;
+      width: 100%;
+      cursor: pointer;
+      margin-top: 8px;
+      margin-bottom: 24px;
+      transition: all 0.15s;
+      box-shadow: 0 4px 16px rgba(232,80,10,0.35);
+    }
+    .btn-confirmar:active { background: var(--naranja-dark); transform: scale(0.98); }
+    .btn-confirmar:disabled {
+      background: #C0C0C0;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .progress-bar {
+      height: 4px;
+      background: #E5E5E5;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      display: none;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--naranja);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    /* ── Pantalla de éxito ── */
+    #screen-exito {
+      background: var(--negro);
+      justify-content: center;
+      align-items: center;
+      padding: 40px 24px;
+      text-align: center;
+    }
+    .exito-icono { font-size: 80px; margin-bottom: 20px; }
+    .exito-titulo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 40px;
+      color: var(--verde);
+      letter-spacing: 2px;
+    }
+    .exito-sub {
+      font-size: 15px;
+      color: var(--gris-claro);
+      margin-top: 8px;
+      margin-bottom: 40px;
+      line-height: 1.5;
+    }
+    .exito-pedido-id {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      color: var(--naranja);
+      letter-spacing: 2px;
+    }
+    .btn-volver {
+      background: var(--naranja);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 1px;
+      padding: 16px 40px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-volver:active { background: var(--naranja-dark); transform: scale(0.97); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--negro);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      z-index: 9999;
+      transition: transform 0.25s ease;
+      white-space: nowrap;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.error { background: var(--rojo); }
+    #toast.success { background: var(--verde); }
+
+    /* Utilidades */
+    .mt-8 { margin-top: 8px; }
+    .text-sm { font-size: 12px; color: var(--gris-claro); }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     PANTALLA 1: LOGIN
+════════════════════════════════════════════ -->
+<div id="screen-login" class="screen active">
+  <div class="login-logo">TRONCOSO</div>
+  <div class="login-sub">Remisión Digital · Entregas</div>
+
+  <div class="pin-display">
+    <div class="pin-dot" id="dot-0"></div>
+    <div class="pin-dot" id="dot-1"></div>
+    <div class="pin-dot" id="dot-2"></div>
+    <div class="pin-dot" id="dot-3"></div>
+  </div>
+
+  <div class="numpad">
+    <button class="num-btn" onclick="presionarNumero('1')">1</button>
+    <button class="num-btn" onclick="presionarNumero('2')">2</button>
+    <button class="num-btn" onclick="presionarNumero('3')">3</button>
+    <button class="num-btn" onclick="presionarNumero('4')">4</button>
+    <button class="num-btn" onclick="presionarNumero('5')">5</button>
+    <button class="num-btn" onclick="presionarNumero('6')">6</button>
+    <button class="num-btn" onclick="presionarNumero('7')">7</button>
+    <button class="num-btn" onclick="presionarNumero('8')">8</button>
+    <button class="num-btn" onclick="presionarNumero('9')">9</button>
+    <button class="num-btn del" onclick="borrarNumero()">⌫</button>
+    <button class="num-btn" onclick="presionarNumero('0')">0</button>
+    <button class="num-btn" onclick="presionarNumero('')" style="visibility:hidden"></button>
+  </div>
+
+  <div class="login-error" id="login-error"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PANTALLA 2: MIS ENTREGAS DEL DÍA
+════════════════════════════════════════════ -->
+<div id="screen-lista" class="screen">
+  <div class="header">
+    <div>
+      <div class="header-logo">TRONCOSO</div>
+      <div class="header-sub">Remisión Digital</div>
+    </div>
+    <div class="header-right">
+      <span class="badge-operador" id="badge-nombre"></span>
+      <button class="btn-back" onclick="cerrarSesion()" title="Cerrar sesión" style="font-size:20px; color:var(--gris-claro)">✕</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="fecha-hoy" id="fecha-hoy"></div>
+    <div class="section-title">Mis Entregas de Hoy</div>
+    <div id="lista-pedidos"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PANTALLA 3: DETALLE + FIRMA
+════════════════════════════════════════════ -->
+<div id="screen-detalle" class="screen">
+  <div class="header">
+    <button class="btn-back" onclick="volverALista()">‹</button>
+    <div>
+      <div class="header-logo" id="detalle-id-header">Entrega</div>
+      <div class="header-sub">Confirmar Entrega</div>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- Resumen del pedido -->
+    <div class="detalle-card">
+      <h3>📦 Datos del Pedido</h3>
+      <div class="info-row">
+        <span class="info-label">Cliente</span>
+        <span class="info-val" id="det-cliente">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Dirección</span>
+        <span class="info-val" id="det-dir">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Productos</span>
+        <span class="info-val" id="det-productos">—</span>
+      </div>
+      <div class="info-row" id="det-monto-row" style="display:none">
+        <span class="info-label">Monto</span>
+        <span class="info-val" id="det-monto">—</span>
+      </div>
+    </div>
+
+    <!-- Checklist material -->
+    <div class="detalle-card">
+      <h3>✅ ¿Material Completo?</h3>
+      <div class="checklist-row">
+        <button class="check-btn" id="btn-si" onclick="setCompleto(true)">✓ Sí, completo</button>
+        <button class="check-btn" id="btn-no" onclick="setCompleto(false)">✗ Faltó algo</button>
+      </div>
+      <textarea id="nota-incompleto" class="nota-incompleto"
+        placeholder="Describe qué faltó o qué problema hubo..."
+        oninput="evaluarBotonConfirmar()"></textarea>
+    </div>
+
+    <!-- Firma digital -->
+    <div class="detalle-card">
+      <h3>✍️ Firma del Cliente</h3>
+      <div class="firma-container">
+        <canvas id="canvas-firma" height="180"></canvas>
+        <div class="firma-label" id="firma-label">Firma aquí con el dedo</div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+        <button class="btn-limpiar-firma" onclick="limpiarFirma()">Limpiar firma</button>
+        <div class="firma-ok-badge" id="firma-ok">✓ Firma capturada</div>
+      </div>
+    </div>
+
+    <!-- Foto de evidencia -->
+    <div class="detalle-card">
+      <h3>📷 Foto de Evidencia</h3>
+      <div class="foto-area" onclick="abrirCamara()">
+        <div class="foto-placeholder" id="foto-placeholder">
+          <div class="icon">📸</div>
+          <p>Toca para tomar foto</p>
+          <small>Se abrirá la cámara</small>
+        </div>
+        <img id="foto-preview" alt="Evidencia de entrega">
+      </div>
+      <input type="file" id="input-foto" accept="image/*" capture="environment" onchange="procesarFoto(this)">
+      <div class="foto-ok-badge" id="foto-ok" style="display:none">✓ Foto lista</div>
+    </div>
+
+    <!-- Progreso subida -->
+    <div class="progress-bar" id="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+
+    <!-- Botón confirmar -->
+    <button class="btn-confirmar" id="btn-confirmar" disabled onclick="confirmarEntrega()">
+      Confirmar Entrega
+    </button>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PANTALLA 4: ÉXITO
+════════════════════════════════════════════ -->
+<div id="screen-exito" class="screen">
+  <div class="exito-icono">✅</div>
+  <div class="exito-titulo">¡Entrega Confirmada!</div>
+  <div class="exito-pedido-id" id="exito-pedido-id"></div>
+  <div class="exito-sub" id="exito-sub">La remisión quedó registrada<br>y el pedido marcado como entregado.</div>
+  <button class="btn-volver" onclick="volverALista()">Ver mis entregas</button>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════
+     FIREBASE SDK
+════════════════════════════════════════════ -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+<script>
+// ════════════════════════════════════════════
+//  FIREBASE
+// ════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyBuw-B6vn3jzruFBPKEifUNp4vYieYn9cU",
+  authDomain: "troncoso--sistema.firebaseapp.com",
+  projectId: "troncoso--sistema",
+  storageBucket: "troncoso--sistema.firebasestorage.app",
+  messagingSenderId: "112716974444",
+  appId: "1:112716974444:web:fd3f570827afc476634b49"
+};
+firebase.initializeApp(firebaseConfig);
+const db      = firebase.firestore();
+const storage = firebase.storage();
+
+// ════════════════════════════════════════════
+//  USUARIOS
+// ════════════════════════════════════════════
+const USERS = {
+  '1111': { name: 'Ivette',           role: 'Ventas' },
+  '2222': { name: 'Erika',            role: 'Compras' },
+  '3333': { name: 'Francisco',        role: 'Operador' },
+  '4444': { name: 'Agustín Lara',     role: 'Operador' },
+  '5555': { name: 'Carlos J. Escobar',role: 'Operador' },
+  '5678': { name: 'Viridiana',        role: 'Gerencia' },
+  '9900': { name: 'Jose Manuel',      role: 'Director' }
+};
+
+// ════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ════════════════════════════════════════════
+let usuarioActual  = null;
+let pedidoActual   = null;
+let firmaHecha     = false;
+let fotoBlob       = null;
+let completoFlag   = null; // true | false
+let pintando       = false;
+let ultimoPunto    = null;
+let canvasCtx      = null;
+
+// ════════════════════════════════════════════
+//  NAVEGACIÓN
+// ════════════════════════════════════════════
+function mostrarPantalla(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ════════════════════════════════════════════
+//  LOGIN
+// ════════════════════════════════════════════
+let pinActual = '';
+
+function presionarNumero(n) {
+  if (pinActual.length >= 4) return;
+  pinActual += n;
+  actualizarDots();
+  if (pinActual.length === 4) setTimeout(intentarLogin, 120);
+}
+
+function borrarNumero() {
+  pinActual = pinActual.slice(0, -1);
+  actualizarDots();
+  document.getElementById('login-error').textContent = '';
+}
+
+function actualizarDots() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById('dot-' + i)
+      .classList.toggle('filled', i < pinActual.length);
+  }
+}
+
+function intentarLogin() {
+  const user = USERS[pinActual];
+  if (user) {
+    usuarioActual = { pin: pinActual, ...user };
+    pinActual = '';
+    actualizarDots();
+    document.getElementById('login-error').textContent = '';
+    document.getElementById('badge-nombre').textContent = user.name;
+    const hoy = new Date();
+    document.getElementById('fecha-hoy').textContent =
+      hoy.toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    mostrarPantalla('screen-lista');
+    cargarPedidos();
+  } else {
+    pinActual = '';
+    actualizarDots();
+    document.getElementById('login-error').textContent = 'PIN incorrecto, intenta de nuevo.';
+    document.getElementById('screen-login').style.animation = 'none';
+    setTimeout(() => { document.getElementById('screen-login').style.animation = ''; }, 10);
+  }
+}
+
+function cerrarSesion() {
+  usuarioActual = null;
+  pinActual = '';
+  actualizarDots();
+  document.getElementById('login-error').textContent = '';
+  mostrarPantalla('screen-login');
+}
+
+// ════════════════════════════════════════════
+//  CARGA DE PEDIDOS
+// ════════════════════════════════════════════
+function formatearProductos(p) {
+  // Los pedidos pueden traer los productos en distintos formatos
+  if (!p) return '—';
+  if (typeof p === 'string') return p;
+  if (Array.isArray(p)) {
+    return p.map(x => {
+      if (typeof x === 'string') return x;
+      const cant = x.cantidad || x.qty || x.piezas || '';
+      const nom  = x.nombre || x.producto || x.name || x.descripcion || JSON.stringify(x);
+      return cant ? `${cant} ${nom}` : nom;
+    }).join(', ');
+  }
+  if (typeof p === 'object') {
+    return Object.entries(p).map(([k,v]) => `${v} ${k}`).join(', ');
+  }
+  return String(p);
+}
+
+async function cargarPedidos() {
+  const contenedor = document.getElementById('lista-pedidos');
+  contenedor.innerHTML = `<div class="loading-state"><div class="spinner"></div><div>Cargando pedidos...</div></div>`;
+
+  try {
+    // Buscar pedidos asignados al operador en estado confirmado o en-ruta
+    // El campo puede ser 'ch', 'operador', 'chofer', 'repartidor'
+    const estados = ['confirmado', 'en-ruta', 'en ruta', 'pendiente'];
+
+    // Intentamos con campo 'ch' primero (patrón visto en troncoso-sistema)
+    let docs = [];
+    const camposCandidatos = ['ch', 'operador', 'chofer', 'repartidor'];
+
+    for (const campo of camposCandidatos) {
+      const snap = await db.collection('pedidos')
+        .where(campo, '==', usuarioActual.name)
+        .get();
+      snap.forEach(doc => {
+        if (!docs.find(d => d.id === doc.id)) {
+          docs.push({ id: doc.id, ...doc.data() });
+        }
+      });
+    }
+
+    // Filtrar los que ya están entregados
+    const pendientes = docs.filter(p => {
+      const est = (p.estado || p.status || '').toLowerCase();
+      return est !== 'entregado' && est !== 'entregada' && est !== 'delivered';
+    });
+
+    if (pendientes.length === 0) {
+      contenedor.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🎉</div>
+          <div class="empty-text">¡Todo al día!</div>
+          <div class="empty-sub">No tienes entregas pendientes hoy.</div>
+        </div>`;
+      return;
+    }
+
+    contenedor.innerHTML = '';
+    pendientes.forEach(pedido => {
+      const estado  = (pedido.estado || pedido.status || 'confirmado').toLowerCase();
+      const cliente = pedido.cliente || pedido.nombreCliente || pedido.razonSocial || '—';
+      const dir     = pedido.direccion || pedido.domicilio || pedido.dir || pedido.address || '—';
+      const prods   = formatearProductos(pedido.productos || pedido.items || pedido.material || pedido.articulos);
+      const estaEnRuta = estado.includes('ruta');
+
+      const card = document.createElement('div');
+      card.className = `tarjeta-pedido${estaEnRuta ? ' en-ruta' : ''}`;
+      card.innerHTML = `
+        <div class="pedido-id">${pedido.id}</div>
+        <div class="pedido-cliente">${cliente}</div>
+        <div class="pedido-dir">📍 ${dir}</div>
+        <div class="pedido-productos">${prods}</div>
+        <span class="badge-estado badge-${estaEnRuta ? 'en-ruta' : 'confirmado'}">
+          ${estaEnRuta ? '🚚 En ruta' : '📋 Confirmado'}
+        </span>
+      `;
+      card.onclick = () => abrirDetalle(pedido);
+      contenedor.appendChild(card);
+    });
+
+  } catch (err) {
+    console.error(err);
+    contenedor.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-text">Error al cargar</div>
+        <div class="empty-sub">${err.message}<br><br>
+          <button onclick="cargarPedidos()" style="background:var(--naranja);color:#fff;border:none;padding:10px 20px;border-radius:10px;font-size:14px;cursor:pointer;font-family:Barlow,sans-serif;font-weight:700;">
+            Reintentar
+          </button>
+        </div>
+      </div>`;
+  }
+}
+
+// ════════════════════════════════════════════
+//  DETALLE DE PEDIDO
+// ════════════════════════════════════════════
+function abrirDetalle(pedido) {
+  pedidoActual  = pedido;
+  firmaHecha    = false;
+  fotoBlob      = null;
+  completoFlag  = null;
+
+  const cliente = pedido.cliente || pedido.nombreCliente || pedido.razonSocial || '—';
+  const dir     = pedido.direccion || pedido.domicilio || pedido.dir || '—';
+  const prods   = formatearProductos(pedido.productos || pedido.items || pedido.material || pedido.articulos);
+  const monto   = pedido.total || pedido.monto || pedido.importe || null;
+
+  document.getElementById('detalle-id-header').textContent = pedido.id;
+  document.getElementById('det-cliente').textContent   = cliente;
+  document.getElementById('det-dir').textContent       = dir;
+  document.getElementById('det-productos').textContent = prods;
+
+  if (monto) {
+    document.getElementById('det-monto').textContent = '$' + Number(monto).toLocaleString('es-MX');
+    document.getElementById('det-monto-row').style.display = 'flex';
+  } else {
+    document.getElementById('det-monto-row').style.display = 'none';
+  }
+
+  // Reset checklist
+  document.getElementById('btn-si').className = 'check-btn';
+  document.getElementById('btn-no').className = 'check-btn';
+  document.getElementById('nota-incompleto').value = '';
+  document.getElementById('nota-incompleto').classList.remove('visible');
+
+  // Reset firma
+  inicializarCanvas();
+
+  // Reset foto
+  document.getElementById('foto-preview').classList.remove('visible');
+  document.getElementById('foto-preview').src = '';
+  document.getElementById('foto-placeholder').style.display = '';
+  document.getElementById('foto-ok').style.display = 'none';
+  document.getElementById('input-foto').value = '';
+
+  // Reset botón
+  document.getElementById('btn-confirmar').disabled = true;
+  document.getElementById('progress-bar').style.display = 'none';
+
+  mostrarPantalla('screen-detalle');
+}
+
+function volverALista() {
+  mostrarPantalla('screen-lista');
+  cargarPedidos();
+}
+
+// ════════════════════════════════════════════
+//  CHECKLIST
+// ════════════════════════════════════════════
+function setCompleto(val) {
+  completoFlag = val;
+  document.getElementById('btn-si').className = 'check-btn' + (val ? ' selected-si' : '');
+  document.getElementById('btn-no').className = 'check-btn' + (!val ? ' selected-no' : '');
+  const nota = document.getElementById('nota-incompleto');
+  if (!val) {
+    nota.classList.add('visible');
+    nota.focus();
+  } else {
+    nota.classList.remove('visible');
+    nota.value = '';
+  }
+  evaluarBotonConfirmar();
+}
+
+// ════════════════════════════════════════════
+//  CANVAS DE FIRMA
+// ════════════════════════════════════════════
+function inicializarCanvas() {
+  const canvas = document.getElementById('canvas-firma');
+  const ratio  = window.devicePixelRatio || 1;
+  const w      = canvas.parentElement.clientWidth || 340;
+  canvas.width  = w * ratio;
+  canvas.height = 180 * ratio;
+  canvas.style.width  = w + 'px';
+  canvas.style.height = '180px';
+  canvasCtx = canvas.getContext('2d');
+  canvasCtx.scale(ratio, ratio);
+  canvasCtx.strokeStyle = '#1A1A1A';
+  canvasCtx.lineWidth   = 2.5;
+  canvasCtx.lineCap     = 'round';
+  canvasCtx.lineJoin    = 'round';
+  firmaHecha = false;
+  document.getElementById('firma-label').classList.remove('hidden');
+  document.getElementById('firma-ok').classList.remove('visible');
+
+  // Eventos touch y mouse
+  canvas.addEventListener('pointerdown', iniciarTrazo, { passive: false });
+  canvas.addEventListener('pointermove', continuar,    { passive: false });
+  canvas.addEventListener('pointerup',   terminarTrazo);
+  canvas.addEventListener('pointercancel', terminarTrazo);
+}
+
+function posEnCanvas(e) {
+  const canvas = document.getElementById('canvas-firma');
+  const rect   = canvas.getBoundingClientRect();
+  const x = (e.clientX ?? e.touches?.[0]?.clientX) - rect.left;
+  const y = (e.clientY ?? e.touches?.[0]?.clientY) - rect.top;
+  return { x, y };
+}
+
+function iniciarTrazo(e) {
+  e.preventDefault();
+  pintando    = true;
+  ultimoPunto = posEnCanvas(e);
+  canvasCtx.beginPath();
+  canvasCtx.moveTo(ultimoPunto.x, ultimoPunto.y);
+}
+
+function continuar(e) {
+  if (!pintando) return;
+  e.preventDefault();
+  const p = posEnCanvas(e);
+  canvasCtx.lineTo(p.x, p.y);
+  canvasCtx.stroke();
+  ultimoPunto = p;
+
+  if (!firmaHecha) {
+    firmaHecha = true;
+    document.getElementById('firma-label').classList.add('hidden');
+    document.getElementById('firma-ok').classList.add('visible');
+    evaluarBotonConfirmar();
+  }
+}
+
+function terminarTrazo(e) { pintando = false; }
+
+function limpiarFirma() {
+  const canvas = document.getElementById('canvas-firma');
+  canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+  firmaHecha = false;
+  document.getElementById('firma-label').classList.remove('hidden');
+  document.getElementById('firma-ok').classList.remove('visible');
+  evaluarBotonConfirmar();
+}
+
+// ════════════════════════════════════════════
+//  FOTO
+// ════════════════════════════════════════════
+function abrirCamara() {
+  document.getElementById('input-foto').click();
+}
+
+async function procesarFoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+
+  try {
+    const comprimida = await comprimirImagen(file, 1200, 0.82);
+    fotoBlob = comprimida;
+
+    const url = URL.createObjectURL(comprimida);
+    const img = document.getElementById('foto-preview');
+    img.src   = url;
+    img.classList.add('visible');
+    document.getElementById('foto-placeholder').style.display = 'none';
+    document.getElementById('foto-ok').style.display = 'flex';
+
+    evaluarBotonConfirmar();
+  } catch (err) {
+    toast('Error al procesar la foto: ' + err.message, 'error');
+  }
+}
+
+function comprimirImagen(file, maxWidth, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => {
+          if (!blob) { reject(new Error('No se pudo comprimir')); return; }
+          resolve(blob);
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ════════════════════════════════════════════
+//  VALIDACIÓN DEL BOTÓN
+// ════════════════════════════════════════════
+function evaluarBotonConfirmar() {
+  const checkOk   = completoFlag !== null;
+  const notaOk    = completoFlag !== false || document.getElementById('nota-incompleto').value.trim().length > 0;
+  const btn       = document.getElementById('btn-confirmar');
+  btn.disabled    = !(checkOk && notaOk && firmaHecha && fotoBlob);
+}
+
+// ════════════════════════════════════════════
+//  CONFIRMAR ENTREGA
+// ════════════════════════════════════════════
+async function confirmarEntrega() {
+  const btn = document.getElementById('btn-confirmar');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  const bar  = document.getElementById('progress-bar');
+  const fill = document.getElementById('progress-fill');
+  bar.style.display = 'block';
+  fill.style.width  = '5%';
+
+  const pedido = pedidoActual;
+  const fecha  = new Date().toISOString().slice(0, 10);
+  const ts     = Date.now();
+
+  try {
+    // 1. Subir firma a Firebase Storage
+    const canvas = document.getElementById('canvas-firma');
+    const firmaDataUrl = canvas.toDataURL('image/png');
+    const firmaBlob    = await dataURLaBlob(firmaDataUrl);
+
+    fill.style.width = '20%';
+    const firmaRef  = storage.ref(`remisiones/${fecha}/${pedido.id}_firma.png`);
+    await firmaRef.put(firmaBlob, { contentType: 'image/png' });
+    const firmaURL  = await firmaRef.getDownloadURL();
+
+    fill.style.width = '50%';
+
+    // 2. Subir foto
+    const fotoRef = storage.ref(`remisiones/${fecha}/${pedido.id}_foto.jpg`);
+    await fotoRef.put(fotoBlob, { contentType: 'image/jpeg' });
+    const fotoURL = await fotoRef.getDownloadURL();
+
+    fill.style.width = '75%';
+
+    // 3. Geolocalización (opcional, sin bloquear)
+    let ubicacion = null;
+    try {
+      ubicacion = await obtenerUbicacion();
+    } catch (_) { /* opcional */ }
+
+    // 4. Crear documento en colección remisiones
+    const remision = {
+      pedidoId:       pedido.id,
+      cliente:        pedido.cliente || pedido.nombreCliente || '—',
+      operador:       usuarioActual.name,
+      fecha:          fecha,
+      timestamp:      ts,
+      completo:       completoFlag,
+      notaIncompleto: completoFlag ? '' : document.getElementById('nota-incompleto').value.trim(),
+      firmaURL:       firmaURL,
+      fotoURL:        fotoURL,
+      ubicacion:      ubicacion
+    };
+    await db.collection('remisiones').doc(`${pedido.id}_${ts}`).set(remision);
+
+    fill.style.width = '90%';
+
+    // 5. Actualizar estado del pedido a 'entregado'
+    await db.collection('pedidos').doc(pedido.id).update({ estado: 'entregado' });
+
+    fill.style.width = '100%';
+
+    // 6. Pantalla de éxito
+    setTimeout(() => {
+      document.getElementById('exito-pedido-id').textContent = pedido.id;
+      const cliente = pedido.cliente || pedido.nombreCliente || '';
+      document.getElementById('exito-sub').innerHTML =
+        `Remisión de <strong>${cliente}</strong> registrada.<br>Pedido marcado como entregado.`;
+      mostrarPantalla('screen-exito');
+    }, 400);
+
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+    btn.textContent = 'Confirmar Entrega';
+    bar.style.display = 'none';
+    toast('Error al guardar: ' + err.message, 'error');
+  }
+}
+
+function dataURLaBlob(dataUrl) {
+  const [header, data] = dataUrl.split(',');
+  const mime  = header.match(/:(.*?);/)[1];
+  const bytes = atob(data);
+  const arr   = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return Promise.resolve(new Blob([arr], { type: mime }));
+}
+
+function obtenerUbicacion() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) { reject(); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      reject,
+      { timeout: 5000 }
+    );
+  });
+}
+
+// ════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════
+let toastTimer = null;
+function toast(msg, tipo = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = 'show ' + tipo;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3200);
+}
+
+// ════════════════════════════════════════════
+//  RESIZE: re-inicializar canvas si cambia orientación
+// ════════════════════════════════════════════
+window.addEventListener('resize', () => {
+  if (document.getElementById('screen-detalle').classList.contains('active')) {
+    const teniaFirma = firmaHecha;
+    inicializarCanvas();
+    if (teniaFirma) {
+      // No podemos recuperar el trazo, avisar al usuario
+      toast('Gira el teléfono antes de firmar para mejores resultados.', '');
+    }
+  }
+});
+</script>
+</body>
+</html>
