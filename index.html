@@ -197,6 +197,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <button class="tab" onclick="switchTab('fondeos',this)">💸 Fondeos</button>
     <button class="tab" onclick="switchTab('compras',this)">🛒 Compras</button>
     <button class="tab" onclick="switchTab('nomina',this)">👷 Nómina</button>
+    <button class="tab" id="tab-dashboard-btn" onclick="switchTab('dashboard',this)" style="display:none">📊 Dashboard</button>
   </div>
 
   <div class="main">
@@ -1194,6 +1195,81 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       </div>
     </div>
 
+    <!-- DASHBOARD PANEL -->
+    <div class="panel" id="panel-dashboard" style="display:none;">
+      <div class="card">
+        <div class="card-title">📊 Dashboard Financiero Ejecutivo</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div style="font-size:11px;color:#888;">Datos en tiempo real de Firebase</div>
+          <button onclick="cargarDashboard()" style="background:var(--naranja);color:#fff;border:none;padding:8px 12px;border-radius:6px;font-size:11px;cursor:pointer;">🔄 Actualizar</button>
+        </div>
+
+        <!-- LIQUIDEZ DEL DÍA -->
+        <div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-bottom:14px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;margin-bottom:12px;letter-spacing:1px;">💰 LIQUIDEZ DEL DÍA</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Entradas</div>
+              <div id="dash-entradas" style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--naranja);margin-top:4px;">$0</div>
+            </div>
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Salidas</div>
+              <div id="dash-salidas" style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--naranja);margin-top:4px;">$0</div>
+            </div>
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">NETO</div>
+              <div id="dash-neto" style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--naranja);margin-top:4px;">$0</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid #FFD8C0;font-size:11px;color:#888;">
+            <div>Efectivo en caja: <strong id="dash-efectivo">$0</strong></div>
+          </div>
+        </div>
+
+        <!-- SEMANA ACTUAL -->
+        <div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-bottom:14px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;margin-bottom:12px;letter-spacing:1px;">📈 SEMANA ACTUAL</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Ventas</div>
+              <div id="dash-ventas-sem" style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--naranja);margin-top:4px;">$0</div>
+            </div>
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Utilidad</div>
+              <div id="dash-utilidad-sem" style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--naranja);margin-top:4px;">$0</div>
+            </div>
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Margen</div>
+              <div id="dash-margen-sem" style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--naranja);margin-top:4px;">0%</div>
+            </div>
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Nómina</div>
+              <div id="dash-nomina-sem" style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--naranja);margin-top:4px;">$0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MES ACTUAL -->
+        <div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;margin-bottom:12px;letter-spacing:1px;">📅 MES ACTUAL</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Acumulado</div>
+              <div id="dash-acumulado-mes" style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--naranja);margin-top:4px;">$0</div>
+            </div>
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Meta (800k)</div>
+              <div id="dash-meta-pct" style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--naranja);margin-top:4px;">0%</div>
+            </div>
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Proyección</div>
+              <div id="dash-proyeccion" style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--naranja);margin-top:4px;">$0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1295,6 +1371,7 @@ function initApp(){
     cotizaciones = JSON.parse(localStorage.getItem('cot_troncoso')||'[]');
     cargarNotasCredito();
     cargarFondeos();
+    mostrarDashboardParaUsuario();
     return;
   }
   document.getElementById('syncstat').textContent = 'Sincronizando...';
@@ -1302,6 +1379,7 @@ function initApp(){
   cargarCotizaciones();
   cargarNotasCredito();
   cargarFondeos();
+  mostrarDashboardParaUsuario();
 }
 
 function cargarClientes(){
@@ -1378,6 +1456,7 @@ function switchTab(tab, btn) {
   if(tab === 'fondeos') iniciarFondeos();
   if(tab === 'compras') iniciarCompras();
   if(tab === 'nomina') iniciarNomina();
+  if(tab === 'dashboard') cargarDashboard();
 }
 
 function showToast(msg) {
@@ -3909,6 +3988,131 @@ function verDetalleNomina(nom) {
 
 function fmtNumero(n) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// ════════════════════════════════════════════
+//  DASHBOARD FINANCIERO
+// ════════════════════════════════════════════
+function mostrarDashboardParaUsuario() {
+  if(!currentUser) return;
+  const pin = currentUser.pin;
+  const tabBtn = document.getElementById('tab-dashboard-btn');
+  if(pin === '9900' || pin === '5678') {
+    if(tabBtn) tabBtn.style.display = 'inline-block';
+  } else {
+    if(tabBtn) tabBtn.style.display = 'none';
+  }
+}
+
+function hoy() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function lunesDeEstaSemana() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d.toISOString().split('T')[0];
+}
+
+function primerDiaDelMes() {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+}
+
+async function cargarDashboard() {
+  if(!db) { showToast('⚠️ Sin conexión a Firebase'); return; }
+
+  try {
+    const hoyStr = hoy();
+    const lunesStr = lunesDeEstaSemana();
+    const primerStr = primerDiaDelMes();
+
+    // LIQUIDEZ DEL DÍA
+    let entradas = 0, salidas = 0, efectivo = 0;
+    const cortesSnap = await db.collection('cortes').where('fecha', '==', hoyStr).where('status', '==', 'aprobado').get();
+    cortesSnap.forEach(doc => {
+      const data = doc.data();
+      entradas += data.granTotal || 0;
+      efectivo += data.efectivo || 0;
+    });
+    const salidasSnap = await db.collection('salidas').where('fecha', '==', hoyStr).where('status', '==', 'aprobado').get();
+    salidasSnap.forEach(doc => {
+      salidas += doc.data().monto || 0;
+    });
+
+    document.getElementById('dash-entradas').textContent = '$' + fmtNumero(entradas);
+    document.getElementById('dash-salidas').textContent = '$' + fmtNumero(salidas);
+    document.getElementById('dash-neto').textContent = '$' + fmtNumero(entradas - salidas);
+    document.getElementById('dash-efectivo').textContent = '$' + fmtNumero(efectivo);
+
+    // SEMANA ACTUAL
+    let ventasSem = 0, nominaSem = 0;
+    const cotizSnap = await db.collection('cotizaciones').where('status', '==', 'cerrado').get();
+    cotizSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fecha || '';
+      if(fecha >= lunesStr && fecha <= hoyStr) {
+        ventasSem += data.total || 0;
+      }
+    });
+    const nominaSnap = await db.collection('nomina_semanas').get();
+    nominaSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fecha || '';
+      if(fecha >= lunesStr && fecha <= hoyStr) {
+        nominaSem += data.totalEfectivo || 0;
+      }
+    });
+
+    let gastosSem = 0;
+    const gastoSnap = await db.collection('salidas').get();
+    gastoSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fecha || '';
+      if(fecha >= lunesStr && fecha <= hoyStr) {
+        const tipo = (data.tipo || '').toLowerCase();
+        if(tipo !== 'nomina' && tipo !== 'compra') {
+          gastosSem += data.monto || 0;
+        }
+      }
+    });
+
+    const utilidadSem = ventasSem - gastosSem - nominaSem;
+    const margenSem = ventasSem > 0 ? (utilidadSem / ventasSem) * 100 : 0;
+
+    document.getElementById('dash-ventas-sem').textContent = '$' + fmtNumero(ventasSem);
+    document.getElementById('dash-utilidad-sem').textContent = '$' + fmtNumero(utilidadSem);
+    document.getElementById('dash-margen-sem').textContent = Math.round(margenSem) + '%';
+    document.getElementById('dash-nomina-sem').textContent = '$' + fmtNumero(nominaSem);
+
+    // MES ACTUAL
+    let acumulado = 0;
+    cotizSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fecha || '';
+      if(fecha >= primerStr && fecha <= hoyStr) {
+        acumulado += data.total || 0;
+      }
+    });
+
+    const hoyDate = new Date();
+    const diaDelMes = hoyDate.getDate();
+    const diasDelMes = new Date(hoyDate.getFullYear(), hoyDate.getMonth() + 1, 0).getDate();
+    const meta = 800000;
+    const proyeccion = (acumulado / diaDelMes) * diasDelMes;
+    const pctMeta = (acumulado / meta) * 100;
+
+    document.getElementById('dash-acumulado-mes').textContent = '$' + fmtNumero(acumulado);
+    document.getElementById('dash-meta-pct').textContent = Math.round(pctMeta) + '%';
+    document.getElementById('dash-proyeccion').textContent = '$' + fmtNumero(proyeccion);
+
+    showToast('✅ Dashboard actualizado');
+  } catch(err) {
+    console.error('Error en dashboard:', err);
+    showToast('⚠️ Error al cargar dashboard: ' + err.message);
+  }
 }
 
 // Inicialización completada
