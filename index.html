@@ -1877,14 +1877,13 @@ async function actualizarMesActual() {
     document.getElementById('mes-proyeccion').textContent = formatearPeso(proyeccion);
 
     // Gráfica de barras por día
-    const svgMes = document.getElementById('chart-mes');
     const maxValor = Math.max(...Object.values(diasDelMesData), 1);
     const alturaChart = 140;
     const anchoTotal = 340;
     const anchoBar = Math.max(2, Math.floor((anchoTotal - 20) / diasDelMes));
     const espaciado = Math.max(1, Math.floor((anchoTotal - 20 - anchoBar * diasDelMes) / (diasDelMes + 1)));
 
-    let svgContent = '';
+    let svgContent = `<svg viewBox="0 0 ${anchoTotal} ${alturaChart}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:140px"><defs><style>.bar-label{font-size:8px;fill:#888;text-anchor:middle}</style></defs>`;
     for (let dia = 1; dia <= diasDelMes; dia++) {
       const fechaStr = new Date(hoyDate.getFullYear(), hoyDate.getMonth(), dia).toISOString().split('T')[0];
       const valor = diasDelMesData[fechaStr] || 0;
@@ -1899,7 +1898,8 @@ async function actualizarMesActual() {
         }
       }
     }
-    svgMes.innerHTML = svgContent;
+    svgContent += `</svg>`;
+    document.getElementById('chart-mes-container').innerHTML = svgContent;
   } catch (err) {
     console.error('Error en mes:', err);
   }
@@ -2132,14 +2132,13 @@ async function actualizarResumenAnual() {
     const promedio = acumulado > 0 ? acumulado / 12 : 0;
 
     // Gráfica de barras por mes
-    const svgAnual = document.getElementById('chart-anual');
     const maxValor = Math.max(...Object.values(mesesData), 1);
     const alturaChart = 140;
     const anchoTotal = 340;
     const anchoBar = Math.floor((anchoTotal - 20) / 12);
     const espaciado = Math.max(1, Math.floor((anchoTotal - 20 - anchoBar * 12) / 13));
 
-    let svgContent = '';
+    let svgContent = `<svg viewBox="0 0 ${anchoTotal} ${alturaChart}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:140px"><defs><style>.bar-label{font-size:7px;fill:#888;text-anchor:middle}</style></defs>`;
     const mesesLabels = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
     for (let m = 0; m < 12; m++) {
       const mesKey = String(m + 1).padStart(2, '0');
@@ -2151,9 +2150,10 @@ async function actualizarResumenAnual() {
       if (valor > 0) {
         svgContent += `<rect x="${x}" y="${y}" width="${anchoBar}" height="${altura}" fill="#E8500A" rx="2"/>`;
       }
-      svgContent += `<text x="${x + anchoBar / 2}" y="${alturaChart + 10}" class="bar-label" text-anchor="middle">${mesesLabels[m]}</text>`;
+      svgContent += `<text x="${x + anchoBar / 2}" y="${alturaChart + 10}" class="bar-label">${mesesLabels[m]}</text>`;
     }
-    svgAnual.innerHTML = svgContent;
+    svgContent += `</svg>`;
+    document.getElementById('chart-anual-container').innerHTML = svgContent;
 
     document.getElementById('anual-mejor').textContent = formatearPeso(mejorMes);
     document.getElementById('anual-mejor-mes').textContent = mejorMesNom;
