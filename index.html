@@ -1344,6 +1344,7 @@ function checkPin(){
   var u = USERS[pinBuf];
   if(u){
     currentUser = u;
+    currentUser.pin = pinBuf;
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('hdr-user').textContent = u.name + ' · ' + u.role;
