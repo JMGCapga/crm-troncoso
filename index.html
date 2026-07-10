@@ -1677,22 +1677,22 @@ function formatearPorcentaje(val) {
 }
 
 async function cargarDashboard() {
-  const inicio = Date.now();
   try {
-    await Promise.all([
-      actualizarLiquidezDia(),
-      actualizarSemanaActual(),
-      actualizarMesActual(),
-      actualizarRazonesSociales(),
-      actualizarPipeline(),
-      actualizarAlertas(),
-      actualizarResumenAnual()
-    ]);
-    const tiempo = new Date().toLocaleTimeString('es-MX');
-    document.getElementById('dashboard-time').textContent = `Última actualización: ${tiempo}`;
+    // Cargar cada sección independientemente para evitar que un error bloquee todo
+    actualizarLiquidezDia().catch(err => console.error('Error liquidez:', err));
+    actualizarSemanaActual().catch(err => console.error('Error semana:', err));
+    actualizarMesActual().catch(err => console.error('Error mes:', err));
+    actualizarRazonesSociales().catch(err => console.error('Error razones:', err));
+    actualizarPipeline().catch(err => console.error('Error pipeline:', err));
+    actualizarAlertas().catch(err => console.error('Error alertas:', err));
+    actualizarResumenAnual().catch(err => console.error('Error anual:', err));
+
+    setTimeout(() => {
+      const tiempo = new Date().toLocaleTimeString('es-MX');
+      document.getElementById('dashboard-time').textContent = `Última actualización: ${tiempo}`;
+    }, 500);
   } catch (err) {
-    console.error('Error cargando dashboard:', err);
-    toast('Error al cargar dashboard: ' + err.message, 'error');
+    console.error('Error general en dashboard:', err);
   }
 }
 
