@@ -1210,8 +1210,18 @@ function intentarLogin() {
 
     // Si es Director (9900) o Gerencia (5678), mostrar dashboard; sino, mostrar lista
     if (pin === '9900' || pin === '5678') {
-      mostrarPantalla('screen-dashboard');
-      cargarDashboard();
+      console.log('Acceso al Dashboard - PIN:', pin);
+      try {
+        const screenDash = document.getElementById('screen-dashboard');
+        console.log('screen-dashboard existe:', !!screenDash);
+        mostrarPantalla('screen-dashboard');
+        console.log('Dashboard mostrado');
+        cargarDashboard();
+        console.log('Dashboard cargando datos...');
+      } catch (err) {
+        console.error('Error mostrando dashboard:', err);
+        toast('Error: ' + err.message, 'error');
+      }
     } else {
       mostrarPantalla('screen-lista');
       cargarPedidos();
