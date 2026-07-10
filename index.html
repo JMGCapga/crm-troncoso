@@ -912,15 +912,17 @@
     <!-- Foto de evidencia -->
     <div class="detalle-card">
       <h3>📷 Foto de Evidencia</h3>
-      <div class="foto-area" onclick="abrirCamara()">
-        <div class="foto-placeholder" id="foto-placeholder">
-          <div class="icon">📸</div>
-          <p>Toca para tomar foto</p>
-          <small>Se abrirá la cámara</small>
+      <label for="input-foto" style="cursor:pointer; display:block">
+        <div class="foto-area">
+          <div class="foto-placeholder" id="foto-placeholder">
+            <div class="icon">📸</div>
+            <p>Toca para tomar foto</p>
+            <small>Se abrirá la cámara</small>
+          </div>
+          <img id="foto-preview" alt="Evidencia de entrega">
         </div>
-        <img id="foto-preview" alt="Evidencia de entrega">
-      </div>
-      <input type="file" id="input-foto" accept="image/*" capture="environment" onchange="procesarFoto(this)">
+      </label>
+      <input type="file" id="input-foto" accept="image/*" capture="environment" onchange="procesarFoto(this)" style="display:none">
       <div class="foto-ok-badge" id="foto-ok" style="display:none">✓ Foto lista</div>
     </div>
 
