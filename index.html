@@ -560,6 +560,239 @@
     /* Utilidades */
     .mt-8 { margin-top: 8px; }
     .text-sm { font-size: 12px; color: var(--gris-claro); }
+
+    /* ── Dashboard Financiero ── */
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .dashboard-refresh {
+      background: none;
+      border: 1px solid var(--gris-medio);
+      color: var(--gris-claro);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'Barlow', sans-serif;
+      transition: all 0.2s;
+    }
+    .dashboard-refresh:active { background: var(--gris-oscuro); }
+    .dashboard-timestamp {
+      font-size: 11px;
+      color: var(--gris-claro);
+      font-weight: 500;
+    }
+
+    .metric-card {
+      background: var(--negro);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: var(--sombra);
+      color: var(--blanco);
+    }
+    .metric-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 14px;
+      color: var(--gris-claro);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .metric-box {
+      background: var(--gris-oscuro);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+    .metric-label {
+      font-size: 11px;
+      color: var(--gris-claro);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .metric-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      color: var(--naranja);
+      letter-spacing: 1px;
+      line-height: 1;
+    }
+    .metric-sub {
+      font-size: 12px;
+      color: var(--gris-claro);
+      margin-top: 6px;
+    }
+
+    .semana-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .semana-item {
+      background: var(--gris-oscuro);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .semana-label {
+      font-size: 11px;
+      color: var(--gris-claro);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .semana-valor {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      color: var(--blanco);
+      letter-spacing: 1px;
+    }
+    .semana-badge {
+      font-size: 11px;
+      margin-top: 6px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: 600;
+    }
+    .semana-badge.positivo {
+      background: #10B981; color: #fff;
+    }
+    .semana-badge.negativo {
+      background: var(--rojo); color: #fff;
+    }
+
+    .utilidad-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--gris-medio);
+    }
+
+    .chart-container {
+      background: var(--gris-oscuro);
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 12px;
+      overflow-x: auto;
+    }
+    .chart-svg {
+      min-width: 100%;
+      height: 180px;
+      display: block;
+    }
+
+    .razon-item {
+      background: var(--gris-oscuro);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .razon-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--blanco);
+    }
+    .razon-valor {
+      text-align: right;
+    }
+    .razon-monto {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      color: var(--naranja);
+      letter-spacing: 1px;
+    }
+    .razon-porcentaje {
+      font-size: 12px;
+      color: var(--gris-claro);
+      margin-top: 2px;
+    }
+
+    .pipeline-item {
+      background: var(--gris-oscuro);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-left: 4px solid var(--gris-claro);
+    }
+    .pipeline-item.alta { border-left-color: #10B981; }
+    .pipeline-item.media { border-left-color: var(--amarillo); }
+    .pipeline-item.baja { border-left-color: var(--rojo); }
+
+    .pipeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .pipeline-prob {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--blanco);
+    }
+    .pipeline-count {
+      font-size: 12px;
+      color: var(--gris-claro);
+    }
+    .pipeline-monto {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      color: var(--naranja);
+      letter-spacing: 1px;
+    }
+
+    .alerta-item {
+      background: var(--gris-oscuro);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-left: 4px solid var(--amarillo);
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--blanco);
+    }
+    .alerta-item strong { color: var(--naranja); }
+
+    .month-stats {
+      background: var(--gris-oscuro);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .month-label {
+      font-size: 11px;
+      color: var(--gris-claro);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .month-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      color: var(--naranja);
+      letter-spacing: 1px;
+    }
+    .month-sub {
+      font-size: 11px;
+      color: var(--gris-claro);
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -715,6 +948,167 @@
   <button class="btn-volver" onclick="volverALista()">Ver mis entregas</button>
 </div>
 
+<!-- ═══════════════════════════════════════════
+     PANTALLA 5: DASHBOARD FINANCIERO
+════════════════════════════════════════════ -->
+<div id="screen-dashboard" class="screen">
+  <div class="header">
+    <div>
+      <div class="header-logo">TRONCOSO</div>
+      <div class="header-sub">Dashboard Financiero</div>
+    </div>
+    <div class="header-right">
+      <span class="badge-operador" id="badge-dashboard"></span>
+      <button class="btn-back" onclick="cerrarSesion()" title="Cerrar sesión" style="font-size:20px; color:var(--gris-claro)">✕</button>
+    </div>
+  </div>
+  <div class="content" id="dashboard-content">
+    <div class="dashboard-header">
+      <div style="flex:1">
+        <div style="font-family:'Bebas Neue';font-size:18px;color:var(--gris-oscuro);letter-spacing:1px;margin-bottom:4px">📊 Dashboard Ejecutivo</div>
+      </div>
+      <div style="text-align:right">
+        <button class="dashboard-refresh" onclick="cargarDashboard()">🔄 Actualizar</button>
+        <div class="dashboard-timestamp" id="dashboard-time">-</div>
+      </div>
+    </div>
+
+    <!-- LIQUIDEZ HOY -->
+    <div class="metric-card" id="card-liquidez">
+      <div class="metric-title">💰 Liquidez del Día</div>
+      <div class="metric-grid">
+        <div class="metric-box">
+          <div class="metric-label">Entradas</div>
+          <div class="metric-value" id="liq-entradas">$0</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Salidas</div>
+          <div class="metric-value" id="liq-salidas">$0</div>
+        </div>
+      </div>
+      <div class="metric-grid" style="margin-top:12px">
+        <div class="metric-box">
+          <div class="metric-label">Neto</div>
+          <div class="metric-value" id="liq-neto">$0</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Efectivo Est.</div>
+          <div class="metric-value" id="liq-efectivo">$0</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--gris-medio);font-size:12px;color:var(--gris-claro)">
+        <div>📤 Transfers pendientes: <strong id="liq-transfers">$0</strong></div>
+      </div>
+    </div>
+
+    <!-- SEMANA ACTUAL -->
+    <div class="metric-card" id="card-semana">
+      <div class="metric-title">📈 Semana Actual</div>
+      <div class="semana-grid">
+        <div class="semana-item">
+          <div class="semana-label">Ventas</div>
+          <div class="semana-valor" id="sem-ventas">$0</div>
+          <div class="semana-badge positivo" id="sem-badge">↑ +0%</div>
+        </div>
+        <div class="semana-item">
+          <div class="semana-label">Gastos</div>
+          <div class="semana-valor" id="sem-gastos">$0</div>
+        </div>
+        <div class="semana-item">
+          <div class="semana-label">Nómina</div>
+          <div class="semana-valor" id="sem-nomina">$0</div>
+        </div>
+        <div class="semana-item">
+          <div class="semana-label">Compras</div>
+          <div class="semana-valor" id="sem-compras">$0</div>
+        </div>
+      </div>
+      <div class="utilidad-row">
+        <div>
+          <div class="semana-label">Utilidad</div>
+          <div class="semana-valor" id="sem-utilidad">$0</div>
+        </div>
+        <div style="text-align:right">
+          <div class="semana-label">Margen</div>
+          <div class="semana-valor" id="sem-margen">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MES ACTUAL -->
+    <div class="metric-card" id="card-mes">
+      <div class="metric-title">📅 Mes Actual</div>
+      <div class="chart-container" id="chart-mes-container">
+        <svg class="chart-svg" id="chart-mes"></svg>
+      </div>
+      <div class="semana-grid" style="margin-top:12px">
+        <div class="month-stats">
+          <div class="month-label">Acumulado</div>
+          <div class="month-value" id="mes-acumulado">$0</div>
+        </div>
+        <div class="month-stats">
+          <div class="month-label">Meta</div>
+          <div class="month-value" id="mes-meta">$0</div>
+          <div class="month-sub" id="mes-porcentaje">0%</div>
+        </div>
+      </div>
+      <div class="month-stats" style="margin-top:12px;text-align:center">
+        <div class="month-label">Proyección</div>
+        <div class="month-value" id="mes-proyeccion">$0</div>
+      </div>
+    </div>
+
+    <!-- POR RAZÓN SOCIAL -->
+    <div class="metric-card" id="card-razon">
+      <div class="metric-title">👥 Ventas por Razón Social</div>
+      <div id="razon-items"></div>
+    </div>
+
+    <!-- PIPELINE DE VENTAS -->
+    <div class="metric-card" id="card-pipeline">
+      <div class="metric-title">📊 Pipeline de Ventas</div>
+      <div id="pipeline-items"></div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--gris-medio);font-size:12px;color:var(--gris-claro)">
+        <div>Tasa de cierre: <strong id="pip-tasa">0%</strong></div>
+        <div>Tiempo promedio: <strong id="pip-tiempo">0 días</strong></div>
+      </div>
+    </div>
+
+    <!-- ALERTAS -->
+    <div class="metric-card" id="card-alertas">
+      <div class="metric-title">⚠️ Alertas</div>
+      <div id="alertas-items" style="min-height:40px;color:var(--gris-claro);font-size:12px;text-align:center">
+        Cargando alertas...
+      </div>
+    </div>
+
+    <!-- RESUMEN ANUAL -->
+    <div class="metric-card" id="card-anual">
+      <div class="metric-title">📊 2026 - Ventas por Mes</div>
+      <div class="chart-container" id="chart-anual-container">
+        <svg class="chart-svg" id="chart-anual"></svg>
+      </div>
+      <div class="semana-grid" style="margin-top:12px">
+        <div class="month-stats">
+          <div class="month-label">Mejor Mes</div>
+          <div class="month-value" id="anual-mejor">$0</div>
+          <div class="month-sub" id="anual-mejor-mes">—</div>
+        </div>
+        <div class="month-stats">
+          <div class="month-label">Promedio</div>
+          <div class="month-value" id="anual-promedio">$0</div>
+        </div>
+      </div>
+      <div class="month-stats" style="margin-top:12px">
+        <div class="month-label">Acumulado 2026</div>
+        <div class="month-value" id="anual-total">$0</div>
+      </div>
+    </div>
+
+    <div style="height:24px"></div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast"></div>
 
@@ -801,18 +1195,27 @@ function actualizarDots() {
 }
 
 function intentarLogin() {
-  const user = USERS[pinActual];
+  const pin = pinActual;
+  const user = USERS[pin];
   if (user) {
-    usuarioActual = { pin: pinActual, ...user };
+    usuarioActual = { pin: pin, ...user };
     pinActual = '';
     actualizarDots();
     document.getElementById('login-error').textContent = '';
     document.getElementById('badge-nombre').textContent = user.name;
+    document.getElementById('badge-dashboard').textContent = user.name;
     const hoy = new Date();
     document.getElementById('fecha-hoy').textContent =
       hoy.toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-    mostrarPantalla('screen-lista');
-    cargarPedidos();
+
+    // Si es Director (9900) o Gerencia (5678), mostrar dashboard; sino, mostrar lista
+    if (pin === '9900' || pin === '5678') {
+      mostrarPantalla('screen-dashboard');
+      cargarDashboard();
+    } else {
+      mostrarPantalla('screen-lista');
+      cargarPedidos();
+    }
   } else {
     pinActual = '';
     actualizarDots();
@@ -1236,6 +1639,529 @@ function obtenerUbicacion() {
       { timeout: 5000 }
     );
   });
+}
+
+// ════════════════════════════════════════════
+//  DASHBOARD FINANCIERO
+// ════════════════════════════════════════════
+
+const RAZONES = {
+  'JMG': { nombre: 'José Manuel Garín',   rfc: 'GACM860923FB3' },
+  'IZZ': { nombre: 'Itzayana Illesca',     rfc: 'IEZI860901AW2' },
+  'CEM': { nombre: 'Abastecedora Cemcoya', rfc: 'ACE230216MR0' }
+};
+
+function hoy() {
+  return new Date().toISOString().split('T')[0];
+}
+function lunesDeEstaSemana() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d.toISOString().split('T')[0];
+}
+function primerDiaDelMes() {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+}
+function primerDiaDelAno() {
+  return new Date().getFullYear() + '-01-01';
+}
+
+function formatearPeso(val) {
+  return '$' + Math.round(val).toLocaleString('es-MX');
+}
+function formatearPorcentaje(val) {
+  return Math.round(val * 100) / 100 + '%';
+}
+
+async function cargarDashboard() {
+  const inicio = Date.now();
+  try {
+    await Promise.all([
+      actualizarLiquidezDia(),
+      actualizarSemanaActual(),
+      actualizarMesActual(),
+      actualizarRazonesSociales(),
+      actualizarPipeline(),
+      actualizarAlertas(),
+      actualizarResumenAnual()
+    ]);
+    const tiempo = new Date().toLocaleTimeString('es-MX');
+    document.getElementById('dashboard-time').textContent = `Última actualización: ${tiempo}`;
+  } catch (err) {
+    console.error('Error cargando dashboard:', err);
+    toast('Error al cargar dashboard: ' + err.message, 'error');
+  }
+}
+
+async function actualizarLiquidezDia() {
+  const hoyStr = hoy();
+  let entradas = 0, salidas = 0, efectivo = 0, transfers = 0;
+
+  try {
+    // Entradas = cortes aprobados de hoy
+    const cortesSnap = await db.collection('cortes')
+      .where('fecha', '==', hoyStr)
+      .where('status', '==', 'aprobado')
+      .get();
+    cortesSnap.forEach(doc => {
+      const data = doc.data();
+      entradas += data.granTotal || 0;
+      efectivo += data.efectivo || 0;
+    });
+
+    // Salidas = salidas aprobadas de hoy
+    const salidasSnap = await db.collection('salidas')
+      .where('fecha', '==', hoyStr)
+      .where('status', '==', 'aprobado')
+      .get();
+    salidasSnap.forEach(doc => {
+      salidas += doc.data().monto || 0;
+    });
+
+    // Transfers pendientes = cotizaciones cerradas hoy con formaPago='transferencia' sin corte confirmado
+    const cotizSnap = await db.collection('cotizaciones')
+      .where('fecha', '==', hoyStr)
+      .where('status', '==', 'cerrado')
+      .get();
+    cotizSnap.forEach(doc => {
+      const data = doc.data();
+      if (data.formaPago === 'transferencia') {
+        transfers += data.total || 0;
+      }
+    });
+
+    const neto = entradas - salidas;
+    document.getElementById('liq-entradas').textContent = formatearPeso(entradas);
+    document.getElementById('liq-salidas').textContent = formatearPeso(salidas);
+    document.getElementById('liq-neto').textContent = formatearPeso(neto);
+    document.getElementById('liq-efectivo').textContent = formatearPeso(efectivo);
+    document.getElementById('liq-transfers').textContent = formatearPeso(transfers);
+  } catch (err) {
+    console.error('Error en liquidez:', err);
+  }
+}
+
+async function actualizarSemanaActual() {
+  const lunesStr = lunesDeEstaSemana();
+  const hoyStr = hoy();
+  let ventasHoy = 0, ventasSemana = 0, gastos = 0, nomina = 0, compras = 0;
+
+  try {
+    // Ventas de la semana
+    const cotizSnap = await db.collection('cotizaciones')
+      .where('status', '==', 'cerrado')
+      .get();
+    cotizSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fecha || '';
+      if (fecha >= lunesStr && fecha <= hoyStr) {
+        ventasSemana += data.total || 0;
+        if (fecha === hoyStr) ventasHoy += data.total || 0;
+      }
+    });
+
+    // Gastos de la semana (excluyendo nomina y compra)
+    const salidasSnap = await db.collection('salidas').get();
+    salidasSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fecha || '';
+      if (fecha >= lunesStr && fecha <= hoyStr) {
+        const tipo = (data.tipo || '').toLowerCase();
+        if (tipo !== 'nomina' && tipo !== 'compra') {
+          gastos += data.monto || 0;
+        }
+      }
+    });
+
+    // Nómina de la semana
+    const nominaSnap = await db.collection('nomina_semanas').get();
+    nominaSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fecha || '';
+      if (fecha >= lunesStr && fecha <= hoyStr) {
+        nomina += data.totalEfectivo || 0;
+      }
+    });
+
+    // Compras de la semana
+    const comprasSnap = await db.collection('compras').get();
+    comprasSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fecha || '';
+      if (fecha >= lunesStr && fecha <= hoyStr) {
+        compras += data.total || 0;
+      }
+    });
+
+    const utilidad = ventasSemana - gastos - nomina - compras;
+    const margen = ventasSemana > 0 ? (utilidad / ventasSemana) * 100 : 0;
+
+    // Comparar con semana anterior (simplificado: mismo rango pero semana pasada)
+    const hace7dias = new Date();
+    hace7dias.setDate(hace7dias.getDate() - 7);
+    const lunesAnterior = new Date(hace7dias);
+    lunesAnterior.setDate(hace7dias.getDate() - hace7dias.getDay() + (hace7dias.getDay() === 0 ? -6 : 1));
+    const lunesAntStr = lunesAnterior.toISOString().split('T')[0];
+    const hace1dia = new Date();
+    hace1dia.setDate(hace1dia.getDate() - 7);
+    const domAnterior = hace1dia.toISOString().split('T')[0];
+
+    let ventasAnterior = 0;
+    const cotizAntSnap = await db.collection('cotizaciones')
+      .where('status', '==', 'cerrado')
+      .get();
+    cotizAntSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fecha || '';
+      if (fecha >= lunesAntStr && fecha <= domAnterior) {
+        ventasAnterior += data.total || 0;
+      }
+    });
+
+    const cambio = ventasAnterior > 0 ? ((ventasSemana - ventasAnterior) / ventasAnterior) * 100 : 0;
+    const badge = document.getElementById('sem-badge');
+    if (cambio >= 0) {
+      badge.className = 'semana-badge positivo';
+      badge.textContent = '↑ +' + Math.round(cambio) + '%';
+    } else {
+      badge.className = 'semana-badge negativo';
+      badge.textContent = '↓ ' + Math.round(cambio) + '%';
+    }
+
+    document.getElementById('sem-ventas').textContent = formatearPeso(ventasSemana);
+    document.getElementById('sem-gastos').textContent = formatearPeso(gastos);
+    document.getElementById('sem-nomina').textContent = formatearPeso(nomina);
+    document.getElementById('sem-compras').textContent = formatearPeso(compras);
+    document.getElementById('sem-utilidad').textContent = formatearPeso(utilidad);
+    document.getElementById('sem-margen').textContent = formatearPorcentaje(margen);
+  } catch (err) {
+    console.error('Error en semana:', err);
+  }
+}
+
+async function actualizarMesActual() {
+  const primerStr = primerDiaDelMes();
+  const hoyStr = hoy();
+  const hoyDate = new Date();
+  const diaDelMes = hoyDate.getDate();
+  const diasDelMes = new Date(hoyDate.getFullYear(), hoyDate.getMonth() + 1, 0).getDate();
+
+  let acumulado = 0;
+  const diasDelMesData = {};
+
+  try {
+    const cotizSnap = await db.collection('cotizaciones')
+      .where('status', '==', 'cerrado')
+      .get();
+    cotizSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fecha || '';
+      if (fecha >= primerStr && fecha <= hoyStr) {
+        const monto = data.total || 0;
+        acumulado += monto;
+        if (!diasDelMesData[fecha]) diasDelMesData[fecha] = 0;
+        diasDelMesData[fecha] += monto;
+      }
+    });
+
+    const meta = 800000; // Meta estimada
+    const porcentajeMeta = (acumulado / meta) * 100;
+    const proyeccion = (acumulado / diaDelMes) * diasDelMes;
+
+    document.getElementById('mes-acumulado').textContent = formatearPeso(acumulado);
+    document.getElementById('mes-meta').textContent = formatearPeso(meta);
+    document.getElementById('mes-porcentaje').textContent = Math.round(porcentajeMeta) + '%';
+    document.getElementById('mes-proyeccion').textContent = formatearPeso(proyeccion);
+
+    // Gráfica de barras por día
+    const svgMes = document.getElementById('chart-mes');
+    const maxValor = Math.max(...Object.values(diasDelMesData), 1);
+    const alturaChart = 140;
+    const anchoTotal = 340;
+    const anchoBar = Math.max(2, Math.floor((anchoTotal - 20) / diasDelMes));
+    const espaciado = Math.max(1, Math.floor((anchoTotal - 20 - anchoBar * diasDelMes) / (diasDelMes + 1)));
+
+    let svgContent = '';
+    for (let dia = 1; dia <= diasDelMes; dia++) {
+      const fechaStr = new Date(hoyDate.getFullYear(), hoyDate.getMonth(), dia).toISOString().split('T')[0];
+      const valor = diasDelMesData[fechaStr] || 0;
+      const altura = valor > 0 ? (valor / maxValor) * alturaChart * 0.8 : 0;
+      const x = 10 + (dia - 1) * (anchoBar + espaciado);
+      const y = alturaChart - altura;
+
+      if (valor > 0) {
+        svgContent += `<rect x="${x}" y="${y}" width="${anchoBar}" height="${altura}" fill="#E8500A" rx="2"/>`;
+        if (dia % 5 === 0 || dia === diaDelMes) {
+          svgContent += `<text x="${x + anchoBar / 2}" y="${alturaChart + 10}" class="bar-label">${dia}</text>`;
+        }
+      }
+    }
+    svgMes.innerHTML = svgContent;
+  } catch (err) {
+    console.error('Error en mes:', err);
+  }
+}
+
+async function actualizarRazonesSociales() {
+  const primerStr = primerDiaDelMes();
+  const hoyStr = hoy();
+  const razonesData = {};
+
+  try {
+    const cotizSnap = await db.collection('cotizaciones')
+      .where('status', '==', 'cerrado')
+      .get();
+    cotizSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fecha || '';
+      if (fecha >= primerStr && fecha <= hoyStr) {
+        const razon = data.razonSocial || 'JMG';
+        if (!razonesData[razon]) razonesData[razon] = 0;
+        razonesData[razon] += data.total || 0;
+      }
+    });
+
+    const total = Object.values(razonesData).reduce((a, b) => a + b, 0);
+    const html = Object.entries(razonesData)
+      .sort((a, b) => b[1] - a[1])
+      .map(([razon, monto]) => {
+        const porcentaje = total > 0 ? (monto / total) * 100 : 0;
+        const nombre = RAZONES[razon]?.nombre || razon;
+        return `
+          <div class="razon-item">
+            <div class="razon-name">${nombre}</div>
+            <div class="razon-valor">
+              <div class="razon-monto">${formatearPeso(monto)}</div>
+              <div class="razon-porcentaje">${Math.round(porcentaje * 10) / 10}%</div>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    document.getElementById('razon-items').innerHTML = html || '<div style="color:#888;font-size:12px">Sin datos</div>';
+  } catch (err) {
+    console.error('Error en razones:', err);
+  }
+}
+
+async function actualizarPipeline() {
+  let alta = 0, media = 0, baja = 0;
+  let altaMonto = 0, mediaMonto = 0, bajaMonto = 0;
+  let cerradas = 0, perdidas = 0;
+  let tiempos = [];
+
+  try {
+    const cotizSnap = await db.collection('cotizaciones').get();
+    const primerStr = primerDiaDelMes();
+    const hoyStr = hoy();
+
+    cotizSnap.forEach(doc => {
+      const data = doc.data();
+      const status = (data.status || '').toLowerCase();
+      const prob = (data.probabilidad || 'media').toLowerCase();
+
+      if (status === 'pendiente' || status === 'contactado') {
+        if (prob === 'alta') { alta++; altaMonto += data.monto || 0; }
+        else if (prob === 'media') { media++; mediaMonto += data.monto || 0; }
+        else { baja++; bajaMonto += data.monto || 0; }
+      } else if (status === 'cerrado') {
+        cerradas++;
+        const fecha = data.fecha || '';
+        if (fecha >= primerStr && fecha <= hoyStr && data.timestamp) {
+          const fechaCreo = data.timestampCreacion || data.timestamp;
+          const dias = (data.timestamp - fechaCreo) / (1000 * 60 * 60 * 24);
+          tiempos.push(dias);
+        }
+      } else if (status === 'perdido') {
+        perdidas++;
+      }
+    });
+
+    const tasaCierre = (cerradas + perdidas) > 0 ? (cerradas / (cerradas + perdidas)) * 100 : 0;
+    const tiempoPromedio = tiempos.length > 0 ? tiempos.reduce((a, b) => a + b) / tiempos.length : 0;
+
+    const html = `
+      <div class="pipeline-item alta">
+        <div class="pipeline-header">
+          <div class="pipeline-prob">🟢 Alta probabilidad</div>
+          <div class="pipeline-count">${alta} cots</div>
+        </div>
+        <div class="pipeline-monto">${formatearPeso(altaMonto)}</div>
+      </div>
+      <div class="pipeline-item media">
+        <div class="pipeline-header">
+          <div class="pipeline-prob">🟡 Media probabilidad</div>
+          <div class="pipeline-count">${media} cots</div>
+        </div>
+        <div class="pipeline-monto">${formatearPeso(mediaMonto)}</div>
+      </div>
+      <div class="pipeline-item baja">
+        <div class="pipeline-header">
+          <div class="pipeline-prob">🔴 Baja probabilidad</div>
+          <div class="pipeline-count">${baja} cots</div>
+        </div>
+        <div class="pipeline-monto">${formatearPeso(bajaMonto)}</div>
+      </div>
+    `;
+    document.getElementById('pipeline-items').innerHTML = html;
+    document.getElementById('pip-tasa').textContent = Math.round(tasaCierre) + '%';
+    document.getElementById('pip-tiempo').textContent = (Math.round(tiempoPromedio * 10) / 10) + ' días';
+  } catch (err) {
+    console.error('Error en pipeline:', err);
+  }
+}
+
+async function actualizarAlertas() {
+  const alertas = [];
+  const hoyStr = hoy();
+  const hace2Dias = new Date();
+  hace2Dias.setDate(hace2Dias.getDate() - 2);
+  const hace2DiasStr = hace2Dias.toISOString().split('T')[0];
+
+  try {
+    // 1. Cotizaciones sin seguimiento >48hrs
+    const cotizSnap = await db.collection('cotizaciones').get();
+    cotizSnap.forEach(doc => {
+      const data = doc.data();
+      const status = (data.status || '').toLowerCase();
+      if (status === 'pendiente') {
+        const fecha = data.fecha || '';
+        if (fecha < hace2DiasStr) {
+          alertas.push(`• ${doc.id}: Cotización sin seguimiento desde ${fecha}`);
+        }
+      }
+    });
+
+    // 2. Compras a crédito próximas a vencer
+    const comprasSnap = await db.collection('compras').get();
+    comprasSnap.forEach(doc => {
+      const data = doc.data();
+      if (data.formaPago === 'credito_proveedor' && data.fechaVencimiento) {
+        const venc = new Date(data.fechaVencimiento);
+        const hoy = new Date();
+        const dias = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24));
+        if (dias > 0 && dias <= 7) {
+          alertas.push(`• Compra ${doc.id}: Vence en ${dias} días por ${formatearPeso(data.total || 0)}`);
+        }
+      }
+    });
+
+    // 3. Transfers pendientes
+    const transfersPend = await db.collection('cotizaciones')
+      .where('status', '==', 'cerrado')
+      .get();
+    let countTransfers = 0;
+    transfersPend.forEach(doc => {
+      const data = doc.data();
+      if (data.formaPago === 'transferencia' && !data.corteConfirmado) {
+        countTransfers++;
+      }
+    });
+    if (countTransfers > 0) {
+      alertas.push(`• ${countTransfers} transferencias pendientes de confirmar`);
+    }
+
+    // 4. Fondeos pendientes
+    const fondeoSnap = await db.collection('fondeos').get();
+    let countFondeos = 0;
+    fondeoSnap.forEach(doc => {
+      if (doc.data().status === 'pendiente') countFondeos++;
+    });
+    if (countFondeos > 0) {
+      alertas.push(`• ${countFondeos} fondeo(s) pendiente(s) de aprobación`);
+    }
+
+    // 5. Notas de crédito pendientes
+    const ncSnap = await db.collection('notas_credito').get();
+    let countNC = 0;
+    ncSnap.forEach(doc => {
+      if (doc.data().status === 'pendiente') countNC++;
+    });
+    if (countNC > 0) {
+      alertas.push(`• ${countNC} nota(s) de crédito pendiente(s)`);
+    }
+
+    const html = alertas.length > 0
+      ? alertas.map(a => `<div class="alerta-item">${a}</div>`).join('')
+      : '<div style="color:#888;font-size:12px">✓ Sin alertas</div>';
+    document.getElementById('alertas-items').innerHTML = html;
+  } catch (err) {
+    console.error('Error en alertas:', err);
+  }
+}
+
+async function actualizarResumenAnual() {
+  const primerStr = primerDiaDelAno();
+  const hoyStr = hoy();
+  const mesesData = {};
+  for (let m = 0; m < 12; m++) {
+    const mes = String(m + 1).padStart(2, '0');
+    mesesData[mes] = 0;
+  }
+
+  let mejorMes = 0, mejorMesNom = '—', acumulado = 0;
+
+  try {
+    const cotizSnap = await db.collection('cotizaciones')
+      .where('status', '==', 'cerrado')
+      .get();
+    cotizSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fecha || '';
+      if (fecha >= primerStr && fecha <= hoyStr) {
+        const mes = fecha.substring(5, 7);
+        mesesData[mes] += data.total || 0;
+      }
+    });
+
+    acumulado = Object.values(mesesData).reduce((a, b) => a + b, 0);
+    mejorMes = Math.max(...Object.values(mesesData));
+    for (const [mes, monto] of Object.entries(mesesData)) {
+      if (monto === mejorMes && monto > 0) {
+        const nombres = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        mejorMesNom = nombres[parseInt(mes)];
+        break;
+      }
+    }
+
+    const promedio = acumulado > 0 ? acumulado / 12 : 0;
+
+    // Gráfica de barras por mes
+    const svgAnual = document.getElementById('chart-anual');
+    const maxValor = Math.max(...Object.values(mesesData), 1);
+    const alturaChart = 140;
+    const anchoTotal = 340;
+    const anchoBar = Math.floor((anchoTotal - 20) / 12);
+    const espaciado = Math.max(1, Math.floor((anchoTotal - 20 - anchoBar * 12) / 13));
+
+    let svgContent = '';
+    const mesesLabels = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+    for (let m = 0; m < 12; m++) {
+      const mesKey = String(m + 1).padStart(2, '0');
+      const valor = mesesData[mesKey] || 0;
+      const altura = valor > 0 ? (valor / maxValor) * alturaChart * 0.8 : 0;
+      const x = 10 + m * (anchoBar + espaciado);
+      const y = alturaChart - altura;
+
+      if (valor > 0) {
+        svgContent += `<rect x="${x}" y="${y}" width="${anchoBar}" height="${altura}" fill="#E8500A" rx="2"/>`;
+      }
+      svgContent += `<text x="${x + anchoBar / 2}" y="${alturaChart + 10}" class="bar-label" text-anchor="middle">${mesesLabels[m]}</text>`;
+    }
+    svgAnual.innerHTML = svgContent;
+
+    document.getElementById('anual-mejor').textContent = formatearPeso(mejorMes);
+    document.getElementById('anual-mejor-mes').textContent = mejorMesNom;
+    document.getElementById('anual-promedio').textContent = formatearPeso(promedio);
+    document.getElementById('anual-total').textContent = formatearPeso(acumulado);
+  } catch (err) {
+    console.error('Error en resumen anual:', err);
+  }
 }
 
 // ════════════════════════════════════════════
