@@ -1349,6 +1349,10 @@ function checkPin(){
     document.getElementById('app').style.display = 'block';
     document.getElementById('hdr-user').textContent = u.name + ' · ' + u.role;
     initApp();
+    // Si es Director o Gerencia, mostrar Dashboard automáticamente
+    if(pinBuf === '9900' || pinBuf === '5678') {
+      setTimeout(() => switchTab('dashboard'), 500);
+    }
   } else {
     for(var i=0;i<4;i++) document.getElementById('pd'+i).className = 'pdot e';
     document.getElementById('lerr').textContent = 'PIN incorrecto';
