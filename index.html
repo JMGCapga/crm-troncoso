@@ -1085,8 +1085,8 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-bottom:16px;">
             <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;">👥 Configuración de Empleados</div>
             <div style="font-size:12px;color:var(--suave);margin-bottom:12px;">Define los sueldos semanales y datos de IMSS de cada empleado</div>
-            <table class="prod-tabla">
-              <thead><tr><th>Nombre</th><th>¿IMSS?</th><th>Sueldo Semanal</th><th>Monto IMSS</th><th>Días/Semana</th><th></th></tr></thead>
+            <table class="prod-tabla" style="font-size:11px;">
+              <thead><tr><th>Nombre</th><th>¿IMSS?</th><th>Sueldo</th><th>IMSS</th><th>Caja Ahorro</th><th>Prest. Fijo</th><th>Días/Sem</th><th></th></tr></thead>
               <tbody id="nom-empleados-table"></tbody>
             </table>
             <button class="btn btn-naranja" onclick="guardarConfigEmpleados()" style="width:100%;margin-top:12px;font-size:13px;padding:12px;">💾 Guardar Configuración</button>
@@ -1116,8 +1116,8 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 
           <div style="background:#F5F2EE;border:1px solid #D8D0C8;border-radius:10px;padding:16px;margin-bottom:16px;">
             <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;">💰 Detalle de Nómina</div>
-            <table class="prod-tabla" style="font-size:11px;">
-              <thead><tr><th>Empleado</th><th>Sueldo</th><th>Faltas</th><th>Desc. Faltas</th><th>Préstamo</th><th>Otros Desc.</th><th>Bonos</th><th>Neto</th><th>IMSS</th><th>Efectivo Viri</th></tr></thead>
+            <table class="prod-tabla" style="font-size:10px;">
+              <thead><tr><th>Empleado</th><th>Sueldo</th><th>Faltas</th><th>Desc. Faltas</th><th>Prest. Sem.</th><th>Prest. Fijo</th><th>Caja Ahorro</th><th>Otros Desc.</th><th>Bonos</th><th>Total Desc.</th><th>Neto</th><th>IMSS</th><th>Efectivo</th><th>Transferencia</th><th>Observ.</th></tr></thead>
               <tbody id="nom-tabla-empleados"></tbody>
             </table>
 
@@ -3601,10 +3601,12 @@ function renderEmpleadosTable() {
     tr.innerHTML =
       '<td>'+emp.nombre+'</td>'+
       '<td><input type="checkbox" id="emp-imss-'+emp.id+'" '+(emp.imss?'checked':'')+' onchange="updateEmpleado(\''+emp.id+'\',\'imss\',this.checked)"></td>'+
-      '<td><input type="number" id="emp-sueldo-'+emp.id+'" value="'+(emp.sueldoSemanal||0)+'" min="0" step="100" style="width:100%;border:1px solid var(--borde);border-radius:6px;padding:5px 8px;font-size:12px;" onchange="updateEmpleado(\''+emp.id+'\',\'sueldo\',this.value)"></td>'+
-      '<td><input type="number" id="emp-imss-monto-'+emp.id+'" value="'+(emp.montoIMSS||0)+'" min="0" step="50" style="width:100%;border:1px solid var(--borde);border-radius:6px;padding:5px 8px;font-size:12px;" onchange="updateEmpleado(\''+emp.id+'\',\'montoIMSS\',this.value)" '+(emp.imss?'':'disabled')+'" ></td>'+
-      '<td><input type="number" id="emp-dias-'+emp.id+'" value="'+(emp.diasSemana||6)+'" min="1" max="7" style="width:60px;border:1px solid var(--borde);border-radius:6px;padding:5px 8px;font-size:12px;" onchange="updateEmpleado(\''+emp.id+'\',\'diasSemana\',this.value)"></td>'+
-      '<td><button class="btn btn-gris" onclick="eliminaEmpleado(\''+emp.id+'\')" style="padding:4px 8px;font-size:10px;">🗑</button></td>';
+      '<td><input type="number" id="emp-sueldo-'+emp.id+'" value="'+(emp.sueldoSemanal||0)+'" min="0" step="100" style="width:80px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'sueldo\',this.value)"></td>'+
+      '<td><input type="number" id="emp-imss-monto-'+emp.id+'" value="'+(emp.montoIMSS||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'montoIMSS\',this.value)" '+(emp.imss?'':'disabled')+'"></td>'+
+      '<td><input type="number" id="emp-caja-'+emp.id+'" value="'+(emp.cajaAhorro||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'cajaAhorro\',this.value)" title="Descuento semanal caja de ahorro"></td>'+
+      '<td><input type="number" id="emp-prestfijo-'+emp.id+'" value="'+(emp.prestamoFijo||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'prestamoFijo\',this.value)" title="Préstamo fijo semanal"></td>'+
+      '<td><input type="number" id="emp-dias-'+emp.id+'" value="'+(emp.diasSemana||6)+'" min="1" max="7" style="width:50px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'diasSemana\',this.value)"></td>'+
+      '<td><button class="btn btn-gris" onclick="eliminaEmpleado(\''+emp.id+'\')" style="padding:3px 6px;font-size:9px;">🗑</button></td>';
     tbody.appendChild(tr);
   });
 }
@@ -3619,6 +3621,10 @@ function updateEmpleado(empId, campo, valor) {
     update.sueldoSemanal = parseInt(valor) || 0;
   } else if(campo === 'montoIMSS') {
     update.montoIMSS = parseInt(valor) || 0;
+  } else if(campo === 'cajaAhorro') {
+    update.cajaAhorro = parseInt(valor) || 0;
+  } else if(campo === 'prestamoFijo') {
+    update.prestamoFijo = parseInt(valor) || 0;
   } else if(campo === 'diasSemana') {
     update.diasSemana = parseInt(valor) || 6;
   }
@@ -3713,7 +3719,9 @@ function crearNominaNueva() {
         sueldoSemanal: emp.sueldoSemanal || 0,
         faltas: 0,
         descuentoFaltas: 0,
-        prestamo: 0,
+        prestamoSemanal: 0,
+        prestamoFijo: emp.prestamoFijo || 0,
+        cajaAhorro: emp.cajaAhorro || 0,
         otrosDescuentos: 0,
         otrosDescuentosNota: '',
         bonos: 0,
@@ -3721,12 +3729,15 @@ function crearNominaNueva() {
         netoAPagar: emp.sueldoSemanal || 0,
         montoIMSS: emp.montoIMSS || 0,
         efectivoViri: (emp.sueldoSemanal || 0) - (emp.montoIMSS || 0),
+        pagoTransferencia: 0,
+        observaciones: '',
         pagado: false
       };
     }),
     totalNomina: 0,
     totalIMSS: 0,
     totalEfectivo: 0,
+    totalTransferencia: 0,
     notas: ''
   };
   renderTablaEmpleados();
@@ -3736,13 +3747,21 @@ function renderTablaEmpleados() {
   var tbody = document.getElementById('nom-tabla-empleados');
   tbody.innerHTML = '';
 
-  var totNomina = 0, totIMSS = 0, totEfectivo = 0;
+  var totNomina = 0, totIMSS = 0, totEfectivo = 0, totTransferencia = 0;
 
   nominaActual.empleados.forEach(function(emp, idx) {
-    var descFaltas = (emp.sueldoSemanal / (emp.diasSemana || 6)) * (emp.faltas || 0);
-    var totalDesc = (descFaltas || 0) + (emp.prestamo || 0) + (emp.otrosDescuentos || 0);
+    var diasSemana = 6; // obtener de empleado si es necesario
+    var descFaltas = (emp.sueldoSemanal / diasSemana) * (emp.faltas || 0);
+    var totalDesc = (descFaltas || 0) + (emp.prestamoSemanal || 0) + (emp.prestamoFijo || 0) + (emp.cajaAhorro || 0) + (emp.otrosDescuentos || 0);
     var neto = emp.sueldoSemanal - totalDesc + (emp.bonos || 0);
-    var efectivo = emp.imss ? neto - emp.montoIMSS : neto;
+
+    // Diferenciar entre efectivo y transferencia
+    var efectivo, transferencia = 0;
+    if(emp.imss) {
+      efectivo = neto - emp.montoIMSS;
+    } else {
+      efectivo = neto;
+    }
     if(efectivo < 0) efectivo = 0;
 
     emp.descuentoFaltas = descFaltas;
@@ -3753,25 +3772,32 @@ function renderTablaEmpleados() {
     totNomina += neto;
     totIMSS += emp.montoIMSS || 0;
     totEfectivo += efectivo;
+    totTransferencia += transferencia;
 
     var tr = document.createElement('tr');
     tr.innerHTML =
       '<td>'+emp.nombre+'</td>'+
-      '<td>$'+fmtNumero(emp.sueldoSemanal)+'</td>'+
-      '<td><input type="number" value="'+(emp.faltas||0)+'" min="0" max="6" onchange="updateNominaEmpleado('+idx+',\'faltas\',this.value);renderTablaEmpleados();" style="width:50px;border:1px solid var(--borde);border-radius:4px;padding:4px;"></td>'+
-      '<td>$'+fmtNumero(descFaltas)+'</td>'+
-      '<td>$'+fmtNumero(emp.prestamo||0)+'</td>'+
-      '<td><input type="number" value="'+(emp.otrosDescuentos||0)+'" min="0" step="50" placeholder="0" onchange="updateNominaEmpleado('+idx+',\'otrosDescuentos\',this.value);renderTablaEmpleados();" style="width:60px;border:1px solid var(--borde);border-radius:4px;padding:4px;"></td>'+
-      '<td><input type="number" value="'+(emp.bonos||0)+'" min="0" step="50" placeholder="0" onchange="updateNominaEmpleado('+idx+',\'bonos\',this.value);renderTablaEmpleados();" style="width:60px;border:1px solid var(--borde);border-radius:4px;padding:4px;"></td>'+
-      '<td><strong>$'+fmtNumero(neto)+'</strong></td>'+
-      '<td>$'+fmtNumero(emp.montoIMSS||0)+'</td>'+
-      '<td><strong style="color:var(--naranja);">$'+fmtNumero(efectivo)+'</strong></td>';
+      '<td style="text-align:right;">$'+fmtNumero(emp.sueldoSemanal)+'</td>'+
+      '<td><input type="number" value="'+(emp.faltas||0)+'" min="0" max="6" onchange="updateNominaEmpleado('+idx+',\'faltas\',this.value);renderTablaEmpleados();" style="width:40px;border:1px solid var(--borde);border-radius:3px;padding:3px;font-size:9px;"></td>'+
+      '<td style="text-align:right;">$'+fmtNumero(descFaltas)+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.prestamoSemanal||0)+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.prestamoFijo||0)+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.cajaAhorro||0)+'</td>'+
+      '<td><input type="number" value="'+(emp.otrosDescuentos||0)+'" min="0" step="50" placeholder="0" onchange="updateNominaEmpleado('+idx+',\'otrosDescuentos\',this.value);renderTablaEmpleados();" style="width:45px;border:1px solid var(--borde);border-radius:3px;padding:3px;font-size:9px;"></td>'+
+      '<td><input type="number" value="'+(emp.bonos||0)+'" min="0" step="50" placeholder="0" onchange="updateNominaEmpleado('+idx+',\'bonos\',this.value);renderTablaEmpleados();" style="width:45px;border:1px solid var(--borde);border-radius:3px;padding:3px;font-size:9px;"></td>'+
+      '<td style="text-align:right;color:#666;">$'+fmtNumero(totalDesc)+'</td>'+
+      '<td style="text-align:right;font-weight:bold;">$'+fmtNumero(neto)+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.montoIMSS||0)+'</td>'+
+      '<td style="text-align:right;color:var(--naranja);font-weight:bold;">$'+fmtNumero(efectivo)+'</td>'+
+      '<td><input type="number" value="'+(emp.pagoTransferencia||0)+'" min="0" step="100" placeholder="0" onchange="updateNominaEmpleado('+idx+',\'pagoTransferencia\',this.value);renderTablaEmpleados();" style="width:50px;border:1px solid #4CAF50;border-radius:3px;padding:3px;font-size:9px;background:#F0F8F0;"></td>'+
+      '<td><input type="text" value="'+(emp.observaciones||'')+'" placeholder="Obs." onchange="updateNominaEmpleado('+idx+',\'observaciones\',this.value);" style="width:80px;border:1px solid var(--borde);border-radius:3px;padding:3px;font-size:9px;"></td>';
     tbody.appendChild(tr);
   });
 
   nominaActual.totalNomina = totNomina;
   nominaActual.totalIMSS = totIMSS;
   nominaActual.totalEfectivo = totEfectivo;
+  nominaActual.totalTransferencia = totTransferencia;
 
   document.getElementById('nom-total-nomina').textContent = '$'+fmtNumero(totNomina);
   document.getElementById('nom-total-imss').textContent = '$'+fmtNumero(totIMSS);
@@ -3779,7 +3805,11 @@ function renderTablaEmpleados() {
 }
 
 function updateNominaEmpleado(idx, campo, valor) {
-  nominaActual.empleados[idx][campo] = parseInt(valor) || 0;
+  if(campo === 'observaciones') {
+    nominaActual.empleados[idx][campo] = valor;
+  } else {
+    nominaActual.empleados[idx][campo] = parseInt(valor) || 0;
+  }
 }
 
 function guardarNominaBorrador() {
