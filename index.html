@@ -3542,12 +3542,12 @@ var prestamosActivos = [];
 var nominaProductos = [];
 
 const EMPLEADOS_SEED = [
-  { nombre: 'Ivette',            imss: false, diasSemana: 6 },
-  { nombre: 'Erika',             imss: true,  diasSemana: 6 },
-  { nombre: 'Carlos J. Escobar', imss: false, diasSemana: 6 },
-  { nombre: 'Francisco',         imss: true,  diasSemana: 6 },
-  { nombre: 'Agustín Lara',      imss: false, diasSemana: 6 },
-  { nombre: 'Viridiana',         imss: true,  diasSemana: 6 },
+  { nombre: 'Ivette',            imss: false, diasSemana: 7 },
+  { nombre: 'Erika',             imss: true,  diasSemana: 7 },
+  { nombre: 'Carlos J. Escobar', imss: false, diasSemana: 7 },
+  { nombre: 'Francisco',         imss: true,  diasSemana: 7 },
+  { nombre: 'Agustín Lara',      imss: false, diasSemana: 7 },
+  { nombre: 'Viridiana',         imss: true,  diasSemana: 7 },
 ];
 
 function iniciarNomina() {
@@ -3605,7 +3605,7 @@ function renderEmpleadosTable() {
       '<td><input type="number" id="emp-imss-monto-'+emp.id+'" value="'+(emp.montoIMSS||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'montoIMSS\',this.value)" '+(emp.imss?'':'disabled')+'"></td>'+
       '<td><input type="number" id="emp-caja-'+emp.id+'" value="'+(emp.cajaAhorro||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'cajaAhorro\',this.value)" title="Descuento semanal caja de ahorro"></td>'+
       '<td><input type="number" id="emp-prestfijo-'+emp.id+'" value="'+(emp.prestamoFijo||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'prestamoFijo\',this.value)" title="Préstamo fijo semanal"></td>'+
-      '<td><input type="number" id="emp-dias-'+emp.id+'" value="'+(emp.diasSemana||6)+'" min="1" max="7" style="width:50px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'diasSemana\',this.value)"></td>'+
+      '<td><input type="number" id="emp-dias-'+emp.id+'" value="'+(emp.diasSemana||7)+'" min="1" max="7" style="width:50px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'diasSemana\',this.value)"></td>'+
       '<td><button class="btn btn-gris" onclick="eliminaEmpleado(\''+emp.id+'\')" style="padding:3px 6px;font-size:9px;">🗑</button></td>';
     tbody.appendChild(tr);
   });
@@ -3626,7 +3626,7 @@ function updateEmpleado(empId, campo, valor) {
   } else if(campo === 'prestamoFijo') {
     update.prestamoFijo = parseInt(valor) || 0;
   } else if(campo === 'diasSemana') {
-    update.diasSemana = parseInt(valor) || 6;
+    update.diasSemana = parseInt(valor) || 7;
   }
   db.collection('empleados').doc(empId).update(update).catch(function(e) { console.log(e); });
 }
@@ -3750,7 +3750,9 @@ function renderTablaEmpleados() {
   var totNomina = 0, totIMSS = 0, totEfectivo = 0, totTransferencia = 0;
 
   nominaActual.empleados.forEach(function(emp, idx) {
-    var diasSemana = 6; // obtener de empleado si es necesario
+    // Obtener días de semana del empleado original
+    var empleadoOriginal = nominaEmpleados.find(e => e.id === emp.empleadoId);
+    var diasSemana = empleadoOriginal ? (empleadoOriginal.diasSemana || 7) : 7;
     var descFaltas = (emp.sueldoSemanal / diasSemana) * (emp.faltas || 0);
     var totalDesc = (descFaltas || 0) + (emp.prestamoSemanal || 0) + (emp.prestamoFijo || 0) + (emp.cajaAhorro || 0) + (emp.otrosDescuentos || 0);
     var neto = emp.sueldoSemanal - totalDesc + (emp.bonos || 0);
