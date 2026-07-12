@@ -4299,6 +4299,17 @@ function formatoFecha(d) {
   return d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
 }
 
+function normalizarFecha(fechaStr) {
+  // Convierte cualquier formato de fecha (12/7/2026 o 12/07/2026) a 12/7/2026 para comparar
+  if(!fechaStr) return '';
+  const partes = fechaStr.split('/');
+  if(partes.length !== 3) return fechaStr;
+  const dia = parseInt(partes[0]);
+  const mes = parseInt(partes[1]);
+  const anio = partes[2];
+  return dia + '/' + mes + '/' + anio;
+}
+
 function hoy() {
   return formatoFecha(new Date());
 }
@@ -4328,15 +4339,24 @@ async function cargarDashboard() {
 
     // LIQUIDEZ DEL DÍA
     let entradas = 0, salidas = 0, efectivo = 0;
-    const cortesSnap = await db.collection('cortes').where('fecha', '==', hoyStr).where('status', '==', 'aprobado').get();
+    const cortesSnap = await db.collection('cortes').get();
     cortesSnap.forEach(doc => {
       const data = doc.data();
-      entradas += data.granTotal || 0;
-      efectivo += data.efectivo || 0;
+      const status = (data.status || '').toLowerCase();
+      const fecha = normalizarFecha(data.fecha || '');
+      if(status === 'aprobado' && fecha === hoyStr) {
+        entradas += data.granTotal || 0;
+        efectivo += data.efectivo || 0;
+      }
     });
-    const salidasSnap = await db.collection('salidas').where('fecha', '==', hoyStr).where('status', '==', 'aprobado').get();
+    const salidasSnap = await db.collection('salidas').get();
     salidasSnap.forEach(doc => {
-      salidas += doc.data().monto || 0;
+      const data = doc.data();
+      const status = (data.status || '').toLowerCase();
+      const fecha = normalizarFecha(data.fecha || '');
+      if(status === 'aprobado' && fecha === hoyStr) {
+        salidas += data.monto || 0;
+      }
     });
 
     document.getElementById('dash-entradas').textContent = '$' + fmtNumero(entradas);
@@ -4350,7 +4370,7 @@ async function cargarDashboard() {
     cotizSnap.forEach(doc => {
       const data = doc.data();
       const status = (data.status || '').toLowerCase();
-      const fecha = data.fecha || '';
+      const fecha = normalizarFecha(data.fecha || '');
       if(status === 'cerrado' && fecha >= lunesStr && fecha <= hoyStr) {
         ventasSem += data.total || 0;
       }
@@ -4358,7 +4378,7 @@ async function cargarDashboard() {
     const nominaSnap = await db.collection('nomina_semanas').get();
     nominaSnap.forEach(doc => {
       const data = doc.data();
-      const fecha = data.fecha || '';
+      const fecha = normalizarFecha(data.fecha || '');
       if(fecha >= lunesStr && fecha <= hoyStr) {
         nominaSem += data.totalEfectivo || 0;
       }
@@ -4368,7 +4388,7 @@ async function cargarDashboard() {
     const gastoSnap = await db.collection('salidas').get();
     gastoSnap.forEach(doc => {
       const data = doc.data();
-      const fecha = data.fecha || '';
+      const fecha = normalizarFecha(data.fecha || '');
       if(fecha >= lunesStr && fecha <= hoyStr) {
         const tipo = (data.tipo || '').toLowerCase();
         if(tipo !== 'nomina' && tipo !== 'compra') {
@@ -4389,7 +4409,7 @@ async function cargarDashboard() {
     let acumulado = 0;
     cotizSnap.forEach(doc => {
       const data = doc.data();
-      const fecha = data.fecha || '';
+      const fecha = normalizarFecha(data.fecha || '');
       if(fecha >= primerStr && fecha <= hoyStr) {
         acumulado += data.total || 0;
       }
