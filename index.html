@@ -1419,6 +1419,41 @@ function checkPin(){
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('hdr-user').textContent = u.name + ' · ' + u.role;
+    // Filtrar tabs según rol
+    var role = u.role;
+    var tabsOperador = ['tab-pedidos-btn'];
+    var tabsVentas = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
+      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-nc-btn','tab-pedidos-btn'];
+    var tabsCompras = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
+      'tab-nota-btn','tab-ticket-btn','tab-salidas-btn','tab-nc-btn',
+      'tab-compras-btn','tab-pedidos-btn'];
+    var tabsGerencia = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
+      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
+      'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-nomina-btn',
+      'tab-pedidos-btn','tab-dashboard-btn'];
+    var tabsDirector = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
+      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
+      'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-nomina-btn',
+      'tab-pedidos-btn','tab-dashboard-btn'];
+
+    var tabsVisibles = role === 'Operador' ? tabsOperador :
+                       role === 'Ventas'   ? tabsVentas :
+                       role === 'Compras'  ? tabsCompras :
+                       role === 'Gerencia' ? tabsGerencia : tabsDirector;
+
+    // Ocultar todos primero
+    document.querySelectorAll('.tabs .tab').forEach(function(btn){
+      btn.style.display = 'none';
+    });
+    // Mostrar solo los permitidos
+    tabsVisibles.forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.style.display = '';
+    });
+    // Si es operador, ir directo a pedidos
+    if(role === 'Operador') {
+      switchTab('pedidos', document.getElementById('tab-pedidos-btn'));
+    }
     initApp();
     // Si es Director o Gerencia, mostrar Dashboard automáticamente
     if(pinBuf === '9900' || pinBuf === '5678') {
