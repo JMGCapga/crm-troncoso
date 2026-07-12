@@ -4639,20 +4639,29 @@ function renderPedidosOperador() {
 function pedidoCardOperador(p) {
   var estado = normStatusPedido(p);
   var st = STATUS_PEDIDO[estado] || STATUS_PEDIDO.confirmado;
-  var accion = estado === 'confirmado'
-    ? '<button class="btn btn-naranja" onclick="marcarEnRuta(\''+p._docId+'\')" style="font-size:11px;padding:8px 14px;">📍 En ruta</button>'
-    : '<button class="btn btn-naranja" onclick="marcarEntregado(\''+p._docId+'\')" style="font-size:11px;padding:8px 14px;">✅ Entregado</button>';
+  var did = p._docId;
+  var btnRegresar = estado !== 'confirmado'
+    ? '<button onclick="cambiarStatusPedido(\''+did+'\',\'confirmado\')" style="width:100%;padding:16px;margin-bottom:8px;border:1.5px solid #D8D0C8;border-radius:12px;background:#fff;color:#1A1A1A;font-family:Bebas Neue,sans-serif;font-size:16px;letter-spacing:1px;cursor:pointer;">&#8617; REGRESAR</button>'
+    : '';
+  var btnEnRuta = estado !== 'en-ruta'
+    ? '<button onclick="cambiarStatusPedido(\''+did+'\',\'en-ruta\')" style="flex:1;padding:18px 8px;border:none;border-radius:12px;background:#3B82F6;color:#fff;font-family:Bebas Neue,sans-serif;font-size:18px;letter-spacing:1px;cursor:pointer;">&#128663; EN RUTA</button>'
+    : '<button disabled style="flex:1;padding:18px 8px;border:3px solid #3B82F6;border-radius:12px;background:#DBEAFE;color:#3B82F6;font-family:Bebas Neue,sans-serif;font-size:18px;letter-spacing:1px;">&#128663; EN RUTA &check;</button>';
+  var btnEntregado = estado !== 'entregado'
+    ? '<button onclick="marcarEntregado(\''+did+'\')" style="flex:1;padding:18px 8px;border:none;border-radius:12px;background:#22C55E;color:#fff;font-family:Bebas Neue,sans-serif;font-size:18px;letter-spacing:1px;cursor:pointer;">&#128230; ENTREGADO</button>'
+    : '<button disabled style="flex:1;padding:18px 8px;border:3px solid #22C55E;border-radius:12px;background:#DCFCE7;color:#22C55E;font-family:Bebas Neue,sans-serif;font-size:18px;letter-spacing:1px;">&#128230; ENTREGADO &check;</button>';
   return `
-    <div class="cot-list-item">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+    <div style="background:#fff;border-radius:14px;padding:18px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
         <div>
-          <div class="cot-cliente">${p.cliente||p.c||''}</div>
-          <div class="cot-meta">${p.direccion||''}</div>
-          <div class="cot-meta">${p.p||''}</div>
-          <div style="margin-top:4px;"><span style="background:#${st.bg};color:#${st.color};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700;">${st.label}</span></div>
+          <div style="font-family:Bebas Neue,sans-serif;font-size:20px;letter-spacing:1px;color:#1A1A1A;">${p.id||''}</div>
+          <div style="font-size:14px;font-weight:700;color:#1A1A1A;margin-top:2px;">${p.cliente||p.c||''}</div>
+          <div style="font-size:12px;color:#6B6560;margin-top:4px;">&#128205; ${p.direccion||'Sin direcci\u00f3n'}</div>
+          <div style="font-size:11px;color:#999;margin-top:2px;">&#128230; ${p.p||''}</div>
         </div>
+        <span style="background:#${st.bg};color:#${st.color};border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;white-space:nowrap;">${st.label}</span>
       </div>
-      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">${accion}</div>
+      ${btnRegresar}
+      <div style="display:flex;gap:8px;">${btnEnRuta}${btnEntregado}</div>
     </div>
   `;
 }
