@@ -669,7 +669,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             </div>
             <div class="field" style="grid-column:1/-1">
               <label>Forma de pago solicitada</label>
-              <select id="fnd-pago">
+              <select id="nc-forma-pago-liquidacion">
                 <option value="efectivo">💵 Efectivo</option>
                 <option value="transferencia">🏦 Transferencia</option>
                 <option value="tarjeta">💳 Tarjeta (Morada/Naranja)</option>
@@ -2654,7 +2654,7 @@ function guardarNC() {
     subtotal: sub,
     descuento: desc,
     total: total,
-    formaPago: document.getElementById('nc-forma-pago').value,
+    formaPago: document.getElementById('nc-forma-pago-liquidacion').value,
     razonSocial: rs,
     rsNombre: RAZONES[rs].nombre,
     creadoPor: currentUser ? currentUser.name : 'Desconocido',
