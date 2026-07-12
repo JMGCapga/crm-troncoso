@@ -4295,8 +4295,12 @@ function mostrarDashboardParaUsuario() {
   }
 }
 
+function formatoFecha(d) {
+  return d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
+}
+
 function hoy() {
-  return new Date().toISOString().split('T')[0];
+  return formatoFecha(new Date());
 }
 
 function lunesDeEstaSemana() {
@@ -4304,12 +4308,12 @@ function lunesDeEstaSemana() {
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   d.setDate(diff);
-  return d.toISOString().split('T')[0];
+  return formatoFecha(d);
 }
 
 function primerDiaDelMes() {
   const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+  return formatoFecha(new Date(d.getFullYear(), d.getMonth(), 1));
 }
 
 async function cargarDashboard() {
