@@ -4490,8 +4490,17 @@ function pedidoCardVentas(p) {
   var estado = normStatusPedido(p);
   var st = STATUS_PEDIDO[estado] || STATUS_PEDIDO.confirmado;
   var nextBtn = '';
-  if(estado === 'confirmado') nextBtn = '<button class="btn btn-gris" onclick="cambiarStatusPedido(\''+p._docId+'\',\'en-ruta\')" style="font-size:10px;padding:5px 10px;">🚛 En ruta</button>';
-  else if(estado === 'en-ruta') nextBtn = '<button class="btn btn-gris" onclick="cambiarStatusPedido(\''+p._docId+'\',\'entregado\')" style="font-size:10px;padding:5px 10px;">📦 Entregado</button>';
+  // Botones para todos los status disponibles
+  var todosStatus = [
+    {s:'confirmado', label:'✅ Confirmado'},
+    {s:'en-ruta',    label:'🚛 En ruta'},
+    {s:'entregado',  label:'📦 Entregado'},
+  ];
+  nextBtn = todosStatus
+    .filter(function(st){ return st.s !== estado; })
+    .map(function(st){
+      return '<button class="btn btn-gris" onclick="cambiarStatusPedido(\''+p._docId+'\',\''+st.s+'\')" style="font-size:10px;padding:5px 10px;">'+st.label+'</button>';
+    }).join('');
   var cancelBtn = (estado !== 'cancelado' && estado !== 'entregado') ? '<button class="btn btn-gris" onclick="cancelarPedido(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;background:#FEE2E2;color:#DC2626;">❌ Cancelar</button>' : '';
   var waBtn = (p.telefono && estado !== 'cancelado') ? '<button class="btn btn-verde" onclick="waPedidoEnRuta(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;">📱 WhatsApp</button>' : '';
   var histBtn = (currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director'))
