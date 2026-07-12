@@ -4316,9 +4316,11 @@ async function cargarDashboard() {
   if(!db) { showToast('⚠️ Sin conexión a Firebase'); return; }
 
   try {
+    console.log('Iniciando carga de Dashboard...');
     const hoyStr = hoy();
     const lunesStr = lunesDeEstaSemana();
     const primerStr = primerDiaDelMes();
+    console.log('Buscando datos de:', hoyStr, lunesStr, primerStr);
 
     // LIQUIDEZ DEL DÍA
     let entradas = 0, salidas = 0, efectivo = 0;
@@ -4399,10 +4401,13 @@ async function cargarDashboard() {
     document.getElementById('dash-meta-pct').textContent = Math.round(pctMeta) + '%';
     document.getElementById('dash-proyeccion').textContent = '$' + fmtNumero(proyeccion);
 
-    showToast('✅ Dashboard actualizado');
+    console.log('Dashboard cargado exitosamente');
+    console.log('Datos: Entradas:', entradas, 'Ventas semana:', ventasSem, 'Acumulado mes:', acumulado);
+    showToast('✅ Dashboard actualizado - Ventas: $' + fmtNumero(acumulado));
   } catch(err) {
     console.error('Error en dashboard:', err);
-    showToast('⚠️ Error al cargar dashboard: ' + err.message);
+    console.error('Stack:', err.stack);
+    showToast('⚠️ Error: ' + err.message);
   }
 }
 
