@@ -1950,10 +1950,16 @@ function confirmarCierrePedido(docId) {
     cotizaciones[idx].status = 'cerrado';
     if(db && cot._docId){
       db.collection('cotizaciones').doc(cot._docId).update({status:'cerrado'}).catch(function(e){console.log(e);});
-      // Crear pedido en Firebase
-      db.collection('pedidos').add(pedido).then(function(){
-        showToast('🎯 Pedido '+folioBase+' creado en Sistema Operativo');
-      }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear pedido'); });
+      // Verificar si ya existe pedido para esta cotización antes de crear
+      db.collection('pedidos').where('cotizacionId','==',cot._docId).limit(1).get().then(function(snap){
+        if(!snap.empty) {
+          showToast('⚠️ Ya existe pedido ' + snap.docs[0].data().id + ' para esta cotización');
+          return;
+        }
+        db.collection('pedidos').add(pedido).then(function(){
+          showToast('🎯 Pedido '+folioBase+' creado en Sistema Operativo');
+        }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear pedido'); });
+      }).catch(function(e){ console.log(e); showToast('⚠️ Error al verificar pedido'); });
     }
 
     var modal = document.getElementById('modal-pedido');
