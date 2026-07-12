@@ -4342,11 +4342,12 @@ async function cargarDashboard() {
 
     // SEMANA ACTUAL
     let ventasSem = 0, nominaSem = 0;
-    const cotizSnap = await db.collection('cotizaciones').where('status', '==', 'cerrado').get();
+    const cotizSnap = await db.collection('cotizaciones').get();
     cotizSnap.forEach(doc => {
       const data = doc.data();
+      const status = (data.status || '').toLowerCase();
       const fecha = data.fecha || '';
-      if(fecha >= lunesStr && fecha <= hoyStr) {
+      if(status === 'cerrado' && fecha >= lunesStr && fecha <= hoyStr) {
         ventasSem += data.total || 0;
       }
     });
