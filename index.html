@@ -813,7 +813,8 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
               <select id="fnd-pago">
                 <option value="efectivo">💵 Efectivo</option>
                 <option value="transferencia">🏦 Transferencia</option>
-                <option value="tarjeta">💳 Tarjeta (Morada/Naranja)</option>
+                <option value="tarjeta_nu">💜 Tarjeta Nu (Morada)</option>
+                <option value="tarjeta_afirme">🟠 Tarjeta Afirme (Naranja)</option>
                 <option value="mixto">🔀 Mixto (efectivo + transferencia)</option>
               </select>
             </div>
@@ -3002,7 +3003,11 @@ function abrirWhatsAppSolicitudFondeo(fondeo) {
     '👤 Solicitante: '+fondeo.solicitadoPor+'\n'+
     '💵 Monto: '+fmtMoney(fondeo.monto)+'\n'+
     '📝 Motivo: '+fondeo.motivo+'\n'+
-    '💳 Forma de pago: '+fondeo.formaPago+'\n'+
+    '💳 Forma de pago: '+(fondeo.formaPago==='efectivo'?'💵 Efectivo':
+      fondeo.formaPago==='transferencia'?'🏦 Transferencia':
+      fondeo.formaPago==='tarjeta_nu'?'💜 Tarjeta Nu (Morada)':
+      fondeo.formaPago==='tarjeta_afirme'?'🟠 Tarjeta Afirme (Naranja)':
+      fondeo.formaPago==='mixto'?'🔀 Mixto':''+fondeo.formaPago)+'\n'+
     '📅 Fecha: '+fechaTexto+
     (fondeo.urgente ? '\n🔴 URGENTE' : '')+
     '\n\nToca para responder:\n'+
