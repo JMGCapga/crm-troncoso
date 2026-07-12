@@ -1097,6 +1097,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       <!-- VISTA OPERADOR (Francisco/Agustín/Carlos) -->
       <div id="pedidos-operador" style="display:none;">
         <div class="card">
+          <div class="card-title">🙋 Pedidos Disponibles</div>
+          <div id="ped-lista-disponibles" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;"></div>
+        </div>
+        <div class="card">
           <div class="card-title">🚚 Mis Entregas</div>
           <div id="ped-lista-operador" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;"></div>
         </div>
@@ -1344,11 +1348,11 @@ try {
 const USERS = {
   '1111':{name:'Ivette',role:'Ventas'},
   '2222':{name:'Erika',role:'Compras'},
-  '3333':{name:'Francisco',role:'Operador'},
-  '4444':{name:'Agustín Lara',role:'Operador'},
-  '5555':{name:'Carlos J. Escobar',role:'Operador'},
+  '3333':{name:'Francisco',role:'Operador',tel:'525640045544'},
+  '4444':{name:'Agustín Lara',role:'Operador',tel:'525610618450'},
+  '5555':{name:'Carlos J. Escobar',role:'Operador',tel:'525640058084'},
   '5678':{name:'Viridiana',role:'Gerencia'},
-  '9900':{name:'Jose Manuel',role:'Director'}
+  '9900':{name:'Jose Manuel',role:'Director',tel:'525585736084'}
 };
 
 const RAZONES = {
@@ -1959,6 +1963,7 @@ function confirmarCierrePedido(docId) {
         }
         db.collection('pedidos').add(pedido).then(function(){
           showToast('🎯 Pedido '+folioBase+' creado en Sistema Operativo');
+          if(operador !== 'Sin asignar') notificarOperadorPedido(pedido, operador);
         }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear pedido'); });
       }).catch(function(e){ console.log(e); showToast('⚠️ Error al verificar pedido'); });
     }
@@ -4412,6 +4417,25 @@ function siguienteFolioPedido() {
   }).catch(function(){ return 'TRO-' + String(Date.now()).slice(-4); });
 }
 
+function notificarOperadorPedido(pedido, operadorNombre) {
+  var operadorUser = Object.values(USERS).find(function(u){
+    return u.name === operadorNombre && u.role === 'Operador';
+  });
+  if(!operadorUser || !operadorUser.tel) return;
+
+  var msg =
+    '🚛 *MATERIALES TRONCOSO — NUEVO PEDIDO ASIGNADO*\n\n'+
+    '📋 Folio: '+(pedido.id||pedido._docId||'')+'\n'+
+    '👤 Cliente: '+(pedido.cliente||pedido.c||'')+'\n'+
+    '📍 Dirección: '+(pedido.direccion||'Ver en CRM')+'\n'+
+    '📦 Material: '+(pedido.p||'')+'\n'+
+    (pedido.m ? '💵 Monto: $'+pedido.m.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')+'\n' : '')+
+    '\nEntra al CRM para ver el detalle:\n'+
+    'jmgcapga.github.io/crm-troncoso';
+
+  window.open('https://wa.me/'+operadorUser.tel+'?text='+encodeURIComponent(msg),'_blank');
+}
+
 function iniciarPedidos() {
   var role = currentUser ? currentUser.role : '';
   document.getElementById('pedidos-ventas').style.display = 'none';
@@ -4425,6 +4449,7 @@ function iniciarPedidos() {
     } else if(role === 'Operador') {
       document.getElementById('pedidos-operador').style.display = 'block';
       renderPedidosOperador();
+      renderPedidosDisponibles();
     } else if(role === 'Gerencia' || role === 'Director') {
       document.getElementById('pedidos-jm').style.display = 'block';
       filtrarPedidosFecha('hoy');
@@ -4541,7 +4566,7 @@ function cambiarStatusPedido(docId, status) {
   }
   showToast('Estado actualizado a ' + (STATUS_PEDIDO[status] ? STATUS_PEDIDO[status].label : status));
   renderActivaPedidos();
-  if(currentUser && currentUser.role === 'Operador') renderPedidosOperador();
+  if(currentUser && currentUser.role === 'Operador') { renderPedidosOperador(); renderPedidosDisponibles(); }
 }
 
 function cancelarPedido(docId) {
@@ -4574,6 +4599,7 @@ function reasignarOperador(docId) {
   }
   p.operador = nuevo; p.ch = nuevo;
   showToast('Operador reasignado a ' + nuevo);
+  if(nuevo !== 'Sin asignar') notificarOperadorPedido(p, nuevo);
   renderActivaPedidos();
 }
 
@@ -4629,6 +4655,58 @@ function pedidoCardOperador(p) {
       <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">${accion}</div>
     </div>
   `;
+}
+
+// ════ PEDIDOS — autoasignación (pedidos sin operador) ════
+function renderPedidosDisponibles() {
+  var list = pedidosCache.filter(function(p){
+    var estado = normStatusPedido(p);
+    var ch = (p.operador || p.ch || '').trim();
+    return estado === 'confirmado' && (ch === '' || ch === 'Sin asignar');
+  });
+  var cont = document.getElementById('ped-lista-disponibles');
+  if(!cont) return;
+  if(!list.length) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">No hay pedidos disponibles</div>'; return; }
+  cont.innerHTML = list.map(pedidoCardDisponible).join('');
+}
+
+function pedidoCardDisponible(p) {
+  return `
+    <div class="cot-list-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="cot-cliente">${p.id||''} · ${p.cliente||p.c||''}</div>
+          <div class="cot-meta">${p.direccion||''}</div>
+          <div class="cot-meta">${p.p||''}</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-naranja" onclick="tomarPedido('${p._docId}')" style="font-size:11px;padding:8px 14px;">🙋 Tomar este pedido</button>
+      </div>
+    </div>
+  `;
+}
+
+function tomarPedido(docId) {
+  if(!currentUser || currentUser.role !== 'Operador') return;
+  var nombre = currentUser.name;
+  if(!confirm('¿Tomar este pedido como ' + nombre + '?')) return;
+  var idx = pedidosCache.findIndex(function(p){ return p._docId === docId; });
+  if(idx < 0) return;
+  pedidosCache[idx].operador = nombre;
+  pedidosCache[idx].ch = nombre;
+  if(db) {
+    db.collection('pedidos').doc(docId).update({
+      operador: nombre,
+      ch: nombre,
+      tomadoPor: nombre,
+      timestampAsignacion: Date.now(),
+      historial: firebase.firestore.FieldValue.arrayUnion({ status: 'asignado', user: nombre, timestamp: Date.now() })
+    }).catch(function(e){ console.log(e); });
+  }
+  showToast('✅ Pedido asignado a ' + nombre);
+  renderPedidosOperador();
+  renderPedidosDisponibles();
 }
 
 function marcarEnRuta(docId) {
@@ -4769,6 +4847,7 @@ function guardarPedidoManual() {
         pedido._docId = ref.id;
         pedidosCache.unshift(pedido);
         showToast('🎯 Pedido ' + folio + ' creado');
+        if(operador !== 'Sin asignar') notificarOperadorPedido(pedido, operador);
         var modal = document.getElementById('modal-pedido-manual');
         if(modal) modal.remove();
         renderActivaPedidos();
