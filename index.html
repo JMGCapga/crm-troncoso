@@ -1504,6 +1504,40 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             </div>
           </div>
         </div>
+
+        <!-- EVALUACIONES DE SERVICIO — Solo para José Manuel -->
+        <div id="dash-evaluaciones-section" style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-top:16px;display:none;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;margin-bottom:12px;letter-spacing:1px;">⭐ EVALUACIONES DE SERVICIO — Este mes</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Puntuación promedio</div>
+              <div id="dash-eval-promedio" style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--naranja);margin-top:4px;">0 / 5</div>
+            </div>
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Encuestas recibidas</div>
+              <div id="dash-eval-total" style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--naranja);margin-top:4px;">0</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Entregas a tiempo</div>
+              <div id="dash-eval-atime" style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--naranja);margin-top:4px;">0%</div>
+            </div>
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Productos correctos</div>
+              <div id="dash-eval-correct" style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--naranja);margin-top:4px;">0%</div>
+            </div>
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Con comentarios</div>
+              <div id="dash-eval-comentarios" style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--naranja);margin-top:4px;">0</div>
+            </div>
+          </div>
+          <div style="border-top:1px solid #FFD8C0;padding-top:12px;">
+            <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:#1A1A1A;">ÚLTIMAS EVALUACIONES</div>
+            <div id="dash-eval-lista" style="max-height:200px;overflow-y:auto;"></div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -1554,6 +1588,150 @@ const STATUS_PEDIDO = {
 var pedidosCache = [];
 var filtroPedFecha = 'hoy';
 var filtroPedStatus = 'todos';
+
+// ════ POLÍTICAS DE ENTREGA — para WhatsApp ════
+const POLITICAS_ENTREGA =
+  '📌 *POLÍTICAS DE ENTREGA:*\n'+
+  '• Entrega en 24/72 hrs según disponibilidad\n'+
+  '• Todos los pedidos se entregan a pie de carro\n'+
+  '• Verifique cantidad y estado ANTES de firmar la remisión\n'+
+  '• Faltantes repórtelos al momento de la entrega\n'+
+  '• Sin cambios en material a granel, tabicones y encostalados\n'+
+  '• Devoluciones con nota original en 5 días hábiles\n'+
+  '• El costo de flete se confirma antes de surtir\n'+
+  '• Cancelaciones sin cargo hasta 2 hrs antes de la entrega';
+
+// Genera mensaje de cotización con políticas para WhatsApp
+function mensajeCotizacionWA(cot) {
+  var productos = (cot.productos || [])
+    .map(function(p){ return '• '+p.cant+' '+p.desc; }).join('\n');
+
+  return '📋 *COTIZACIÓN — MATERIALES TRONCOSO*\n'+
+    'Folio: COT-'+cot.folio+'\n\n'+
+    '📦 *Productos:*\n'+productos+'\n\n'+
+    '💰 *Total: '+fmtMoney(cot.total)+'*\n\n'+
+    'Para confirmar su pedido responda *SÍ*.\n'+
+    '\n'+POLITICAS_ENTREGA+'\n\n'+
+    '📞 5555906802 / 5591800148\n'+
+    'pedidostroncoso@gmail.com';
+}
+
+// Genera mensaje de encuesta para WhatsApp (post-entrega)
+function mensajeEncuestaWA(pedido) {
+  var linkEncuesta = 'jmgcapga.github.io/encuesta-troncoso?pedido='+
+    encodeURIComponent(pedido.id||'')+
+    '&cliente='+encodeURIComponent(pedido.cliente||pedido.c||'');
+
+  return '📦 *MATERIALES TRONCOSO*\n'+
+    '¡Su pedido '+(pedido.id||'')+' fue entregado! ¡Gracias por su preferencia!\n\n'+
+    '⭐ ¿Nos regala 30 segundos?\n'+
+    'Su opinión nos ayuda a mejorar el servicio:\n'+
+    '👉 '+linkEncuesta+'\n\n'+
+    '🎁 Si quedó satisfecho y nos deja una reseña en Google,\n'+
+    '¡le regalamos una playera Materiales Troncoso\n'+
+    'en su próxima visita!\n\n'+
+    '📞 5555906802\n'+
+    'materialestroncoso.com';
+}
+
+// Muestra encuesta embedded después de confirmar entrega
+function mostrarEncuestaEmbedded(pedido) {
+  var existente = document.getElementById('modal-encuesta-troncoso');
+  if(existente) existente.remove();
+
+  var container = document.createElement('div');
+  container.id = 'modal-encuesta-troncoso';
+  container.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;padding:0;';
+
+  var iframeContainer = document.createElement('div');
+  iframeContainer.style.cssText = 'width:100%;height:100%;max-width:500px;max-height:100vh;background:white;border-radius:0;overflow:hidden;display:flex;flex-direction:column;';
+
+  var iframe = document.createElement('iframe');
+  iframe.src = 'https://jmgcapga.github.io/encuesta-troncoso?embedded=true';
+  iframe.style.cssText = 'border:none;flex:1;width:100%;';
+
+  iframeContainer.appendChild(iframe);
+  container.appendChild(iframeContainer);
+  document.body.appendChild(container);
+
+  // Esperar a que cargue el iframe y llamar a la función
+  setTimeout(function() {
+    try {
+      iframe.contentWindow.mostrarEncuesta({
+        pedidoId: pedido.id || 'SIN-FOLIO',
+        clienteNombre: pedido.cliente || pedido.c || 'Cliente',
+        onCompleta: function(datos) {
+          console.log('Encuesta completada:', datos);
+          setTimeout(function() {
+            container.remove();
+            // Aquí irá el envío de WhatsApp a dos números
+            enviarEncuestaADosNumeros(pedido);
+          }, 2000);
+        }
+      });
+    } catch(e) {
+      console.log('Error al mostrar encuesta:', e);
+      container.remove();
+    }
+  }, 1000);
+}
+
+// Envía WhatsApp con link de encuesta a dos números si están disponibles
+function enviarEncuestaADosNumeros(pedido) {
+  var mensaje = mensajeEncuestaWA(pedido);
+  var numeros = [];
+
+  // Número 1: teléfono del cliente en pedido (quien pagó)
+  if(pedido.telefono) {
+    numeros.push(pedido.telefono);
+  }
+
+  // Número 2: teléfono del que recibe (si es diferente) — si existe en cotización original
+  // Se buscaría de la cotización asociada al pedido
+  // Por ahora solo enviamos al teléfono del cliente
+
+  numeros.forEach(function(tel) {
+    var url = 'https://wa.me/'+tel.replace(/\D/g,'')+
+      '?text='+encodeURIComponent(mensaje);
+    window.open(url);
+  });
+}
+
+// Muestra botón para enviar cotización por WhatsApp con políticas
+function mostrarBtnEnviarCotizacionWA(cot) {
+  var existente = document.getElementById('btn-whatsapp-cot-container');
+  if(existente) existente.remove();
+
+  var container = document.createElement('div');
+  container.id = 'btn-whatsapp-cot-container';
+  container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9997;';
+
+  var btn = document.createElement('button');
+  btn.textContent = '📱 Enviar cotización por WhatsApp';
+  btn.style.cssText = 'background:var(--naranja);color:white;border:none;padding:14px 20px;'+
+    'border-radius:10px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;'+
+    'cursor:pointer;box-shadow:0 8px 24px rgba(232,80,10,0.3);transition:all 0.2s;';
+
+  btn.onmouseover = function() { btn.style.transform = 'scale(1.05)'; };
+  btn.onmouseout = function() { btn.style.transform = 'scale(1)'; };
+
+  btn.onclick = function() {
+    var msg = mensajeCotizacionWA(cot);
+    var url = 'https://wa.me/'+cot.clienteTel.replace(/\D/g,'')+
+      '?text='+encodeURIComponent(msg);
+    window.open(url);
+    container.remove();
+  };
+
+  container.appendChild(btn);
+  document.body.appendChild(container);
+
+  // Auto-remover en 30 segundos
+  setTimeout(function() {
+    if(container.parentNode) container.remove();
+  }, 30000);
+}
+
 // Normaliza el status del pedido — tolera mayúsculas/espacios/valores heredados del Sistema Troncoso
 function normStatusPedido(p) {
   var s = (p && p.s ? String(p.s) : '').trim().toLowerCase();
@@ -1942,6 +2120,11 @@ function guardarCotizacion() {
       cotizaciones.unshift(cot);
       folioActual++;
       showToast('✅ Cotización #' + cot.folio + ' guardada en la nube');
+
+      // Mostrar botón de WhatsApp si hay teléfono y es JMG
+      if(cot.clienteTel && cot.rs === 'JMG') {
+        mostrarBtnEnviarCotizacionWA(cot);
+      }
     }).catch(function(e){
       console.log('Error guardando:', e);
       cotizaciones.unshift(cot);
@@ -4631,6 +4814,50 @@ async function cargarDashboard() {
     document.getElementById('dash-meta-pct').textContent = Math.round(pctMeta) + '%';
     document.getElementById('dash-proyeccion').textContent = '$' + fmtNumero(proyeccion);
 
+    // EVALUACIONES DE SERVICIO — Solo si José Manuel está loggeado
+    if(currentUser && (currentUser.pin === '9900' || currentUser.role === 'Director')) {
+      const encuestasSnap = await db.collection('encuestas').where('fecha', '>=', primerStr).get();
+      let totalEncuestas = 0, sumaPuntuacion = 0, llegaATiempo = 0, productosCorrectos = 0, conComentarios = 0;
+      const encuestas = [];
+
+      encuestasSnap.forEach(doc => {
+        const data = doc.data();
+        totalEncuestas++;
+        sumaPuntuacion += data.puntuacion || 0;
+        if(data.llegóATiempo === true) llegaATiempo++;
+        if(data.productosCorrectos === true) productosCorrectos++;
+        if(data.comentarios && data.comentarios.trim()) conComentarios++;
+        encuestas.push(data);
+      });
+
+      const promedio = totalEncuestas > 0 ? (sumaPuntuacion / totalEncuestas).toFixed(1) : 0;
+      const pctATime = totalEncuestas > 0 ? Math.round((llegaATiempo / totalEncuestas) * 100) : 0;
+      const pctCorrect = totalEncuestas > 0 ? Math.round((productosCorrectos / totalEncuestas) * 100) : 0;
+
+      document.getElementById('dash-eval-promedio').textContent = promedio + ' / 5';
+      document.getElementById('dash-eval-total').textContent = totalEncuestas;
+      document.getElementById('dash-eval-atime').textContent = pctATime + '%';
+      document.getElementById('dash-eval-correct').textContent = pctCorrect + '%';
+      document.getElementById('dash-eval-comentarios').textContent = conComentarios;
+
+      // Últimas evaluaciones
+      const listHTML = encuestas
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+        .slice(0, 5)
+        .map(e => `
+          <div style="padding:8px;border-bottom:1px solid #FFD8C0;font-size:11px;">
+            <div style="font-weight:700;color:#1A1A1A;">${e.pedidoId || 'SIN-FOLIO'} · ${e.cliente || 'Sin nombre'}</div>
+            <div style="color:var(--naranja);font-weight:700;">${'⭐'.repeat(e.puntuacion || 0)}</div>
+            ${e.comentarios ? '<div style="color:#666;margin-top:3px;font-size:10px;">' + e.comentarios.substring(0, 60) + '...</div>' : ''}
+          </div>
+        `).join('');
+
+      document.getElementById('dash-eval-lista').innerHTML = listHTML || '<div style="padding:12px;color:#999;text-align:center;">Sin evaluaciones este mes</div>';
+      document.getElementById('dash-evaluaciones-section').style.display = 'block';
+    } else {
+      document.getElementById('dash-evaluaciones-section').style.display = 'none';
+    }
+
     console.log('Dashboard cargado exitosamente');
     console.log('Datos: Entradas:', entradas, 'Ventas semana:', ventasSem, 'Acumulado mes:', acumulado);
     showToast('✅ Dashboard actualizado - Ventas: $' + fmtNumero(acumulado));
@@ -5127,6 +5354,20 @@ function confirmarEntregaFinal(docId) {
   window._fotoBase64 = null;
   window._entregaCompleta = true;
   showToast(completa ? '✅ Entrega confirmada con firma y foto' : '⚠️ Entrega parcial registrada');
+
+  // Mostrar encuesta embedded si es JMG, hay teléfono y entrega completa
+  if(completa && pedidosCache[idx]) {
+    var pedido = pedidosCache[idx];
+    var rs = pedido.razonSocial || pedido.rs || 'JMG';
+    var telCliente = pedido.telefono || '';
+
+    if(rs === 'JMG' && telCliente) {
+      setTimeout(function() {
+        mostrarEncuestaEmbedded(pedido);
+      }, 500);
+    }
+  }
+
   renderPedidosOperador();
 }
 
