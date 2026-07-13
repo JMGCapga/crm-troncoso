@@ -198,6 +198,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <button class="tab" id="tab-compras-btn" onclick="switchTab('compras',this)">🛒 Compras</button>
     <button class="tab" id="tab-nomina-btn" onclick="switchTab('nomina',this)">👷 Nómina</button>
     <button class="tab" id="tab-pedidos-btn" onclick="switchTab('pedidos',this)">📦 Pedidos</button>
+    <button class="tab" id="tab-flota-btn" onclick="switchTab('flota',this)" style="display:none">🚛 Flota</button>
     <button class="tab" id="tab-dashboard-btn" onclick="switchTab('dashboard',this)" style="display:none">📊 Dashboard</button>
   </div>
 
@@ -1122,6 +1123,187 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 
     </div>
 
+    <!-- ===== FLOTA (FlotaManager integrado) ===== -->
+    <div class="panel" id="panel-flota">
+
+      <!-- VISTA OPERADOR (Francisco/Agustín/Carlos) -->
+      <div id="flota-operador" style="display:none;">
+        <div class="card">
+          <div class="card-title">🚦 Inicio de turno</div>
+          <div id="flota-op-turno-activo" style="display:none;background:#DBEAFE;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;font-weight:700;color:#1D4ED8;"></div>
+          <div id="flota-op-turno-form">
+            <div class="field">
+              <label>Unidad</label>
+              <select class="flota-unidad-select" id="flota-op-unidad"></select>
+            </div>
+            <div class="field">
+              <label>Km de salida</label>
+              <input type="number" id="flota-op-km-salida" placeholder="Ej. 776049">
+            </div>
+            <div class="field">
+              <label>Estado de la unidad</label>
+              <div style="display:flex;gap:8px;">
+                <button type="button" id="flota-op-estado-ok" onclick="flotaSelEstadoTurno('ok')" style="flex:1;padding:14px;border:2px solid #22C55E;border-radius:10px;background:#DCFCE7;color:#15803D;font-family:'Bebas Neue',sans-serif;font-size:16px;cursor:pointer;">✅ OK</button>
+                <button type="button" id="flota-op-estado-danio" onclick="flotaSelEstadoTurno('danio')" style="flex:1;padding:14px;border:2px solid #D8D0C8;border-radius:10px;background:#fff;color:#1A1A1A;font-family:'Bebas Neue',sans-serif;font-size:16px;cursor:pointer;">⚠️ Daño a reportar</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Foto del odómetro (opcional)</label>
+              <input type="file" accept="image/*" capture="environment" onchange="previsualizarFotoFlota(this,'odometro')">
+              <img id="flota-foto-preview-odometro" style="display:none;max-width:100%;border-radius:8px;margin-top:8px;">
+            </div>
+            <button class="btn btn-naranja" onclick="iniciarTurnoFlota()">🚦 Iniciar turno</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">⛽ Cargar gasolina</div>
+          <div class="field">
+            <label>Unidad</label>
+            <select class="flota-unidad-select" id="flota-gas-unidad"></select>
+          </div>
+          <div class="field">
+            <label>Litros cargados</label>
+            <input type="number" id="flota-gas-litros" placeholder="Ej. 45">
+          </div>
+          <div class="field">
+            <label>Monto pagado ($)</label>
+            <input type="number" id="flota-gas-monto" placeholder="Ej. 850">
+          </div>
+          <div class="field">
+            <label>Estación de servicio</label>
+            <input type="text" id="flota-gas-estacion" placeholder="Ej. OXXO Gas Iztacalco">
+          </div>
+          <div class="field">
+            <label>Foto del ticket (opcional)</label>
+            <input type="file" accept="image/*" capture="environment" onchange="previsualizarFotoFlota(this,'ticket')">
+            <img id="flota-foto-preview-ticket" style="display:none;max-width:100%;border-radius:8px;margin-top:8px;">
+          </div>
+          <button class="btn btn-naranja" onclick="guardarGasolinaFlota()">⛽ Registrar gasolina</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">⚠️ Reportar daño</div>
+          <div class="field">
+            <label>Unidad</label>
+            <select class="flota-unidad-select" id="flota-danio-unidad"></select>
+          </div>
+          <div class="field">
+            <label>Descripción del daño</label>
+            <textarea id="flota-danio-desc" placeholder="Ej. Rayón en puerta trasera derecha"></textarea>
+          </div>
+          <div class="field">
+            <label>Gravedad</label>
+            <select id="flota-danio-gravedad">
+              <option value="leve">🟢 Leve</option>
+              <option value="moderado">🟡 Moderado</option>
+              <option value="grave">🔴 Grave</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Foto del daño</label>
+            <input type="file" accept="image/*" capture="environment" onchange="previsualizarFotoFlota(this,'danio')">
+            <img id="flota-foto-preview-danio" style="display:none;max-width:100%;border-radius:8px;margin-top:8px;">
+          </div>
+          <button class="btn btn-gris" onclick="guardarDanioFlota()">⚠️ Reportar daño</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🏁 Fin de turno</div>
+          <div class="field">
+            <label>Km de llegada</label>
+            <input type="number" id="flota-op-km-llegada" placeholder="Ej. 776312">
+          </div>
+          <div id="flota-op-resumen-turno" style="font-size:12px;color:var(--suave);margin-bottom:10px;"></div>
+          <button class="btn btn-verde" onclick="finalizarTurnoFlota()">🏁 Finalizar turno</button>
+        </div>
+      </div>
+
+      <!-- VISTA MECÁNICO (PIN 2024) -->
+      <div id="flota-mecanico" style="display:none;">
+        <div class="card">
+          <div class="card-title">🚛 Unidades y su historial</div>
+          <div id="flota-mec-lista-unidades" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🔧 Registrar trabajo realizado</div>
+          <div class="field">
+            <label>Unidad</label>
+            <select class="flota-unidad-select" id="flota-mec-unidad"></select>
+          </div>
+          <div class="field">
+            <label>Tipo</label>
+            <select id="flota-mec-tipo">
+              <option value="preventivo">Preventivo</option>
+              <option value="correctivo">Correctivo</option>
+              <option value="llantas">Llantas</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Descripción</label>
+            <textarea id="flota-mec-desc" placeholder="Detalle del trabajo realizado"></textarea>
+          </div>
+          <div class="field">
+            <label>Costo</label>
+            <input type="number" id="flota-mec-costo" placeholder="Ej. 1200">
+          </div>
+          <div class="field">
+            <label>Fecha</label>
+            <input type="date" id="flota-mec-fecha">
+          </div>
+          <button class="btn btn-naranja" onclick="guardarTrabajoMecanico()">💾 Registrar trabajo</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">⚠️ Daños pendientes</div>
+          <div id="flota-mec-danios-pendientes" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🗓️ Próximo servicio programado</div>
+          <div class="field">
+            <label>Unidad</label>
+            <select class="flota-unidad-select" id="flota-mec-servicio-unidad"></select>
+          </div>
+          <div class="field">
+            <label>Próximo servicio a los (km)</label>
+            <input type="number" id="flota-mec-servicio-km" placeholder="Ej. 780000">
+          </div>
+          <button class="btn btn-gris" onclick="guardarProximoServicioFlota()">🗓️ Guardar próximo servicio</button>
+        </div>
+      </div>
+
+      <!-- VISTA GERENCIA/DIRECTOR -->
+      <div id="flota-admin" style="display:none;">
+        <div class="card">
+          <div class="card-title">🚛 Flota — Resumen</div>
+          <div id="flota-admin-resumen" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;"></div>
+          <div id="flota-admin-alertas"></div>
+        </div>
+
+        <div class="card" id="flota-admin-nueva-unidad-card" style="display:none;">
+          <div class="card-title">➕ Agregar unidad</div>
+          <div class="field"><label>Modelo</label><input type="text" id="flota-nu-modelo" placeholder="Ej. 2024 Veloci Covalt 300"></div>
+          <div class="field"><label>Año</label><input type="number" id="flota-nu-anio" placeholder="Ej. 2024"></div>
+          <div class="field"><label>Placas</label><input type="text" id="flota-nu-placas" placeholder="Ej. 20KKU9"></div>
+          <div class="field"><label>Color</label><input type="text" id="flota-nu-color" placeholder="Ej. Blanco"></div>
+          <div class="field"><label>Km actual</label><input type="number" id="flota-nu-km" placeholder="Ej. 0"></div>
+          <div class="field"><label>Operador asignado</label>
+            <select id="flota-nu-operador"><option value="">Sin asignar</option></select>
+          </div>
+          <div class="field"><label>Tarjeta de circulación vence</label><input type="date" id="flota-nu-doc-tarjeta"></div>
+          <div class="field"><label>Seguro vence</label><input type="date" id="flota-nu-doc-seguro"></div>
+          <div class="field"><label>Verificación vence</label><input type="date" id="flota-nu-doc-verificacion"></div>
+          <button class="btn btn-naranja" onclick="guardarNuevaUnidadFlota()">➕ Agregar unidad</button>
+        </div>
+
+        <div id="flota-admin-unidades" style="display:grid;grid-template-columns:1fr;gap:12px;"></div>
+      </div>
+
+    </div>
+
     <!-- ===== NÓMINA SEMANAL ===== -->
     <div class="panel" id="panel-nomina">
       <div class="card">
@@ -1352,7 +1534,8 @@ const USERS = {
   '4444':{name:'Agustín Lara',role:'Operador',tel:'525610618450'},
   '5555':{name:'Carlos J. Escobar',role:'Operador',tel:'525640058084'},
   '5678':{name:'Viridiana',role:'Gerencia'},
-  '9900':{name:'Jose Manuel',role:'Director',tel:'525585736084'}
+  '9900':{name:'Jose Manuel',role:'Director',tel:'525585736084'},
+  '2024':{name:'Taller Ynurrigarro',role:'Mecanico'}
 };
 
 const RAZONES = {
@@ -1426,7 +1609,8 @@ function checkPin(){
     document.getElementById('hdr-user').textContent = u.name + ' · ' + u.role;
     // Filtrar tabs según rol
     var role = u.role;
-    var tabsOperador = ['tab-pedidos-btn'];
+    var tabsOperador = ['tab-pedidos-btn','tab-flota-btn'];
+    var tabsMecanico = ['tab-flota-btn'];
     var tabsVentas = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-nc-btn','tab-pedidos-btn'];
     var tabsCompras = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
@@ -1435,16 +1619,18 @@ function checkPin(){
     var tabsGerencia = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
       'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-nomina-btn',
-      'tab-pedidos-btn','tab-dashboard-btn'];
+      'tab-pedidos-btn','tab-flota-btn','tab-dashboard-btn'];
     var tabsDirector = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
       'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-nomina-btn',
-      'tab-pedidos-btn','tab-dashboard-btn'];
+      'tab-pedidos-btn','tab-flota-btn','tab-dashboard-btn'];
 
     var tabsVisibles = role === 'Operador' ? tabsOperador :
+                       role === 'Mecanico' ? tabsMecanico :
                        role === 'Ventas'   ? tabsVentas :
                        role === 'Compras'  ? tabsCompras :
-                       role === 'Gerencia' ? tabsGerencia : tabsDirector;
+                       role === 'Gerencia' ? tabsGerencia :
+                       role === 'Director' ? tabsDirector : [];
 
     // Ocultar todos primero
     document.querySelectorAll('.tabs .tab').forEach(function(btn){
@@ -1459,6 +1645,10 @@ function checkPin(){
     if(role === 'Operador') {
       switchTab('pedidos', document.getElementById('tab-pedidos-btn'));
     }
+    // Si es Mecanico, ir directo a Flota (es su único tab)
+    if(role === 'Mecanico') {
+      switchTab('flota', document.getElementById('tab-flota-btn'));
+    }
     initApp();
     // Si es Director o Gerencia, mostrar Dashboard automáticamente
     if(pinBuf === '9900' || pinBuf === '5678') {
@@ -1467,6 +1657,10 @@ function checkPin(){
     // Si es Operador, mandar directo a Pedidos (candado: no ve ni puede tocar cotizaciones)
     if(u.role === 'Operador') {
       setTimeout(() => switchTab('pedidos', document.getElementById('tab-pedidos-btn')), 300);
+    }
+    // Si es Mecanico, mandar directo a Flota
+    if(u.role === 'Mecanico') {
+      setTimeout(() => switchTab('flota', document.getElementById('tab-flota-btn')), 300);
     }
   } else {
     for(var i=0;i<4;i++) document.getElementById('pd'+i).className = 'pdot e';
@@ -1507,11 +1701,21 @@ function initApp(){
 // ════ CANDADO OPERADORES — solo ven/tocan Pedidos, no cotizaciones ════
 function aplicarCandadoOperador() {
   var esOperador = currentUser && currentUser.role === 'Operador';
+  var esMecanico = currentUser && currentUser.role === 'Mecanico';
   var idsOcultos = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn','tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-nomina-btn'];
   idsOcultos.forEach(function(id){
     var b = document.getElementById(id);
-    if(b) b.style.display = esOperador ? 'none' : '';
+    if(!b) return;
+    if(esMecanico){ b.style.display = 'none'; return; }
+    b.style.display = esOperador ? 'none' : '';
   });
+  // Candado Mecánico: solo ve Flota (no Pedidos ni Dashboard, que no están en idsOcultos)
+  if(esMecanico){
+    ['tab-pedidos-btn','tab-dashboard-btn'].forEach(function(id){
+      var b = document.getElementById(id);
+      if(b) b.style.display = 'none';
+    });
+  }
 }
 
 function cargarClientes(){
@@ -1588,6 +1792,7 @@ function switchTab(tab, btn) {
   if(tab === 'fondeos') iniciarFondeos();
   if(tab === 'compras') iniciarCompras();
   if(tab === 'nomina') iniciarNomina();
+  if(tab === 'flota') iniciarFlota();
   if(tab === 'pedidos') iniciarPedidos();
   if(tab === 'dashboard') cargarDashboard();
 }
@@ -5107,6 +5312,478 @@ function recalcNotaManual() {
   document.getElementById('nmp-imp').textContent = fmtMoney(precio);
   document.getElementById('nota-subtotal').textContent = fmtMoney(precio);
   document.getElementById('nota-total-val').textContent = fmtMoney(precio);
+}
+
+// ════ FLOTA (FlotaManager integrado) ════
+var unidadesCache = [];
+
+// fechaISOLocal() (YYYY-MM-DD) es el formato usado por gasolinas/danos/kilometraje/mantenimiento;
+// difiere del formato D/M/YYYY que usa hoy()/lunesDeEstaSemana() para salidas/cotizaciones.
+function lunesISOFlota(){
+  var d = new Date();
+  var day = d.getDay();
+  var diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function iniciarFlota(){
+  var role = currentUser ? currentUser.role : '';
+  document.getElementById('flota-operador').style.display = 'none';
+  document.getElementById('flota-mecanico').style.display = 'none';
+  document.getElementById('flota-admin').style.display = 'none';
+  if(!db){ showToast('⚠️ Sin conexión a Firebase'); return; }
+  cargarUnidadesFlota(function(){
+    if(role === 'Operador'){
+      document.getElementById('flota-operador').style.display = 'block';
+      poblarSelectsUnidadesFlota();
+      renderTurnoActivoFlota();
+    } else if(role === 'Mecanico'){
+      document.getElementById('flota-mecanico').style.display = 'block';
+      poblarSelectsUnidadesFlota();
+      var fechaEl = document.getElementById('flota-mec-fecha');
+      if(fechaEl && !fechaEl.value) fechaEl.value = fechaISOLocal();
+      renderListaUnidadesMecanico();
+      cargarDaniosPendientesMecanico();
+    } else if(role === 'Gerencia' || role === 'Director'){
+      document.getElementById('flota-admin').style.display = 'block';
+      document.getElementById('flota-admin-nueva-unidad-card').style.display = role === 'Director' ? 'block' : 'none';
+      poblarSelectOperadoresFlota();
+      renderFlotaAdmin();
+    }
+  });
+}
+
+function cargarUnidadesFlota(cb){
+  db.collection('unidades').get().then(function(snap){
+    unidadesCache = [];
+    snap.forEach(function(doc){ var d = doc.data(); d._docId = doc.id; unidadesCache.push(d); });
+    if(cb) cb();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al cargar unidades'); });
+}
+
+function poblarSelectsUnidadesFlota(){
+  var opts = unidadesCache.map(function(u){ return '<option value="'+u.placas+'">'+(u.modelo||'')+' · '+u.placas+'</option>'; }).join('');
+  document.querySelectorAll('.flota-unidad-select').forEach(function(sel){ sel.innerHTML = opts; });
+}
+
+function poblarSelectOperadoresFlota(){
+  var sel = document.getElementById('flota-nu-operador');
+  if(!sel) return;
+  var opts = '<option value="">Sin asignar</option>';
+  Object.keys(USERS).forEach(function(pin){
+    var u = USERS[pin];
+    if(u.role === 'Operador') opts += '<option value="'+u.name+'">'+u.name+'</option>';
+  });
+  sel.innerHTML = opts;
+}
+
+function previsualizarFotoFlota(input, key){
+  var file = input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    window['_flotaFoto'+key] = e.target.result;
+    var prev = document.getElementById('flota-foto-preview-'+key);
+    if(prev){ prev.src = e.target.result; prev.style.display = 'block'; }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Vista Operador ──
+function flotaSelEstadoTurno(val){
+  window._flotaEstadoTurno = val;
+  document.getElementById('flota-op-estado-ok').style.cssText = 'flex:1;padding:14px;border:2px solid '+(val==='ok'?'#22C55E':'#D8D0C8')+';border-radius:10px;background:'+(val==='ok'?'#DCFCE7':'#fff')+';color:'+(val==='ok'?'#15803D':'#1A1A1A')+';font-family:\'Bebas Neue\',sans-serif;font-size:16px;cursor:pointer;';
+  document.getElementById('flota-op-estado-danio').style.cssText = 'flex:1;padding:14px;border:2px solid '+(val==='danio'?'#EF4444':'#D8D0C8')+';border-radius:10px;background:'+(val==='danio'?'#FEE2E2':'#fff')+';color:'+(val==='danio'?'#DC2626':'#1A1A1A')+';font-family:\'Bebas Neue\',sans-serif;font-size:16px;cursor:pointer;';
+}
+
+function renderTurnoActivoFlota(){
+  var raw = localStorage.getItem('flota_turno_'+currentPin);
+  var banner = document.getElementById('flota-op-turno-activo');
+  if(raw){
+    var t = JSON.parse(raw);
+    banner.style.display = 'block';
+    banner.textContent = '🚦 Turno activo — ' + t.unidad + ' · salida ' + t.kmSalida + ' km';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function iniciarTurnoFlota(){
+  var unidad = document.getElementById('flota-op-unidad').value;
+  var kmSalida = parseFloat(document.getElementById('flota-op-km-salida').value||0);
+  if(!unidad || !kmSalida){ showToast('⚠️ Selecciona unidad e ingresa el km de salida'); return; }
+  var estado = window._flotaEstadoTurno || 'ok';
+  var operador = currentUser ? currentUser.name : '';
+  var turno = {
+    unidad: unidad, operador: operador, fecha: fechaISOLocal(),
+    kmSalida: kmSalida, kmLlegada: null, estadoInicio: estado,
+    fotoOdometroBase64: window._flotaFotoodometro || null,
+    timestamp: Date.now()
+  };
+  db.collection('kilometraje').add(turno).then(function(ref){
+    localStorage.setItem('flota_turno_'+currentPin, JSON.stringify({docId:ref.id, unidad:unidad, kmSalida:kmSalida, fecha:turno.fecha}));
+    showToast(estado === 'danio' ? '✅ Turno iniciado — no olvides reportar el daño abajo' : '✅ Turno iniciado — ' + unidad);
+    renderTurnoActivoFlota();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al iniciar turno'); });
+}
+
+function finalizarTurnoFlota(){
+  var raw = localStorage.getItem('flota_turno_'+currentPin);
+  if(!raw){ showToast('⚠️ No tienes un turno activo'); return; }
+  var turno = JSON.parse(raw);
+  var kmLlegada = parseFloat(document.getElementById('flota-op-km-llegada').value||0);
+  if(!kmLlegada){ showToast('⚠️ Ingresa el km de llegada'); return; }
+  var kmRecorridos = kmLlegada - turno.kmSalida;
+  db.collection('kilometraje').doc(turno.docId).update({ kmLlegada: kmLlegada, kmRecorridos: kmRecorridos }).then(function(){
+    var u = unidadesCache.find(function(x){ return x.placas === turno.unidad; });
+    if(u) db.collection('unidades').doc(u._docId).update({ kmActual: kmLlegada }).catch(function(e){ console.log(e); });
+    localStorage.removeItem('flota_turno_'+currentPin);
+    showToast('✅ Turno finalizado — ' + kmRecorridos + ' km recorridos');
+    document.getElementById('flota-op-km-llegada').value = '';
+    document.getElementById('flota-op-resumen-turno').textContent = '';
+    renderTurnoActivoFlota();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al finalizar turno'); });
+}
+
+function guardarGasolinaFlota(){
+  var unidad = document.getElementById('flota-gas-unidad').value;
+  var litros = parseFloat(document.getElementById('flota-gas-litros').value||0);
+  var monto = parseFloat(document.getElementById('flota-gas-monto').value||0);
+  var estacion = document.getElementById('flota-gas-estacion').value.trim();
+  if(!unidad || !litros || !monto){ showToast('⚠️ Completa unidad, litros y monto'); return; }
+  var operador = currentUser ? currentUser.name : '';
+  var fecha = fechaISOLocal();
+  var gasolina = {
+    unidad: unidad, operador: operador, fecha: fecha, timestamp: Date.now(),
+    litros: litros, monto: monto, estacion: estacion,
+    fotoTicketBase64: window._flotaFototicket || null,
+    registradoPor: operador
+  };
+  db.collection('gasolinas').add(gasolina).then(function(ref){
+    var salida = {
+      fecha: fecha, timestamp: Date.now(), tipo: 'gasolina',
+      tipoLabel: TIPOS_SALIDA.gasolina.label + ' — ' + unidad,
+      monto: monto, concepto: litros + 'L · ' + (estacion || 'Sin estación'),
+      operador: operador, rs: 'JMG', rsNombre: RAZONES.JMG.nombre,
+      factura: 'pendiente', registradoPor: operador, status: 'aprobado',
+      gasolinaId: ref.id
+    };
+    return db.collection('salidas').add(salida);
+  }).then(function(){
+    showToast('✅ Gasolina registrada — ' + fmtMoney(monto));
+    ['flota-gas-litros','flota-gas-monto','flota-gas-estacion'].forEach(function(id){ document.getElementById(id).value=''; });
+    var prev = document.getElementById('flota-foto-preview-ticket'); prev.style.display='none'; prev.src='';
+    window._flotaFototicket = null;
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar gasolina'); });
+}
+
+function guardarDanioFlota(){
+  var unidad = document.getElementById('flota-danio-unidad').value;
+  var descripcion = document.getElementById('flota-danio-desc').value.trim();
+  var gravedad = document.getElementById('flota-danio-gravedad').value;
+  if(!unidad || !descripcion){ showToast('⚠️ Selecciona unidad y describe el daño'); return; }
+  var operador = currentUser ? currentUser.name : '';
+  var danio = {
+    unidad: unidad, operador: operador, fecha: fechaISOLocal(),
+    descripcion: descripcion, gravedad: gravedad,
+    fotoBase64: window._flotaFotodanio || null,
+    resuelto: false, resueltoEn: null, timestamp: Date.now()
+  };
+  db.collection('danos').add(danio).then(function(){
+    showToast('⚠️ Daño reportado — ' + unidad);
+    document.getElementById('flota-danio-desc').value = '';
+    var prev = document.getElementById('flota-foto-preview-danio'); prev.style.display='none'; prev.src='';
+    window._flotaFotodanio = null;
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al reportar daño'); });
+}
+
+// ── Vista Mecánico ──
+function renderListaUnidadesMecanico(){
+  var cont = document.getElementById('flota-mec-lista-unidades');
+  if(!unidadesCache.length){ cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Sin unidades</div>'; return; }
+  cont.innerHTML = unidadesCache.map(function(u){
+    return '<div class="cot-list-item" style="cursor:pointer;" onclick="toggleHistorialUnidadFlota(\''+u.placas+'\')">'
+      + '<div class="cot-cliente">'+(u.modelo||'')+' · '+u.placas+'</div>'
+      + '<div class="cot-meta">Km actual: '+fmtNumero(u.kmActual||0)+' · '+(u.estado==='taller'?'🔧 En taller':'🟢 Activo')+'</div>'
+      + '<div id="flota-hist-'+u.placas+'" style="display:none;margin-top:8px;font-size:12px;color:var(--suave);"></div>'
+      + '</div>';
+  }).join('');
+}
+
+function toggleHistorialUnidadFlota(placas){
+  var div = document.getElementById('flota-hist-'+placas);
+  if(!div) return;
+  if(div.style.display === 'block'){ div.style.display = 'none'; return; }
+  div.style.display = 'block';
+  div.innerHTML = 'Cargando historial...';
+  Promise.all([
+    db.collection('mantenimiento').where('unidad','==',placas).get(),
+    db.collection('danos').where('unidad','==',placas).get()
+  ]).then(function(res){
+    var mant = []; res[0].forEach(function(d){ mant.push(d.data()); });
+    var dan = []; res[1].forEach(function(d){ dan.push(d.data()); });
+    mant.sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
+    dan.sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
+    var html = '<b>Mantenimiento:</b><br>' + (mant.length ? mant.map(function(m){ return '• '+m.fecha+' — '+m.tipo+' — '+(m.descripcion||''); }).join('<br>') : 'Sin registros');
+    html += '<br><br><b>Daños:</b><br>' + (dan.length ? dan.map(function(d){ return '• '+d.fecha+' — '+d.descripcion+' ('+d.gravedad+')'+(d.resuelto?' ✅':' ⏳'); }).join('<br>') : 'Sin registros');
+    div.innerHTML = html;
+  }).catch(function(e){ console.log(e); div.innerHTML = 'Error al cargar historial'; });
+}
+
+function cargarDaniosPendientesMecanico(){
+  var cont = document.getElementById('flota-mec-danios-pendientes');
+  cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Cargando...</div>';
+  db.collection('danos').where('resuelto','==',false).get().then(function(snap){
+    var list = [];
+    snap.forEach(function(d){ var x = d.data(); x._docId = d.id; list.push(x); });
+    list.sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
+    if(!list.length){ cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Sin daños pendientes</div>'; return; }
+    cont.innerHTML = list.map(function(d){
+      var color = d.gravedad === 'grave' ? '#EF4444' : d.gravedad === 'moderado' ? '#F59E0B' : '#22C55E';
+      return '<div class="cot-list-item">'
+        + '<div class="cot-cliente">'+d.unidad+' — '+d.descripcion+'</div>'
+        + '<div class="cot-meta" style="color:'+color+';">'+d.gravedad.toUpperCase()+' · '+d.fecha+'</div>'
+        + '<button class="btn btn-verde" style="margin-top:6px;font-size:11px;padding:6px 12px;" onclick="resolverDanioFlota(\''+d._docId+'\')">✅ Marcar resuelto</button>'
+        + '</div>';
+    }).join('');
+  }).catch(function(e){ console.log(e); cont.innerHTML = 'Error al cargar daños'; });
+}
+
+function resolverDanioFlota(docId){
+  db.collection('danos').doc(docId).update({ resuelto: true, resueltoEn: Date.now() }).then(function(){
+    showToast('✅ Daño marcado como resuelto');
+    cargarDaniosPendientesMecanico();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error'); });
+}
+
+function guardarTrabajoMecanico(){
+  var unidad = document.getElementById('flota-mec-unidad').value;
+  var tipo = document.getElementById('flota-mec-tipo').value;
+  var descripcion = document.getElementById('flota-mec-desc').value.trim();
+  var costo = parseFloat(document.getElementById('flota-mec-costo').value||0);
+  var fecha = document.getElementById('flota-mec-fecha').value || fechaISOLocal();
+  if(!unidad || !descripcion){ showToast('⚠️ Selecciona unidad y describe el trabajo'); return; }
+  var trabajo = { unidad: unidad, tipo: tipo, descripcion: descripcion, costo: costo, fecha: fecha, timestamp: Date.now(), registradoPor: currentUser ? currentUser.name : '' };
+  db.collection('mantenimiento').add(trabajo).then(function(){
+    showToast('✅ Trabajo registrado');
+    document.getElementById('flota-mec-desc').value = '';
+    document.getElementById('flota-mec-costo').value = '';
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar trabajo'); });
+}
+
+function guardarProximoServicioFlota(){
+  var placas = document.getElementById('flota-mec-servicio-unidad').value;
+  var km = parseFloat(document.getElementById('flota-mec-servicio-km').value||0);
+  if(!placas || !km){ showToast('⚠️ Selecciona unidad e ingresa el km'); return; }
+  var u = unidadesCache.find(function(x){ return x.placas === placas; });
+  if(!u){ showToast('⚠️ Unidad no encontrada'); return; }
+  db.collection('unidades').doc(u._docId).update({ proximoServicioKm: km }).then(function(){
+    u.proximoServicioKm = km;
+    showToast('✅ Próximo servicio guardado');
+    document.getElementById('flota-mec-servicio-km').value = '';
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error'); });
+}
+
+// ── Vista Gerencia/Director ──
+function renderFlotaAdmin(){
+  Promise.all([
+    db.collection('danos').where('resuelto','==',false).get(),
+    db.collection('kilometraje').where('fecha','==',fechaISOLocal()).get(),
+    db.collection('gasolinas').get(),
+    db.collection('mantenimiento').get()
+  ]).then(function(res){
+    var daniosPend = []; res[0].forEach(function(d){ var x=d.data(); x._docId=d.id; daniosPend.push(x); });
+    var kmHoy = []; res[1].forEach(function(d){ kmHoy.push(d.data()); });
+    var gasolinasAll = []; res[2].forEach(function(d){ gasolinasAll.push(d.data()); });
+    var mantAll = []; res[3].forEach(function(d){ mantAll.push(d.data()); });
+
+    var enRuta = kmHoy.filter(function(k){ return k.kmLlegada === null || k.kmLlegada === undefined; }).length;
+    var enTaller = unidadesCache.filter(function(u){ return u.estado === 'taller'; }).length;
+
+    var lunes = lunesISOFlota(); var hoyStr = fechaISOLocal();
+    var gastoGas = 0, gastoMant = 0;
+    gasolinasAll.forEach(function(g){ var f = g.fecha||''; if(f>=lunes && f<=hoyStr) gastoGas += g.monto||0; });
+    mantAll.forEach(function(m){ var f = m.fecha||''; if(f>=lunes && f<=hoyStr) gastoMant += m.costo||0; });
+
+    document.getElementById('flota-admin-resumen').innerHTML =
+      '<div style="background:#F5F2EE;border-radius:10px;padding:14px;"><div style="font-size:11px;color:var(--suave);font-weight:700;text-transform:uppercase;">Unidades</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;">'+unidadesCache.length+'</div></div>'
+      + '<div style="background:#F5F2EE;border-radius:10px;padding:14px;"><div style="font-size:11px;color:var(--suave);font-weight:700;text-transform:uppercase;">En ruta hoy</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;">'+enRuta+'</div></div>'
+      + '<div style="background:#F5F2EE;border-radius:10px;padding:14px;"><div style="font-size:11px;color:var(--suave);font-weight:700;text-transform:uppercase;">En taller</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;">'+enTaller+'</div></div>'
+      + '<div style="background:#F5F2EE;border-radius:10px;padding:14px;"><div style="font-size:11px;color:var(--suave);font-weight:700;text-transform:uppercase;">Gasto flota semana</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;">'+fmtMoney(gastoGas+gastoMant)+'</div></div>';
+
+    renderAlertasFlotaAdmin(daniosPend);
+    renderUnidadesAdminCards(daniosPend);
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al cargar Flota'); });
+}
+
+function labelDocFlota(k){
+  return k==='tarjetaCirculacion' ? 'Tarjeta de circulación' : k==='seguro' ? 'Seguro' : k==='verificacion' ? 'Verificación' : k;
+}
+
+function renderAlertasFlotaAdmin(daniosPend){
+  var alertas = [];
+  var limite = new Date(); limite.setDate(limite.getDate()+30);
+  unidadesCache.forEach(function(u){
+    var docs = u.documentos || {};
+    Object.keys(docs).forEach(function(k){
+      if(!docs[k]) return;
+      var d = new Date(docs[k]+'T00:00:00');
+      if(d <= limite) alertas.push('📄 '+u.placas+' — '+labelDocFlota(k)+' vence '+docs[k]);
+    });
+    if(u.proximoServicioKm && u.kmActual && (u.proximoServicioKm - u.kmActual) <= 500) {
+      alertas.push('🔧 '+u.placas+' — servicio próximo a los '+fmtNumero(u.proximoServicioKm)+' km');
+    }
+  });
+  daniosPend.forEach(function(d){ alertas.push('⚠️ '+d.unidad+' — daño sin resolver ('+d.gravedad+')'); });
+  var cont = document.getElementById('flota-admin-alertas');
+  if(!alertas.length){ cont.innerHTML = ''; return; }
+  cont.innerHTML = '<div style="margin-top:10px;">' + alertas.map(function(a){ return '<div style="background:#FEF3C7;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:6px;">'+a+'</div>'; }).join('') + '</div>';
+}
+
+function calcBadgeUnidadFlota(u, daniosUnidad){
+  if(u.estado === 'taller') return {emoji:'🔧', label:'En taller', color:'3B82F6'};
+  var alerta = false, atencion = false;
+  var hoyDate = new Date(); var limite = new Date(); limite.setDate(limite.getDate()+30);
+  var docs = u.documentos || {};
+  Object.keys(docs).forEach(function(k){
+    if(!docs[k]) return;
+    var d = new Date(docs[k]+'T00:00:00');
+    if(d < hoyDate) alerta = true; else if(d <= limite) atencion = true;
+  });
+  if(daniosUnidad.some(function(d){ return d.gravedad === 'grave'; })) alerta = true;
+  else if(daniosUnidad.length) atencion = true;
+  if(u.proximoServicioKm && u.kmActual && (u.proximoServicioKm - u.kmActual) <= 500) atencion = true;
+  if(alerta) return {emoji:'🔴', label:'Alerta', color:'EF4444'};
+  if(atencion) return {emoji:'🟡', label:'Atención', color:'F59E0B'};
+  return {emoji:'🟢', label:'OK', color:'22C55E'};
+}
+
+function renderUnidadesAdminCards(daniosPend){
+  var cont = document.getElementById('flota-admin-unidades');
+  if(!unidadesCache.length){ cont.innerHTML = '<div class="card"><div style="text-align:center;padding:20px;color:var(--suave);">Sin unidades registradas</div></div>'; return; }
+  cont.innerHTML = unidadesCache.map(function(u){
+    var badge = calcBadgeUnidadFlota(u, daniosPend.filter(function(d){ return d.unidad === u.placas; }));
+    return '<div class="card">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+      + '<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;">'+(u.modelo||'')+'</div>'
+      + '<div style="font-size:12px;color:var(--suave);">'+u.placas+' · '+(u.color||'')+' · '+fmtNumero(u.kmActual||0)+' km</div>'
+      + '<div style="font-size:12px;color:var(--suave);margin-top:2px;">Operador: '+(u.operadorAsignado||'Sin asignar')+'</div>'
+      + '<div style="font-size:12px;color:var(--suave);margin-top:2px;">Próx. servicio: '+(u.proximoServicioKm?fmtNumero(u.proximoServicioKm)+' km':'—')+'</div></div>'
+      + '<span style="background:#'+badge.color+'22;color:#'+badge.color+';border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;white-space:nowrap;">'+badge.emoji+' '+badge.label+'</span>'
+      + '</div>'
+      + '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">'
+      + '<button class="btn btn-gris" style="font-size:11px;padding:7px 12px;" onclick="editarUnidadFlota(\''+u._docId+'\')">✏️ Editar</button>'
+      + '<button class="btn btn-gris" style="font-size:11px;padding:7px 12px;" onclick="agregarServicioUnidadFlota(\''+u._docId+'\')">🗓️ +Servicio</button>'
+      + '<button class="btn btn-gris" style="font-size:11px;padding:7px 12px;" onclick="toggleTallerUnidadFlota(\''+u._docId+'\')">🔧 '+(u.estado==='taller'?'Sacar de taller':'+Taller')+'</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+function toggleTallerUnidadFlota(docId){
+  var u = unidadesCache.find(function(x){ return x._docId === docId; });
+  if(!u) return;
+  var nuevoEstado = u.estado === 'taller' ? 'activo' : 'taller';
+  if(!confirm(nuevoEstado === 'taller' ? '¿Marcar '+u.placas+' como en taller?' : '¿Sacar '+u.placas+' de taller?')) return;
+  db.collection('unidades').doc(docId).update({ estado: nuevoEstado }).then(function(){
+    u.estado = nuevoEstado;
+    showToast('✅ Actualizado');
+    renderFlotaAdmin();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error'); });
+}
+
+function agregarServicioUnidadFlota(docId){
+  var u = unidadesCache.find(function(x){ return x._docId === docId; });
+  if(!u) return;
+  var km = prompt('Próximo servicio a los (km) para '+u.placas+':', u.proximoServicioKm||'');
+  if(km === null) return;
+  km = parseFloat(km);
+  if(!km){ showToast('⚠️ Km inválido'); return; }
+  db.collection('unidades').doc(docId).update({ proximoServicioKm: km }).then(function(){
+    u.proximoServicioKm = km;
+    showToast('✅ Próximo servicio guardado');
+    renderFlotaAdmin();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error'); });
+}
+
+function editarUnidadFlota(docId){
+  var u = unidadesCache.find(function(x){ return x._docId === docId; });
+  if(!u) return;
+  var docs = u.documentos || {};
+  var existente = document.getElementById('modal-editar-unidad');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-editar-unidad';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow-y:auto;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:460px;margin:auto;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;margin-bottom:14px;">✏️ Editar unidad</div>
+      <div class="field"><label>Modelo</label><input type="text" id="eu-modelo" value="${(u.modelo||'').replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Placas</label><input type="text" id="eu-placas" value="${(u.placas||'').replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Color</label><input type="text" id="eu-color" value="${(u.color||'').replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Km actual</label><input type="number" id="eu-km" value="${u.kmActual||0}"></div>
+      <div class="field"><label>Operador asignado</label><input type="text" id="eu-operador" value="${(u.operadorAsignado||'').replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Tarjeta de circulación vence</label><input type="date" id="eu-doc-tarjeta" value="${docs.tarjetaCirculacion||''}"></div>
+      <div class="field"><label>Seguro vence</label><input type="date" id="eu-doc-seguro" value="${docs.seguro||''}"></div>
+      <div class="field"><label>Verificación vence</label><input type="date" id="eu-doc-verificacion" value="${docs.verificacion||''}"></div>
+      <div class="field"><label>Notas</label><textarea id="eu-notas">${u.notas||''}</textarea></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-naranja" style="flex:1;" onclick="guardarEdicionUnidadFlota('${docId}')">💾 Guardar</button>
+        <button class="btn btn-gris" style="flex:1;" onclick="document.getElementById('modal-editar-unidad').remove()">Cancelar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function guardarEdicionUnidadFlota(docId){
+  var update = {
+    modelo: document.getElementById('eu-modelo').value.trim(),
+    placas: document.getElementById('eu-placas').value.trim(),
+    color: document.getElementById('eu-color').value.trim(),
+    kmActual: parseFloat(document.getElementById('eu-km').value||0),
+    operadorAsignado: document.getElementById('eu-operador').value.trim(),
+    documentos: {
+      tarjetaCirculacion: document.getElementById('eu-doc-tarjeta').value || null,
+      seguro: document.getElementById('eu-doc-seguro').value || null,
+      verificacion: document.getElementById('eu-doc-verificacion').value || null
+    },
+    notas: document.getElementById('eu-notas').value.trim()
+  };
+  db.collection('unidades').doc(docId).update(update).then(function(){
+    showToast('✅ Unidad actualizada');
+    document.getElementById('modal-editar-unidad').remove();
+    cargarUnidadesFlota(function(){ renderFlotaAdmin(); });
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al actualizar'); });
+}
+
+function guardarNuevaUnidadFlota(){
+  if(!currentUser || currentUser.role !== 'Director'){ showToast('⚠️ No tienes permiso'); return; }
+  var modelo = document.getElementById('flota-nu-modelo').value.trim();
+  var placas = document.getElementById('flota-nu-placas').value.trim();
+  if(!modelo || !placas){ showToast('⚠️ Completa modelo y placas'); return; }
+  var unidad = {
+    modelo: modelo,
+    anio: parseInt(document.getElementById('flota-nu-anio').value||0) || null,
+    placas: placas,
+    color: document.getElementById('flota-nu-color').value.trim(),
+    kmActual: parseFloat(document.getElementById('flota-nu-km').value||0),
+    operadorAsignado: document.getElementById('flota-nu-operador').value || '',
+    estado: 'activo',
+    documentos: {
+      tarjetaCirculacion: document.getElementById('flota-nu-doc-tarjeta').value || null,
+      seguro: document.getElementById('flota-nu-doc-seguro').value || null,
+      verificacion: document.getElementById('flota-nu-doc-verificacion').value || null
+    },
+    proximoServicioKm: null,
+    notas: '',
+    timestamp: Date.now()
+  };
+  db.collection('unidades').add(unidad).then(function(){
+    showToast('✅ Unidad agregada — ' + placas);
+    ['flota-nu-modelo','flota-nu-anio','flota-nu-placas','flota-nu-color','flota-nu-km','flota-nu-doc-tarjeta','flota-nu-doc-seguro','flota-nu-doc-verificacion'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('flota-nu-operador').value = '';
+    cargarUnidadesFlota(function(){ renderFlotaAdmin(); poblarSelectsUnidadesFlota(); });
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al agregar unidad'); });
 }
 
 // Inicialización completada
