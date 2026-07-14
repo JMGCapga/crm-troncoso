@@ -207,7 +207,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 
     <div class="panel active" id="panel-clientes">
       <div class="card">
-        <div class="card-title">Directorio de Clientes</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div class="card-title" style="margin-bottom:0;">Directorio de Clientes</div>
+          <button class="btn btn-naranja" onclick="mostrarFormularioNuevoCliente()" style="font-size:11px;padding:7px 14px;">+ Nuevo Cliente</button>
+        </div>
         <div class="search-wrap">
           <span class="ico">🔍</span>
           <input type="text" id="cli-search" placeholder="Buscar por nombre o teléfono..." oninput="buscarCliente()" autocomplete="off">
@@ -1983,6 +1986,95 @@ function showToast(msg) {
 }
 
 // ════ BÚSQUEDA CLIENTES ════
+function mostrarFormularioNuevoCliente() {
+  var existente = document.getElementById('modal-nuevo-cliente');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-nuevo-cliente';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:24px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:#1A1A1A;margin-bottom:4px;">👤 NUEVO CLIENTE</div>
+      <div style="font-size:12px;color:#6B6560;margin-bottom:16px;">Los datos se guardan en el directorio de clientes</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Nombre o Razón Social *</label>
+          <input type="text" id="nc-nombre" placeholder="Nombre del cliente o empresa..." style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:10px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Teléfono *</label>
+          <input type="tel" id="nc-telefono" placeholder="55XXXXXXXX" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:10px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Celular (opcional)</label>
+          <input type="tel" id="nc-celular" placeholder="55XXXXXXXX" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:10px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Dirección</label>
+          <input type="text" id="nc-domicilio" placeholder="Calle, colonia, referencias..." style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:10px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">RFC (opcional)</label>
+          <input type="text" id="nc-rfc" placeholder="XXXX000000XXX" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:10px 12px;font-family:'Barlow',sans-serif;font-size:14px;" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Representante (opcional)</label>
+          <input type="text" id="nc-representante" placeholder="Nombre del contacto..." style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:10px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button onclick="document.getElementById('modal-nuevo-cliente').remove()" style="flex:1;padding:12px;border:1.5px solid #D8D0C8;border-radius:8px;background:#fff;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Cancelar</button>
+        <button onclick="guardarNuevoCliente()" style="flex:2;padding:12px;border:none;border-radius:8px;background:#E8500A;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;cursor:pointer;">💾 GUARDAR CLIENTE</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  setTimeout(function(){ document.getElementById('nc-nombre').focus(); }, 200);
+}
+
+function guardarNuevoCliente() {
+  var nombre = document.getElementById('nc-nombre').value.trim();
+  var telefono = document.getElementById('nc-telefono').value.trim();
+  if(!nombre || !telefono) { showToast('⚠️ Nombre y teléfono son obligatorios'); return; }
+
+  var nuevoId = 'CRM-' + Date.now();
+  var cliente = {
+    id: nuevoId,
+    nombre: nombre.toUpperCase(),
+    telefono: telefono,
+    celular: document.getElementById('nc-celular').value.trim(),
+    domicilio: document.getElementById('nc-domicilio').value.trim(),
+    representante: document.getElementById('nc-representante').value.trim(),
+    rfc: document.getElementById('nc-rfc').value.trim(),
+    origen: 'crm',
+    creadoPor: currentUser ? currentUser.name : 'Ivette',
+    timestamp: Date.now()
+  };
+
+  // Agregar al cache local inmediatamente
+  clientesCache.unshift(cliente);
+
+  // Guardar en Firebase
+  if(db) {
+    db.collection('clientes').doc(nuevoId).set(cliente).then(function(){
+      showToast('✅ Cliente ' + nombre + ' dado de alta');
+    }).catch(function(e){
+      console.log(e);
+      showToast('⚠️ Error al guardar en la nube');
+    });
+  } else {
+    showToast('✅ Cliente guardado localmente');
+  }
+
+  document.getElementById('modal-nuevo-cliente').remove();
+
+  // Mostrar el cliente recién creado en la búsqueda
+  document.getElementById('cli-search').value = nombre;
+  buscarCliente();
+}
+
 function buscarCliente() {
   const q = document.getElementById('cli-search').value.trim().toLowerCase();
   const list = document.getElementById('cli-list');
