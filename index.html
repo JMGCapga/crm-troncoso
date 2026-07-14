@@ -196,6 +196,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <button class="tab" id="tab-nc-btn" onclick="switchTab('nc',this)">📝 Notas de Crédito</button>
     <button class="tab" id="tab-fondeos-btn" onclick="switchTab('fondeos',this)">💸 Fondeos</button>
     <button class="tab" id="tab-compras-btn" onclick="switchTab('compras',this)">🛒 Compras</button>
+    <button class="tab" id="tab-cuentas-btn" onclick="switchTab('cuentas',this)">💰 Cuentas</button>
     <button class="tab" id="tab-nomina-btn" onclick="switchTab('nomina',this)">👷 Nómina</button>
     <button class="tab" id="tab-pedidos-btn" onclick="switchTab('pedidos',this)">📦 Pedidos</button>
     <button class="tab" id="tab-flota-btn" onclick="switchTab('flota',this)" style="display:none">🚛 Flota</button>
@@ -1073,6 +1074,35 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 
     </div>
 
+    <!-- ===== CUENTAS (POR COBRAR / POR PAGAR) ===== -->
+    <div class="panel" id="panel-cuentas">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="card-title" style="margin-bottom:0;">💰 Cuentas</div>
+          <button class="btn btn-gris" onclick="iniciarCuentas()" style="font-size:11px;padding:7px 14px;">🔄 Actualizar</button>
+        </div>
+        <div style="font-size:11px;color:var(--suave);margin-top:4px;">Saldos pendientes ordenados por vencimiento</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;">
+            <div class="card-title" style="margin-bottom:0;">📥 Por Cobrar</div>
+            <div id="cuentas-cobrar-total" style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--naranja);">$0.00</div>
+          </div>
+          <div id="cuentas-cobrar-lista" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;max-height:520px;overflow-y:auto;"></div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;">
+            <div class="card-title" style="margin-bottom:0;">📤 Por Pagar</div>
+            <div id="cuentas-pagar-total" style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--naranja);">$0.00</div>
+          </div>
+          <div id="cuentas-pagar-lista" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;max-height:520px;overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ===== PEDIDOS ===== -->
     <div class="panel" id="panel-pedidos">
 
@@ -1466,6 +1496,21 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           </div>
         </div>
 
+        <!-- CUENTAS POR COBRAR / POR PAGAR -->
+        <div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-bottom:14px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;margin-bottom:12px;letter-spacing:1px;">💳 CUENTAS PENDIENTES</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">💰 Por Cobrar</div>
+              <div id="dash-por-cobrar" style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--naranja);margin-top:4px;">$0.00</div>
+            </div>
+            <div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Por Pagar</div>
+              <div id="dash-por-pagar" style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--naranja);margin-top:4px;">$0.00</div>
+            </div>
+          </div>
+        </div>
+
         <!-- SEMANA ACTUAL -->
         <div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-bottom:14px;">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;margin-bottom:12px;letter-spacing:1px;">📈 SEMANA ACTUAL</div>
@@ -1548,6 +1593,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 </div>
 
 <script>
+var cuentasCobrar = [], cuentasPagar = [];
 // ════ FIREBASE — misma base que Sistema Troncoso ════
 var firebaseConfig = {
   apiKey: "AIzaSyBuw-B6vn3jzruFBPKEifUNp4vYieYn9cU",
@@ -1796,14 +1842,14 @@ function checkPin(){
       'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-nc-btn','tab-pedidos-btn','tab-flota-btn'];
     var tabsCompras = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-salidas-btn','tab-nc-btn',
-      'tab-compras-btn','tab-pedidos-btn'];
+      'tab-compras-btn','tab-cuentas-btn','tab-pedidos-btn'];
     var tabsGerencia = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
-      'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-nomina-btn',
+      'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-cuentas-btn','tab-nomina-btn',
       'tab-pedidos-btn','tab-flota-btn','tab-dashboard-btn'];
     var tabsDirector = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
-      'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-nomina-btn',
+      'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-cuentas-btn','tab-nomina-btn',
       'tab-pedidos-btn','tab-flota-btn','tab-dashboard-btn'];
 
     var tabsVisibles = role === 'Operador' ? tabsOperador :
@@ -1831,6 +1877,10 @@ function checkPin(){
       switchTab('flota', document.getElementById('tab-flota-btn'));
     }
     initApp();
+    // Si es Compras, revisar cuentas por pagar próximas a vencer y alertar por WhatsApp
+    if(role === 'Compras') {
+      verificarAlertasCuentasPorPagar();
+    }
     // Si es Director o Gerencia, mostrar Dashboard automáticamente
     if(pinBuf === '9900' || pinBuf === '5678') {
       setTimeout(() => switchTab('dashboard'), 500);
@@ -1972,6 +2022,7 @@ function switchTab(tab, btn) {
   if(tab === 'salidas') iniciarSalidas();
   if(tab === 'fondeos') iniciarFondeos();
   if(tab === 'compras') iniciarCompras();
+  if(tab === 'cuentas') iniciarCuentas();
   if(tab === 'nomina') iniciarNomina();
   if(tab === 'flota') iniciarFlota();
   if(tab === 'pedidos') iniciarPedidos();
@@ -2392,6 +2443,63 @@ function mostrarModalPedido(cot, docId) {
 }
 
 var creandoPedido = false;
+
+function registrarPagoCliente(docId, monto) {
+  if(!db || !docId || !(monto > 0)) return;
+  var ref = db.collection('cuentas_cobrar').doc(docId);
+  return db.runTransaction(function(tx){
+    return tx.get(ref).then(function(doc){
+      if(!doc.exists) throw new Error('Cuenta por cobrar no encontrada');
+      var data = doc.data();
+      var nuevoSaldo = Math.max(0, (data.saldo || 0) - monto);
+      tx.update(ref, {
+        saldo: nuevoSaldo,
+        estado: nuevoSaldo === 0 ? 'pagado' : 'pendiente',
+        ultimoPago: monto,
+        ultimoPagoFecha: fechaISOLocal(),
+        ultimoPagoTimestamp: Date.now()
+      });
+    });
+  }).then(function(){
+    showToast('💰 Pago registrado');
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar pago'); });
+}
+
+function registrarCompraProveedor(proveedor, total, vencimiento) {
+  if(!db || !proveedor || !(total > 0)) return;
+  return db.collection('cuentas_pagar').add({
+    proveedor: proveedor,
+    total: total,
+    saldo: total,
+    estado: 'pendiente',
+    vencimiento: vencimiento || '',
+    fecha: fechaISOLocal(),
+    timestamp: Date.now()
+  }).then(function(){
+    showToast('🧾 Compra a proveedor registrada');
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar compra'); });
+}
+
+function registrarAbonoProveedor(docId, monto) {
+  if(!db || !docId || !(monto > 0)) return;
+  var ref = db.collection('cuentas_pagar').doc(docId);
+  return db.runTransaction(function(tx){
+    return tx.get(ref).then(function(doc){
+      if(!doc.exists) throw new Error('Cuenta por pagar no encontrada');
+      var data = doc.data();
+      var nuevoSaldo = Math.max(0, (data.saldo || 0) - monto);
+      tx.update(ref, {
+        saldo: nuevoSaldo,
+        estado: nuevoSaldo === 0 ? 'pagado' : 'pendiente',
+        ultimoAbono: monto,
+        ultimoAbonoFecha: fechaISOLocal(),
+        ultimoAbonoTimestamp: Date.now()
+      });
+    });
+  }).then(function(){
+    showToast('💸 Abono a proveedor registrado');
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar abono'); });
+}
 function confirmarCierrePedido(docId) {
   if(creandoPedido) return;
   creandoPedido = true;
@@ -2441,9 +2549,20 @@ function confirmarCierrePedido(docId) {
           showToast('⚠️ Ya existe pedido ' + snap.docs[0].data().id + ' para esta cotización');
           return;
         }
-        db.collection('pedidos').add(pedido).then(function(){
+        db.collection('pedidos').add(pedido).then(function(pedidoRef){
           showToast('🎯 Pedido '+folioBase+' creado en Sistema Operativo');
           if(operador !== 'Sin asignar') notificarOperadorPedido(pedido, operador);
+          if(pago === 'Crédito' || pago === 'Contra entrega'){
+            db.collection('cuentas_cobrar').add({
+              pedidoId: pedidoRef.id,
+              cliente: cot.cliente,
+              total: cot.total || 0,
+              saldo: cot.total || 0,
+              estado: 'pendiente',
+              fecha: fechaISOLocal(),
+              timestamp: Date.now()
+            }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear cuenta por cobrar'); });
+          }
         }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear pedido'); });
       }).catch(function(e){ console.log(e); showToast('⚠️ Error al verificar pedido'); });
     }
@@ -4272,6 +4391,167 @@ function cargarComprasJM() {
 }
 
 // ════════════════════════════════════════════════════════════
+//  MÓDULO CUENTAS (POR COBRAR / POR PAGAR)
+// ════════════════════════════════════════════════════════════
+
+function iniciarCuentas() {
+  cargarCuentasCobrar();
+  cargarCuentasPagar();
+}
+
+function cargarCuentasCobrar() {
+  var cont = document.getElementById('cuentas-cobrar-lista');
+  if(!db) { cont.innerHTML = '<div style="padding:12px;color:var(--suave);">Sin conexión</div>'; return; }
+  cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Cargando...</div>';
+  db.collection('cuentas_cobrar').where('estado','==','pendiente').get().then(function(snap) {
+    cuentasCobrar = [];
+    snap.forEach(function(doc) { cuentasCobrar.push(Object.assign({_docId: doc.id}, doc.data())); });
+    cuentasCobrar.sort(function(a, b) {
+      return (a.vencimiento || a.fecha || '').localeCompare(b.vencimiento || b.fecha || '');
+    });
+    renderCuentasCobrar();
+  }).catch(function(e) { console.log(e); cont.innerHTML = '<div style="padding:12px;color:#EF4444;">Error al cargar</div>'; });
+}
+
+function cargarCuentasPagar() {
+  var cont = document.getElementById('cuentas-pagar-lista');
+  if(!db) { cont.innerHTML = '<div style="padding:12px;color:var(--suave);">Sin conexión</div>'; return; }
+  cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Cargando...</div>';
+  db.collection('cuentas_pagar').where('estado','==','pendiente').get().then(function(snap) {
+    cuentasPagar = [];
+    snap.forEach(function(doc) { cuentasPagar.push(Object.assign({_docId: doc.id}, doc.data())); });
+    cuentasPagar.sort(function(a, b) {
+      return (a.vencimiento || a.fecha || '').localeCompare(b.vencimiento || b.fecha || '');
+    });
+    renderCuentasPagar();
+  }).catch(function(e) { console.log(e); cont.innerHTML = '<div style="padding:12px;color:#EF4444;">Error al cargar</div>'; });
+}
+
+function renderCuentasCobrar() {
+  var cont = document.getElementById('cuentas-cobrar-lista');
+  var totalEl = document.getElementById('cuentas-cobrar-total');
+  if(!cont) return;
+  if(!cuentasCobrar.length) {
+    cont.innerHTML = '<div style="padding:16px;text-align:center;color:var(--suave);font-size:13px;">✅ Sin cuentas por cobrar pendientes</div>';
+    if(totalEl) totalEl.textContent = fmtMoney(0);
+    return;
+  }
+  var hoyStr = fechaISOLocal();
+  var total = 0;
+  cont.innerHTML = cuentasCobrar.map(function(c) {
+    total += c.saldo || 0;
+    var venc = c.vencimiento || c.fecha || '';
+    var vencido = !!venc && venc < hoyStr;
+    return '<div style="padding:14px;border-bottom:1px solid #F0EDE8;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">'
+      +   '<div style="font-weight:700;font-size:13px;">' + (c.cliente || 'Sin nombre') + '</div>'
+      +   '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--naranja);white-space:nowrap;">' + fmtMoney(c.saldo || 0) + '</div>'
+      + '</div>'
+      + '<div style="font-size:11px;color:' + (vencido ? '#EF4444' : 'var(--suave)') + ';margin-top:2px;">'
+      +   (vencido ? '⚠️ Vencido: ' : 'Vence: ') + (venc || '—') + ' · Total: ' + fmtMoney(c.total || 0)
+      + '</div>'
+      + '<div style="display:flex;gap:8px;margin-top:8px;">'
+      +   '<input type="number" id="cc-abono-' + c._docId + '" placeholder="Monto a abonar" min="0" step="0.01" style="flex:1;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-family:\'Barlow\',sans-serif;font-size:12px;">'
+      +   '<button class="btn btn-naranja" onclick="abonarCuentaCobrar(\'' + c._docId + '\')" style="font-size:11px;padding:8px 14px;">💰 Registrar pago</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  if(totalEl) totalEl.textContent = fmtMoney(total);
+}
+
+function renderCuentasPagar() {
+  var cont = document.getElementById('cuentas-pagar-lista');
+  var totalEl = document.getElementById('cuentas-pagar-total');
+  if(!cont) return;
+  if(!cuentasPagar.length) {
+    cont.innerHTML = '<div style="padding:16px;text-align:center;color:var(--suave);font-size:13px;">✅ Sin cuentas por pagar pendientes</div>';
+    if(totalEl) totalEl.textContent = fmtMoney(0);
+    return;
+  }
+  var hoyStr = fechaISOLocal();
+  var total = 0;
+  cont.innerHTML = cuentasPagar.map(function(c) {
+    total += c.saldo || 0;
+    var venc = c.vencimiento || c.fecha || '';
+    var vencido = !!venc && venc < hoyStr;
+    return '<div style="padding:14px;border-bottom:1px solid #F0EDE8;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">'
+      +   '<div style="font-weight:700;font-size:13px;">' + (c.proveedor || 'Sin nombre') + '</div>'
+      +   '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--naranja);white-space:nowrap;">' + fmtMoney(c.saldo || 0) + '</div>'
+      + '</div>'
+      + '<div style="font-size:11px;color:' + (vencido ? '#EF4444' : 'var(--suave)') + ';margin-top:2px;">'
+      +   (vencido ? '⚠️ Vencido: ' : 'Vence: ') + (venc || '—') + ' · Total: ' + fmtMoney(c.total || 0)
+      + '</div>'
+      + '<div style="display:flex;gap:8px;margin-top:8px;">'
+      +   '<input type="number" id="cp-abono-' + c._docId + '" placeholder="Monto a pagar" min="0" step="0.01" style="flex:1;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-family:\'Barlow\',sans-serif;font-size:12px;">'
+      +   '<button class="btn btn-naranja" onclick="abonarCuentaPagar(\'' + c._docId + '\')" style="font-size:11px;padding:8px 14px;">💸 Registrar pago</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  if(totalEl) totalEl.textContent = fmtMoney(total);
+}
+
+function abonarCuentaCobrar(docId) {
+  var input = document.getElementById('cc-abono-' + docId);
+  var monto = parseFloat(input ? input.value : '');
+  if(!(monto > 0)) { showToast('⚠️ Ingresa un monto válido'); return; }
+  registrarPagoCliente(docId, monto).then(function() { cargarCuentasCobrar(); });
+}
+
+function abonarCuentaPagar(docId) {
+  var input = document.getElementById('cp-abono-' + docId);
+  var monto = parseFloat(input ? input.value : '');
+  if(!(monto > 0)) { showToast('⚠️ Ingresa un monto válido'); return; }
+  registrarAbonoProveedor(docId, monto).then(function() { cargarCuentasPagar(); });
+}
+
+// ════ ALERTA CUENTAS POR PAGAR PRÓXIMAS A VENCER (rol Compras) ════
+function verificarAlertasCuentasPorPagar() {
+  if(!db) return;
+  db.collection('cuentas_pagar').where('estado','==','pendiente').get().then(function(snap) {
+    var hoy = new Date();
+    var limite = new Date(hoy.getTime() + 7*24*60*60*1000);
+    var limiteStr = limite.toISOString().slice(0,10);
+    var porVencer = [];
+    snap.forEach(function(doc) {
+      var data = doc.data();
+      if(data.vencimiento && data.vencimiento <= limiteStr && !data.alertaSent) {
+        porVencer.push(Object.assign({_docId: doc.id}, data));
+      }
+    });
+    if(!porVencer.length) return;
+    var msg = '⚠️ CUENTA POR VENCER\n\n' + porVencer.map(function(c) {
+      return '• ' + (c.proveedor || 'Sin nombre') + ' — ' + fmtMoney(c.saldo || c.total || 0) + ' — Vence: ' + c.vencimiento;
+    }).join('\n');
+    if(confirm(msg + '\n\n¿Enviar alerta por WhatsApp?')) {
+      window.open('https://wa.me/525585736084?text=' + encodeURIComponent(msg), '_blank');
+      var batch = db.batch();
+      porVencer.forEach(function(c) {
+        batch.update(db.collection('cuentas_pagar').doc(c._docId), { alertaSent: true });
+      });
+      batch.commit().catch(function(e) { console.log(e); });
+    }
+  }).catch(function(e) { console.log(e); });
+}
+
+function renderDashboardDirector() {
+  if(!db) return;
+  db.collection('cuentas_cobrar').where('estado','==','pendiente').get().then(function(snap) {
+    var total = 0;
+    snap.forEach(function(doc) { total += doc.data().saldo || 0; });
+    var el = document.getElementById('dash-por-cobrar');
+    if(el) el.textContent = fmtMoney(total);
+  }).catch(function(e) { console.log(e); });
+
+  db.collection('cuentas_pagar').where('estado','==','pendiente').get().then(function(snap) {
+    var total = 0;
+    snap.forEach(function(doc) { total += doc.data().saldo || 0; });
+    var el = document.getElementById('dash-por-pagar');
+    if(el) el.textContent = fmtMoney(total);
+  }).catch(function(e) { console.log(e); });
+}
+
+// ════════════════════════════════════════════════════════════
 //  MÓDULO NÓMINA SEMANAL
 // ════════════════════════════════════════════════════════════
 
@@ -4813,6 +5093,8 @@ function primerDiaDelMes() {
 
 async function cargarDashboard() {
   if(!db) { showToast('⚠️ Sin conexión a Firebase'); return; }
+
+  renderDashboardDirector();
 
   try {
     console.log('Iniciando carga de Dashboard...');
