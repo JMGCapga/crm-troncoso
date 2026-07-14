@@ -2861,6 +2861,7 @@ function cargarCortesPendientes() {
 
 function validarCorte(docId, status) {
   if(!db) return;
+  if(!currentUser || currentUser.role !== 'Gerencia') { showToast('⚠️ No tienes permisos para validar cortes'); return; }
   db.collection('cortes').doc(docId).update({
     status: status,
     validadoPor: currentUser ? currentUser.name : 'Viridiana',
@@ -3425,6 +3426,7 @@ function cargarNCPendientes() {
 
 function validarNC(docId, status) {
   if(!db) return;
+  if(!currentUser || currentUser.role !== 'Gerencia') { showToast('⚠️ No tienes permisos para validar notas de crédito'); return; }
   db.collection('notas_credito').doc(docId).get().then(function(doc){
     if(!doc.exists) return;
     var nc = doc.data();
@@ -3731,6 +3733,7 @@ function renderFondeosPendientesJM() {
 }
 
 function aprobarRechazarFondeoCRM(docId, accion) {
+  if(!currentUser || currentUser.role !== 'Director') { showToast('⚠️ No tienes permisos para aprobar fondeos'); return; }
   var motivo = accion === 'rechazado' ? (prompt('Motivo del rechazo (opcional):') || '') : '';
   procesarFondeo(docId, accion, { motivoRechazo: motivo }).then(function(){
     showToast(accion === 'aprobado' ? '✅ Fondeo aprobado' : '❌ Fondeo rechazado');
@@ -4292,6 +4295,7 @@ function cargarComprasViri(filtro) {
 
 function validarCompra(compraId, aprobada) {
   if(!db) return;
+  if(!currentUser || currentUser.role !== 'Gerencia') { showToast('⚠️ No tienes permisos para validar compras'); return; }
   db.collection('compras').doc(compraId).update({
     status: aprobada ? 'validada' : 'rechazada',
     validadoPor: currentUser ? currentUser.name : 'Viridiana',
