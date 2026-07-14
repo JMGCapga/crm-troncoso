@@ -2914,7 +2914,7 @@ function iniciarSalidas() {
   document.getElementById('salidas-viri').style.display = 'none';
   document.getElementById('salidas-director').style.display = 'none';
 
-  if(role === 'Compras' || role === 'Ventas') {
+  if(role === 'Compras') {
     document.getElementById('salidas-erika').style.display = 'block';
     document.getElementById('salidas-fecha-hoy').textContent = 'Fecha: ' + new Date().toLocaleDateString('es-MX',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
     cargarSalidasHoy();
@@ -4394,6 +4394,11 @@ function cargarComprasJM() {
 // ════════════════════════════════════════════════════════════
 
 function iniciarCuentas() {
+  var role = currentUser ? currentUser.role : '';
+  if(role !== 'Compras' && role !== 'Gerencia' && role !== 'Director') {
+    document.getElementById('panel-cuentas').innerHTML = '<div class="card"><div style="text-align:center;padding:40px;color:var(--suave);">⚠️ No tienes permisos para acceder a este módulo</div></div>';
+    return;
+  }
   cargarCuentasCobrar();
   cargarCuentasPagar();
 }
@@ -5968,6 +5973,11 @@ function iniciarFlota(){
       document.getElementById('flota-admin-nueva-unidad-card').style.display = role === 'Director' ? 'block' : 'none';
       poblarSelectOperadoresFlota();
       renderFlotaAdmin();
+    } else if(role === 'Ventas'){
+      // Vista de solo lectura: estatus de la flota, sin acciones de edición/servicio/taller
+      document.getElementById('flota-admin').style.display = 'block';
+      document.getElementById('flota-admin-nueva-unidad-card').style.display = 'none';
+      renderFlotaAdmin();
     }
   });
 }
@@ -6280,6 +6290,8 @@ function calcBadgeUnidadFlota(u, daniosUnidad){
 function renderUnidadesAdminCards(daniosPend){
   var cont = document.getElementById('flota-admin-unidades');
   if(!unidadesCache.length){ cont.innerHTML = '<div class="card"><div style="text-align:center;padding:20px;color:var(--suave);">Sin unidades registradas</div></div>'; return; }
+  var role = currentUser ? currentUser.role : '';
+  var puedeEditar = role === 'Gerencia' || role === 'Director';
   cont.innerHTML = unidadesCache.map(function(u){
     var badge = calcBadgeUnidadFlota(u, daniosPend.filter(function(d){ return d.unidad === u.placas; }));
     return '<div class="card">'
@@ -6290,11 +6302,13 @@ function renderUnidadesAdminCards(daniosPend){
       + '<div style="font-size:12px;color:var(--suave);margin-top:2px;">Próx. servicio: '+(u.proximoServicioKm?fmtNumero(u.proximoServicioKm)+' km':'—')+'</div></div>'
       + '<span style="background:#'+badge.color+'22;color:#'+badge.color+';border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;white-space:nowrap;">'+badge.emoji+' '+badge.label+'</span>'
       + '</div>'
-      + '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">'
-      + '<button class="btn btn-gris" style="font-size:11px;padding:7px 12px;" onclick="editarUnidadFlota(\''+u._docId+'\')">✏️ Editar</button>'
-      + '<button class="btn btn-gris" style="font-size:11px;padding:7px 12px;" onclick="agregarServicioUnidadFlota(\''+u._docId+'\')">🗓️ +Servicio</button>'
-      + '<button class="btn btn-gris" style="font-size:11px;padding:7px 12px;" onclick="toggleTallerUnidadFlota(\''+u._docId+'\')">🔧 '+(u.estado==='taller'?'Sacar de taller':'+Taller')+'</button>'
-      + '</div></div>';
+      + (puedeEditar ?
+        '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">'
+        + '<button class="btn btn-gris" style="font-size:11px;padding:7px 12px;" onclick="editarUnidadFlota(\''+u._docId+'\')">✏️ Editar</button>'
+        + '<button class="btn btn-gris" style="font-size:11px;padding:7px 12px;" onclick="agregarServicioUnidadFlota(\''+u._docId+'\')">🗓️ +Servicio</button>'
+        + '<button class="btn btn-gris" style="font-size:11px;padding:7px 12px;" onclick="toggleTallerUnidadFlota(\''+u._docId+'\')">🔧 '+(u.estado==='taller'?'Sacar de taller':'+Taller')+'</button>'
+        + '</div>' : '')
+      + '</div>';
   }).join('');
 }
 
