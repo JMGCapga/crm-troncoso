@@ -1790,7 +1790,7 @@ function checkPin(){
     var tabsOperador = ['tab-pedidos-btn','tab-flota-btn'];
     var tabsMecanico = ['tab-flota-btn'];
     var tabsVentas = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-nc-btn','tab-pedidos-btn'];
+      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-nc-btn','tab-pedidos-btn','tab-flota-btn'];
     var tabsCompras = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-salidas-btn','tab-nc-btn',
       'tab-compras-btn','tab-pedidos-btn'];
@@ -3407,6 +3407,10 @@ function abrirWhatsAppSolicitudFondeo(fondeo) {
     '✅ APROBAR → '+urlAprobar+'\n'+
     '❌ RECHAZAR → '+urlRechazar;
   window.open('https://wa.me/'+JOSE_MANUEL_WHATSAPP+'?text='+encodeURIComponent(msg),'_blank');
+  // Enviar también a Viridiana
+  setTimeout(function(){
+    window.open('https://wa.me/525534665197?text='+encodeURIComponent(msg),'_blank');
+  }, 1000);
   if(fondeo._docId && db) {
     db.collection('fondeos').doc(fondeo._docId).update({ whatsappEnviado: true }).catch(function(e){ console.log(e); });
   }
