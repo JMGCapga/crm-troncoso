@@ -1933,12 +1933,11 @@ function initApp(){
 function aplicarCandadoOperador() {
   var esOperador = currentUser && currentUser.role === 'Operador';
   var esMecanico = currentUser && currentUser.role === 'Mecanico';
+  if(!esOperador && !esMecanico) return; // otros roles ya fueron filtrados por checkPin()
   var idsOcultos = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn','tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-nomina-btn'];
   idsOcultos.forEach(function(id){
     var b = document.getElementById(id);
-    if(!b) return;
-    if(esMecanico){ b.style.display = 'none'; return; }
-    b.style.display = esOperador ? 'none' : '';
+    if(b) b.style.display = 'none';
   });
   // Candado Mecánico: solo ve Flota (no Pedidos ni Dashboard, que no están en idsOcultos)
   if(esMecanico){
