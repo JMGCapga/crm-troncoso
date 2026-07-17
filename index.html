@@ -5157,7 +5157,7 @@ function hoy() {
   return formatoFecha(new Date());
 }
 
-function lunesDeEstaSemana() {
+function lunesDeEstaSemanaFmt() {
   const d = new Date();
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
@@ -5178,7 +5178,7 @@ async function cargarDashboard() {
   try {
     console.log('Iniciando carga de Dashboard...');
     const hoyStr = hoy();
-    const lunesStr = lunesDeEstaSemana();
+    const lunesStr = lunesDeEstaSemanaFmt();
     const primerStr = primerDiaDelMes();
     console.log('Buscando datos de:', hoyStr, lunesStr, primerStr);
 
