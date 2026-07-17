@@ -1385,7 +1385,16 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           </div>
 
           <div style="background:#F5F2EE;border:1px solid #D8D0C8;border-radius:10px;padding:16px;margin-bottom:16px;">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;">💰 Detalle de Nómina</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;">💰 Detalle de Nómina</div>
+              <div style="display:flex;gap:8px;">
+                <button id="nom-btn-editar" class="btn btn-gris" onclick="toggleModoEdicionNomina()" style="font-size:11px;padding:8px 12px;">✏️ Editar descuentos</button>
+                <button class="btn btn-gris" onclick="imprimirNomina()" style="font-size:11px;padding:8px 12px;">🖨️ Imprimir</button>
+              </div>
+            </div>
+            <div id="nom-edicion-hint" style="display:none;background:#FFF6E5;border:1px solid #FFB84D;border-radius:6px;padding:8px 10px;font-size:11px;color:#8A5300;margin-bottom:10px;">
+              🔓 Modo edición activo: puedes ajustar manualmente <b>Desc. Faltas, Préstamo Semanal, Préstamo Fijo y Caja Ahorro</b> para reflejar negociaciones (cuando no se descuenta todo). Usa el ícono <b>↺</b> para regresar un valor a su cálculo/configuración automática.
+            </div>
             <table class="prod-tabla" style="font-size:10px;">
               <thead><tr><th>Empleado</th><th>Sueldo</th><th>Faltas</th><th>Desc. Faltas</th><th>Prest. Sem.</th><th>Prest. Fijo</th><th>Caja Ahorro</th><th>Otros Desc.</th><th>Bonos</th><th>Total Desc.</th><th>Neto</th><th>IMSS</th><th>Efectivo</th><th>Transferencia</th><th>Observ.</th></tr></thead>
               <tbody id="nom-tabla-empleados"></tbody>
@@ -1404,6 +1413,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 
             <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
               <button class="btn btn-gris" onclick="guardarNominaBorrador()" style="flex:1;font-size:12px;">💾 Guardar borrador</button>
+              <button class="btn btn-gris" onclick="imprimirNomina()" style="flex:1;font-size:12px;">🖨️ Imprimir nómina</button>
               <button class="btn btn-naranja" onclick="procesarNomina()" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;padding:12px;">✅ PROCESAR NÓMINA</button>
             </div>
           </div>
@@ -4759,8 +4769,9 @@ function resincronizarEmpleadosNomina() {
       emp.imss = actual.imss;
       emp.sueldoSemanal = actual.sueldoSemanal || 0;
       emp.montoIMSS = actual.montoIMSS || 0;
-      emp.cajaAhorro = actual.cajaAhorro || 0;
-      emp.prestamoFijo = actual.prestamoFijo || 0;
+      // Si ya se ajustó manualmente esta semana (negociación), no se sobreescribe con la config
+      if(!emp.cajaAhorroManual) emp.cajaAhorro = actual.cajaAhorro || 0;
+      if(!emp.prestamoFijoManual) emp.prestamoFijo = actual.prestamoFijo || 0;
     }
   });
 
@@ -4846,12 +4857,13 @@ function renderTablaEmpleados() {
   }
 
   var totNomina = 0, totIMSS = 0, totEfectivo = 0, totTransferencia = 0;
+  var editStyle = 'width:55px;border:1px solid #FF9800;border-radius:3px;padding:3px;font-size:9px;background:#FFF6E5;';
 
   nominaActual.empleados.forEach(function(emp, idx) {
     // Obtener días de semana del empleado original
     var empleadoOriginal = nominaEmpleados.find(e => e.id === emp.empleadoId);
     var diasSemana = empleadoOriginal ? (empleadoOriginal.diasSemana || 7) : 7;
-    var descFaltas = (emp.sueldoSemanal / diasSemana) * (emp.faltas || 0);
+    var descFaltas = emp.descFaltasManual ? (emp.descuentoFaltas || 0) : (emp.sueldoSemanal / diasSemana) * (emp.faltas || 0);
     var totalDesc = (descFaltas || 0) + (emp.prestamoSemanal || 0) + (emp.prestamoFijo || 0) + (emp.cajaAhorro || 0) + (emp.otrosDescuentos || 0);
     var neto = emp.sueldoSemanal - totalDesc + (emp.bonos || 0);
 
@@ -4874,15 +4886,33 @@ function renderTablaEmpleados() {
     totEfectivo += efectivo;
     totTransferencia += transferencia;
 
+    // Celdas de descuentos: normal (solo lectura) o editables en modo negociación
+    var celdaDescFaltas, celdaPrestSem, celdaPrestFijo, celdaCaja;
+
+    if(nomModoEdicion) {
+      celdaDescFaltas = '<td><input type="number" value="'+Math.round(descFaltas)+'" min="0" step="10" onchange="updateNominaEmpleado('+idx+',\'descuentoFaltasManual\',this.value);renderTablaEmpleados();" style="'+editStyle+'">'+
+        (emp.descFaltasManual ? ' <a href="#" onclick="resetDescuentoFaltas('+idx+');return false;" title="Volver al cálculo automático" style="font-size:11px;">↺</a>' : '')+'</td>';
+      celdaPrestSem = '<td><input type="number" value="'+(emp.prestamoSemanal||0)+'" min="0" step="50" onchange="updateNominaEmpleado('+idx+',\'prestamoSemanal\',this.value);renderTablaEmpleados();" style="'+editStyle+'"></td>';
+      celdaPrestFijo = '<td><input type="number" value="'+(emp.prestamoFijo||0)+'" min="0" step="50" onchange="updateNominaEmpleado('+idx+',\'prestamoFijoManual\',this.value);renderTablaEmpleados();" style="'+editStyle+'">'+
+        (emp.prestamoFijoManual ? ' <a href="#" onclick="resetPrestamoFijo('+idx+');return false;" title="Volver a configuración" style="font-size:11px;">↺</a>' : '')+'</td>';
+      celdaCaja = '<td><input type="number" value="'+(emp.cajaAhorro||0)+'" min="0" step="50" onchange="updateNominaEmpleado('+idx+',\'cajaAhorroManual\',this.value);renderTablaEmpleados();" style="'+editStyle+'">'+
+        (emp.cajaAhorroManual ? ' <a href="#" onclick="resetCajaAhorro('+idx+');return false;" title="Volver a configuración" style="font-size:11px;">↺</a>' : '')+'</td>';
+    } else {
+      celdaDescFaltas = '<td style="text-align:right;">$'+fmtNumero(descFaltas)+(emp.descFaltasManual?' <span title="Ajustado manualmente (negociación)" style="color:#FF9800;">✎</span>':'')+'</td>';
+      celdaPrestSem = '<td style="text-align:right;">$'+fmtNumero(emp.prestamoSemanal||0)+'</td>';
+      celdaPrestFijo = '<td style="text-align:right;">$'+fmtNumero(emp.prestamoFijo||0)+(emp.prestamoFijoManual?' <span title="Ajustado manualmente (negociación)" style="color:#FF9800;">✎</span>':'')+'</td>';
+      celdaCaja = '<td style="text-align:right;">$'+fmtNumero(emp.cajaAhorro||0)+(emp.cajaAhorroManual?' <span title="Ajustado manualmente (negociación)" style="color:#FF9800;">✎</span>':'')+'</td>';
+    }
+
     var tr = document.createElement('tr');
     tr.innerHTML =
       '<td>'+emp.nombre+'</td>'+
       '<td style="text-align:right;">$'+fmtNumero(emp.sueldoSemanal)+'</td>'+
       '<td><input type="number" value="'+(emp.faltas||0)+'" min="0" max="6" onchange="updateNominaEmpleado('+idx+',\'faltas\',this.value);renderTablaEmpleados();" style="width:40px;border:1px solid var(--borde);border-radius:3px;padding:3px;font-size:9px;"></td>'+
-      '<td style="text-align:right;">$'+fmtNumero(descFaltas)+'</td>'+
-      '<td style="text-align:right;">$'+fmtNumero(emp.prestamoSemanal||0)+'</td>'+
-      '<td style="text-align:right;">$'+fmtNumero(emp.prestamoFijo||0)+'</td>'+
-      '<td style="text-align:right;">$'+fmtNumero(emp.cajaAhorro||0)+'</td>'+
+      celdaDescFaltas+
+      celdaPrestSem+
+      celdaPrestFijo+
+      celdaCaja+
       '<td><input type="number" value="'+(emp.otrosDescuentos||0)+'" min="0" step="50" placeholder="0" onchange="updateNominaEmpleado('+idx+',\'otrosDescuentos\',this.value);renderTablaEmpleados();" style="width:45px;border:1px solid var(--borde);border-radius:3px;padding:3px;font-size:9px;"></td>'+
       '<td><input type="number" value="'+(emp.bonos||0)+'" min="0" step="50" placeholder="0" onchange="updateNominaEmpleado('+idx+',\'bonos\',this.value);renderTablaEmpleados();" style="width:45px;border:1px solid var(--borde);border-radius:3px;padding:3px;font-size:9px;"></td>'+
       '<td style="text-align:right;color:#666;">$'+fmtNumero(totalDesc)+'</td>'+
@@ -4904,12 +4934,131 @@ function renderTablaEmpleados() {
   document.getElementById('nom-total-efectivo').textContent = '$'+fmtNumero(totEfectivo);
 }
 
-function updateNominaEmpleado(idx, campo, valor) {
-  if(campo === 'observaciones') {
-    nominaActual.empleados[idx][campo] = valor;
-  } else {
-    nominaActual.empleados[idx][campo] = parseInt(valor) || 0;
+// Activa/desactiva el modo de edición manual de descuentos, para cuando
+// en la negociación con el empleado no se descuenta el total calculado.
+var nomModoEdicion = false;
+function toggleModoEdicionNomina() {
+  nomModoEdicion = !nomModoEdicion;
+  var btn = document.getElementById('nom-btn-editar');
+  var hint = document.getElementById('nom-edicion-hint');
+  if(btn) {
+    btn.textContent = nomModoEdicion ? '🔒 Bloquear descuentos' : '✏️ Editar descuentos';
+    btn.className = nomModoEdicion ? 'btn btn-naranja' : 'btn btn-gris';
   }
+  if(hint) hint.style.display = nomModoEdicion ? 'block' : 'none';
+  renderTablaEmpleados();
+}
+
+function resetDescuentoFaltas(idx) {
+  var emp = nominaActual.empleados[idx];
+  emp.descFaltasManual = false;
+  renderTablaEmpleados();
+}
+
+function resetPrestamoFijo(idx) {
+  var emp = nominaActual.empleados[idx];
+  emp.prestamoFijoManual = false;
+  var actual = nominaEmpleados.find(e => e.id === emp.empleadoId);
+  emp.prestamoFijo = actual ? (actual.prestamoFijo || 0) : 0;
+  renderTablaEmpleados();
+}
+
+function resetCajaAhorro(idx) {
+  var emp = nominaActual.empleados[idx];
+  emp.cajaAhorroManual = false;
+  var actual = nominaEmpleados.find(e => e.id === emp.empleadoId);
+  emp.cajaAhorro = actual ? (actual.cajaAhorro || 0) : 0;
+  renderTablaEmpleados();
+}
+
+function updateNominaEmpleado(idx, campo, valor) {
+  var emp = nominaActual.empleados[idx];
+  if(campo === 'observaciones') {
+    emp.observaciones = valor;
+  } else if(campo === 'descuentoFaltasManual') {
+    emp.descuentoFaltas = parseInt(valor) || 0;
+    emp.descFaltasManual = true;
+  } else if(campo === 'prestamoFijoManual') {
+    emp.prestamoFijo = parseInt(valor) || 0;
+    emp.prestamoFijoManual = true;
+  } else if(campo === 'cajaAhorroManual') {
+    emp.cajaAhorro = parseInt(valor) || 0;
+    emp.cajaAhorroManual = true;
+  } else {
+    emp[campo] = parseInt(valor) || 0;
+  }
+}
+
+// Genera un formato imprimible (hoja limpia con totales y espacio de firma)
+// y abre el diálogo de impresión del navegador.
+function imprimirNomina() {
+  if(!nominaActual || !Array.isArray(nominaActual.empleados) || nominaActual.empleados.length === 0) {
+    showToast('⚠️ No hay datos de nómina para imprimir');
+    return;
+  }
+
+  var filas = nominaActual.empleados.map(function(emp) {
+    return '<tr>'+
+      '<td>'+emp.nombre+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.sueldoSemanal)+'</td>'+
+      '<td style="text-align:center;">'+(emp.faltas||0)+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.descuentoFaltas||0)+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.prestamoSemanal||0)+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.prestamoFijo||0)+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.cajaAhorro||0)+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.otrosDescuentos||0)+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.bonos||0)+'</td>'+
+      '<td style="text-align:right;font-weight:bold;">$'+fmtNumero(emp.totalDescuentos||0)+'</td>'+
+      '<td style="text-align:right;font-weight:bold;">$'+fmtNumero(emp.netoAPagar||0)+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.montoIMSS||0)+'</td>'+
+      '<td style="text-align:right;font-weight:bold;">$'+fmtNumero(emp.efectivoViri||0)+'</td>'+
+      '<td style="text-align:right;">$'+fmtNumero(emp.pagoTransferencia||0)+'</td>'+
+      '<td style="font-size:10px;">'+(emp.observaciones||'')+'</td>'+
+      '<td style="min-width:70px;border-bottom:1px solid #000;">&nbsp;</td>'+
+    '</tr>';
+  }).join('');
+
+  var notas = document.getElementById('nom-notas') ? document.getElementById('nom-notas').value : (nominaActual.notas || '');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nómina '+nominaActual.semana+'</title>'+
+    '<style>'+
+    'body{font-family:Arial,Helvetica,sans-serif;padding:20px;color:#222;}'+
+    'h1{font-size:18px;margin:0 0 4px;}'+
+    '.sub{font-size:12px;color:#555;margin-bottom:16px;}'+
+    'table{width:100%;border-collapse:collapse;font-size:10px;}'+
+    'th,td{border:1px solid #999;padding:4px 6px;}'+
+    'th{background:#222;color:#fff;text-align:left;}'+
+    '.totales{margin-top:16px;display:flex;gap:24px;font-size:13px;font-weight:bold;flex-wrap:wrap;}'+
+    '.notas{margin-top:16px;font-size:11px;}'+
+    '@media print{ @page{ size: landscape; margin: 10mm; } }'+
+    '</style></head><body>'+
+    '<h1>Materiales Troncoso — Nómina Semanal</h1>'+
+    '<div class="sub">Semana '+nominaActual.semana+' &nbsp;|&nbsp; Del '+nominaActual.fechaInicio+' al '+nominaActual.fechaSabado+' &nbsp;|&nbsp; Generado: '+new Date().toLocaleDateString('es-MX')+'</div>'+
+    '<table><thead><tr>'+
+    '<th>Empleado</th><th>Sueldo</th><th>Faltas</th><th>Desc.Faltas</th><th>Prést.Sem.</th><th>Prést.Fijo</th><th>Caja Ahorro</th><th>Otros Desc.</th><th>Bonos</th><th>Total Desc.</th><th>Neto</th><th>IMSS</th><th>Efectivo</th><th>Transferencia</th><th>Observaciones</th><th>Firma</th>'+
+    '</tr></thead><tbody>'+filas+'</tbody></table>'+
+    '<div class="totales">'+
+      '<div>Total Nómina: $'+fmtNumero(nominaActual.totalNomina||0)+'</div>'+
+      '<div>Total IMSS: $'+fmtNumero(nominaActual.totalIMSS||0)+'</div>'+
+      '<div>Total Efectivo: $'+fmtNumero(nominaActual.totalEfectivo||0)+'</div>'+
+      '<div>Total Transferencia: $'+fmtNumero(nominaActual.totalTransferencia||0)+'</div>'+
+    '</div>'+
+    (notas ? '<div class="notas"><b>Notas:</b> '+notas+'</div>' : '')+
+    '</body></html>';
+
+  var w = window.open('', '_blank', 'width=1100,height=800');
+  if(!w) { showToast('⚠️ Habilita las ventanas emergentes para poder imprimir'); return; }
+  w.document.write(html);
+  w.document.close();
+  var yaImprimio = false;
+  var imprimir = function() {
+    if(yaImprimio) return;
+    yaImprimio = true;
+    w.focus();
+    w.print();
+  };
+  w.onload = imprimir;
+  setTimeout(imprimir, 400);
 }
 
 function guardarNominaBorrador() {
