@@ -4724,10 +4724,75 @@ function cargarNominaDeEstaSemana() {
         crearNominaNueva();
       } else {
         nominaActual = { id: snap.docs[0].id, ...snap.docs[0].data() };
+
+        // Si el borrador no trae empleados (doc viejo/corrupto o vacío), regenerar desde cero
+        if(!Array.isArray(nominaActual.empleados) || nominaActual.empleados.length === 0) {
+          crearNominaNueva();
+          return;
+        }
+
+        resincronizarEmpleadosNomina();
         renderTablaEmpleados();
       }
     })
     .catch(function(e) { console.log('Error:', e); crearNominaNueva(); });
+}
+
+// Refresca nombre y datos de configuración (sueldo, IMSS, caja, préstamo fijo, días)
+// de cada empleado en el borrador actual usando los datos vigentes de la colección
+// "empleados". Esto evita que un borrador viejo se quede con nombres/config desactualizados.
+// Los valores capturados esa semana (faltas, préstamo semanal, bonos, otros descuentos,
+// transferencia, observaciones) NO se tocan.
+function resincronizarEmpleadosNomina() {
+  if(!nominaActual || !Array.isArray(nominaActual.empleados)) return;
+
+  nominaActual.empleados.forEach(function(emp) {
+    var actual = nominaEmpleados.find(function(e) {
+      return e.id === emp.empleadoId;
+    }) || nominaEmpleados.find(function(e) {
+      return e.nombre === emp.nombre;
+    });
+
+    if(actual) {
+      emp.empleadoId = actual.id;
+      emp.nombre = actual.nombre;
+      emp.imss = actual.imss;
+      emp.sueldoSemanal = actual.sueldoSemanal || 0;
+      emp.montoIMSS = actual.montoIMSS || 0;
+      emp.cajaAhorro = actual.cajaAhorro || 0;
+      emp.prestamoFijo = actual.prestamoFijo || 0;
+    }
+  });
+
+  // Agregar empleados nuevos que no estaban en el borrador (ej. dados de alta después)
+  nominaEmpleados.forEach(function(actual) {
+    var yaExiste = nominaActual.empleados.some(function(emp) {
+      return emp.empleadoId === actual.id || emp.nombre === actual.nombre;
+    });
+    if(!yaExiste) {
+      nominaActual.empleados.push({
+        nombre: actual.nombre,
+        empleadoId: actual.id,
+        imss: actual.imss,
+        sueldoSemanal: actual.sueldoSemanal || 0,
+        faltas: 0,
+        descuentoFaltas: 0,
+        prestamoSemanal: 0,
+        prestamoFijo: actual.prestamoFijo || 0,
+        cajaAhorro: actual.cajaAhorro || 0,
+        otrosDescuentos: 0,
+        otrosDescuentosNota: '',
+        bonos: 0,
+        totalDescuentos: 0,
+        netoAPagar: actual.sueldoSemanal || 0,
+        montoIMSS: actual.montoIMSS || 0,
+        efectivoViri: (actual.sueldoSemanal || 0) - (actual.montoIMSS || 0),
+        pagoTransferencia: 0,
+        observaciones: '',
+        pagado: false
+      });
+    }
+  });
 }
 
 function crearNominaNueva() {
@@ -4774,6 +4839,11 @@ function crearNominaNueva() {
 function renderTablaEmpleados() {
   var tbody = document.getElementById('nom-tabla-empleados');
   tbody.innerHTML = '';
+
+  if(!nominaActual || !Array.isArray(nominaActual.empleados) || nominaActual.empleados.length === 0) {
+    console.log('⚠️ renderTablaEmpleados: no hay empleados en nominaActual', nominaActual);
+    return;
+  }
 
   var totNomina = 0, totIMSS = 0, totEfectivo = 0, totTransferencia = 0;
 
