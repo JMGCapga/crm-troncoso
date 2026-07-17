@@ -1403,6 +1403,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <div class="total-row" style="margin-top:16px;">
               <div class="total-item"><label>Total Nómina</label><span id="nom-total-nomina">$0.00</span></div>
               <div class="total-item"><label>Total IMSS</label><span id="nom-total-imss">$0.00</span></div>
+              <div class="total-item"><label>Total Transferencia</label><span id="nom-total-transferencia">$0.00</span></div>
               <div class="total-item"><label>Total Efectivo</label><span id="nom-total-efectivo" style="font-size:20px;">$0.00</span></div>
             </div>
 
@@ -4868,11 +4869,12 @@ function renderTablaEmpleados() {
     var neto = emp.sueldoSemanal - totalDesc + (emp.bonos || 0);
 
     // Diferenciar entre efectivo y transferencia
-    var efectivo, transferencia = 0;
+    var transferencia = emp.pagoTransferencia || 0;
+    var efectivo;
     if(emp.imss) {
-      efectivo = neto - emp.montoIMSS;
+      efectivo = neto - emp.montoIMSS - transferencia;
     } else {
-      efectivo = neto;
+      efectivo = neto - transferencia;
     }
     if(efectivo < 0) efectivo = 0;
 
@@ -4931,6 +4933,7 @@ function renderTablaEmpleados() {
 
   document.getElementById('nom-total-nomina').textContent = '$'+fmtNumero(totNomina);
   document.getElementById('nom-total-imss').textContent = '$'+fmtNumero(totIMSS);
+  document.getElementById('nom-total-transferencia').textContent = '$'+fmtNumero(totTransferencia);
   document.getElementById('nom-total-efectivo').textContent = '$'+fmtNumero(totEfectivo);
 }
 
