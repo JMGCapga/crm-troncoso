@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <style>
 :root{--naranja:#E8500A;--gris-oscuro:#1A1A1A;--gris-claro:#F5F2EE;--blanco:#fff;--borde:#D8D0C8;--texto:#1A1A1A;--suave:#6B6560;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -202,6 +203,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <button class="tab" id="tab-pedidos-btn" onclick="switchTab('pedidos',this)">📦 Pedidos</button>
     <button class="tab" id="tab-flota-btn" onclick="switchTab('flota',this)" style="display:none">🚛 Flota</button>
     <button class="tab" id="tab-dashboard-btn" onclick="switchTab('dashboard',this)" style="display:none">📊 Dashboard</button>
+    <button class="tab" id="tab-fiscal-btn" onclick="switchTab('fiscal',this)" style="display:none">📄 Fiscal</button>
   </div>
 
   <div class="main">
@@ -403,6 +405,31 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             </div>
           </div>
 
+          <!-- TPV BBVA IZZ -->
+          <div style="background:#F3F0FF;border-radius:10px;padding:16px;margin-bottom:12px;">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;color:#5B21B6;">💳 TPV BBVA — ITZAYANA ILLESCA</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Total TPV BBVA IZZ</label>
+                <input type="number" id="c-tpv-izz" placeholder="0.00" min="0" step="0.01" oninput="calcCorte()">
+                <div class="ct-unit">Según cierre de terminal — mejor tasa, mandar aquí los cobros grandes</div>
+              </div>
+              <div class="field">
+                <label>No. de operaciones</label>
+                <input type="number" id="c-tpv-izz-ops" placeholder="0" min="0" step="1">
+                <div class="ct-unit">Número de transacciones</div>
+              </div>
+              <div class="field">
+                <label>Tipo de tarjeta</label>
+                <select id="c-tpv-izz-tipo" onchange="calcCorte()">
+                  <option value="debito">Débito</option>
+                  <option value="credito">Crédito</option>
+                </select>
+                <div class="ct-unit" id="c-tpv-izz-neto"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- TPV BBVA CEMCOYA -->
           <div style="background:#EBF4FF;border-radius:10px;padding:16px;margin-bottom:12px;">
             <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;color:#1864AB;">💳 TPV BBVA — ABASTECEDORA CEMCOYA</div>
@@ -416,6 +443,14 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
                 <label>No. de operaciones</label>
                 <input type="number" id="c-tpv-cemcoya-ops" placeholder="0" min="0" step="1">
                 <div class="ct-unit">Número de transacciones</div>
+              </div>
+              <div class="field">
+                <label>Tipo de tarjeta</label>
+                <select id="c-tpv-cemcoya-tipo" onchange="calcCorte()">
+                  <option value="debito">Débito</option>
+                  <option value="credito">Crédito</option>
+                </select>
+                <div class="ct-unit" id="c-tpv-cemcoya-neto"></div>
               </div>
             </div>
           </div>
@@ -433,6 +468,14 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
                 <label>No. de operaciones</label>
                 <input type="number" id="c-mp-ops" placeholder="0" min="0" step="1">
                 <div class="ct-unit">Número de transacciones</div>
+              </div>
+              <div class="field">
+                <label>Tipo de tarjeta</label>
+                <select id="c-mp-tipo" onchange="calcCorte()">
+                  <option value="debito">Débito</option>
+                  <option value="credito">Crédito</option>
+                </select>
+                <div class="ct-unit" id="c-mp-neto"></div>
               </div>
             </div>
           </div>
@@ -1617,6 +1660,18 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       </div>
     </div>
 
+    <div class="panel" id="panel-fiscal">
+      <div class="card">
+        <div class="card-title">📄 Expediente Fiscal — Razones Sociales</div>
+        <div style="font-size:11px;color:#888;margin-bottom:16px;">Visible solo para Director. Datos sensibles (CLABEs, comisiones, constancias fiscales).</div>
+        <div id="fiscal-cards"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">💳 Terminales y comisiones</div>
+        <div id="fiscal-terminales"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1632,9 +1687,11 @@ var firebaseConfig = {
   appId: "1:112716974444:web:fd3f570827afc476634b49"
 };
 var db = null;
+var storage = null;
 try {
   if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
+  storage = firebase.storage();
 } catch(e) { console.log('Firebase error:', e); }
 
 // ════ USUARIOS — mismo sistema de PIN que Sistema Troncoso ════
@@ -1654,6 +1711,65 @@ const RAZONES = {
   IZZ: { nombre: 'Itzayana Illesca', rfc: 'IEZI860901AW2' },
   CEM: { nombre: 'Abastecedora Cemcoya', rfc: 'ACE230216MR0' }
 };
+
+// ════ EXPEDIENTE FISCAL — Parte 1: Razones Sociales + Terminales ════
+// NOTA: esto NO reemplaza RAZONES (arriba). RAZONES sigue siendo la fuente
+// rápida de nombre+RFC para cotizaciones/pedidos/NC/compras/fondeos.
+// Esta sección solo alimenta el tab 📄 Fiscal (solo director).
+var razonesSocialesCache = {};
+var terminalesCache = [];
+
+const RAZONES_SOCIALES_SEED = {
+  JMG: {
+    rfc: 'GACM860923FB3', razonSocial: 'JOSE MANUEL GARIN CAPOTE',
+    tipoPersona: 'fisica', regimenFiscal: '612',
+    regimenDesc: 'Personas Físicas con Actividades Empresariales y Profesionales',
+    cpFiscal: '08620',
+    domicilioFiscal: 'Francisco del Paso y Troncoso 943, Los Reyes, Iztacalco, CDMX',
+    plataformaFactura: 'Factura Total', tieneAPI: true,
+    serieFactura: 'FAC', folioActual: 14558,
+    cuentas: [
+      {banco:'BANAMEX', sucursal:'7018', cuenta:'0003248', clabe:'002180701800032482', principal:true},
+      {banco:'BANCO AZTECA', cuenta:'27400138009007', clabe:'127180001380090079', principal:false},
+      {banco:'BBVA', cuenta:'0477247818', clabe:'012180004772478188', principal:false},
+      {banco:'BBVA', cuenta:'0104035283', clabe:'012180001040352832', principal:false}
+    ]
+  },
+  IZZ: {
+    rfc: 'IEZI860901AW2', razonSocial: 'ITZAYANA ILLESCAS ZAMUDIO',
+    tipoPersona: 'fisica', regimenFiscal: '612',
+    regimenDesc: 'Personas Físicas con Actividades Empresariales y Profesionales',
+    cpFiscal: '08000',
+    domicilioFiscal: 'Sur 183 No. 2001 Local 1, Gabriel Ramos Millán Secc Bramadero, Iztacalco, CDMX',
+    plataformaFactura: 'Timbrame', tieneAPI: true,
+    serieFactura: '', folioActual: 165,
+    cuentas: [
+      {banco:'BBVA', cuenta:'0483575136', clabe:'012180004835751360', principal:true},
+      {banco:'BANCA MIFEL', cuenta:'01600551929', clabe:'042180016005519293', principal:false},
+      {banco:'MERCADO PAGO', cuenta:'01040763825', clabe:'722969010407638251', principal:false}
+    ]
+  },
+  CEM: {
+    rfc: 'ACE230216MR0', razonSocial: 'ABASTECEDORA CEMCOYA',
+    tipoPersona: 'moral', regimenFiscal: '626',
+    regimenDesc: 'Régimen Simplificado de Confianza',
+    cpFiscal: '08800',
+    domicilioFiscal: 'Playa Nizuc 24, Santiago Sur, Iztacalco, CDMX',
+    plataformaFactura: 'Portal SAT', tieneAPI: false,
+    serieFactura: '', folioActual: 463,
+    cuentas: [
+      {banco:'BBVA', cuenta:'0120547689', clabe:'012180001205476896', principal:true},
+      {banco:'SANTANDER', cuenta:'65509721252', clabe:'014180655097212528', principal:false}
+    ]
+  }
+};
+
+const TERMINALES_SEED = [
+  {rs:'IZZ', banco:'BBVA',         tasaDebito:0.0085, tasaCredito:0.0085, iva:0.16, activa:true},
+  {rs:'IZZ', banco:'MERCADO PAGO', tasaDebito:0.0350, tasaCredito:0.0350, iva:0.16, activa:true},
+  {rs:'CEM', banco:'BBVA',         tasaDebito:0.0154, tasaCredito:0.0154, iva:0.16, activa:true}
+];
+terminalesCache = TERMINALES_SEED.slice();
 
 // ════ PEDIDOS — status badges ════
 const STATUS_PEDIDO = {
@@ -1951,6 +2067,7 @@ function initApp(){
     cargarFondeos();
     cargarProductos();
     mostrarDashboardParaUsuario();
+    mostrarFiscalParaUsuario();
     aplicarCandadoOperador();
     return;
   }
@@ -1961,6 +2078,7 @@ function initApp(){
   cargarFondeos();
   cargarProductos();
   mostrarDashboardParaUsuario();
+  mostrarFiscalParaUsuario();
   aplicarCandadoOperador();
 }
 
@@ -2100,6 +2218,86 @@ function verificarAlertaCostales(){
   if((p.existencia||0) <= (p.min||0)) {
     showToast('⚠️ Quedan ' + (p.existencia||0) + ' costales vacíos');
   }
+}
+
+// ════ EXPEDIENTE FISCAL — carga/seed razones_sociales y terminales ════
+function netoTerminal(monto, rsCode, banco, tipoTarjeta) {
+  var term = terminalesCache.find(function(t){ return t.rs === rsCode && t.banco === banco; });
+  var tasa = term ? (tipoTarjeta === 'credito' ? term.tasaCredito : term.tasaDebito) : 0;
+  var comision = monto * tasa;
+  var ivaCom = comision * 0.16;
+  return { bruto: monto, comision: comision, ivaCom: ivaCom, neto: monto - comision - ivaCom };
+}
+
+function cargarRazonesSociales(cb) {
+  if(!db) { razonesSocialesCache = JSON.parse(JSON.stringify(RAZONES_SOCIALES_SEED)); if(cb) cb(); return; }
+  db.collection('razones_sociales').limit(1).get().then(function(snap){
+    if(snap.empty) {
+      subirRazonesSocialesSeed(cb);
+    } else {
+      db.collection('razones_sociales').get().then(function(snap2){
+        razonesSocialesCache = {};
+        snap2.forEach(function(doc){ razonesSocialesCache[doc.id] = doc.data(); });
+        if(cb) cb();
+      });
+    }
+  }).catch(function(e){
+    console.log('Error Firestore razones_sociales, usando datos locales:', e);
+    razonesSocialesCache = JSON.parse(JSON.stringify(RAZONES_SOCIALES_SEED));
+    if(cb) cb();
+  });
+}
+
+function subirRazonesSocialesSeed(cb) {
+  var batch = db.batch();
+  Object.keys(RAZONES_SOCIALES_SEED).forEach(function(codigo){
+    var ref = db.collection('razones_sociales').doc(codigo);
+    batch.set(ref, RAZONES_SOCIALES_SEED[codigo]);
+  });
+  batch.commit().then(function(){
+    razonesSocialesCache = JSON.parse(JSON.stringify(RAZONES_SOCIALES_SEED));
+    if(cb) cb();
+  }).catch(function(e){
+    console.log('Error subiendo razones_sociales:', e);
+    razonesSocialesCache = JSON.parse(JSON.stringify(RAZONES_SOCIALES_SEED));
+    if(cb) cb();
+  });
+}
+
+function cargarTerminales(cb) {
+  if(!db) { terminalesCache = TERMINALES_SEED.slice(); if(cb) cb(); return; }
+  db.collection('terminales').limit(1).get().then(function(snap){
+    if(snap.empty) {
+      subirTerminalesSeed(cb);
+    } else {
+      db.collection('terminales').get().then(function(snap2){
+        terminalesCache = [];
+        snap2.forEach(function(doc){ terminalesCache.push(doc.data()); });
+        if(cb) cb();
+      });
+    }
+  }).catch(function(e){
+    console.log('Error Firestore terminales, usando datos locales:', e);
+    terminalesCache = TERMINALES_SEED.slice();
+    if(cb) cb();
+  });
+}
+
+function subirTerminalesSeed(cb) {
+  var batch = db.batch();
+  TERMINALES_SEED.forEach(function(t){
+    var docId = t.rs + '_' + t.banco.replace(/\s+/g, '');
+    var ref = db.collection('terminales').doc(docId);
+    batch.set(ref, t);
+  });
+  batch.commit().then(function(){
+    terminalesCache = TERMINALES_SEED.slice();
+    if(cb) cb();
+  }).catch(function(e){
+    console.log('Error subiendo terminales:', e);
+    terminalesCache = TERMINALES_SEED.slice();
+    if(cb) cb();
+  });
 }
 
 // items: array de {desc, cant, clave} (de getProductos()/getProductosNC())
@@ -2356,6 +2554,7 @@ function switchTab(tab, btn) {
   if(tab === 'pedidos') iniciarPedidos();
   if(tab === 'dashboard') cargarDashboard();
   if(tab === 'inventario') iniciarInventario();
+  if(tab === 'fiscal') iniciarFiscal();
 }
 
 function showToast(msg) {
@@ -2960,18 +3159,38 @@ switchTab = function(tab, btn) {
 function calcCorte() {
   var ef = parseFloat(document.getElementById('c-efectivo').value||0);
   var ret = parseFloat(document.getElementById('c-retiros').value||0);
+  var tpvIzz = parseFloat(document.getElementById('c-tpv-izz').value||0);
   var tpvCem = parseFloat(document.getElementById('c-tpv-cemcoya').value||0);
   var mp = parseFloat(document.getElementById('c-mp').value||0);
   var totalTransfers = transfersCorte.reduce(function(a,t){ return a + (parseFloat(t.monto)||0); }, 0);
 
   var efTotal = ef + ret;
-  var tpvTotal = tpvCem + mp;
-  var granTotal = ef + ret + tpvCem + mp + totalTransfers;
+  var tpvTotal = tpvIzz + tpvCem + mp;
+  var granTotal = ef + ret + tpvIzz + tpvCem + mp + totalTransfers;
 
   document.getElementById('res-efectivo-total').textContent = fmtMoney(efTotal);
   document.getElementById('res-tpv-total').textContent = fmtMoney(tpvTotal);
   document.getElementById('res-transfer-total').textContent = fmtMoney(totalTransfers);
   document.getElementById('res-gran-total').textContent = fmtMoney(granTotal);
+
+  var tipoIzz = document.getElementById('c-tpv-izz-tipo') ? document.getElementById('c-tpv-izz-tipo').value : 'debito';
+  var tipoCem = document.getElementById('c-tpv-cemcoya-tipo') ? document.getElementById('c-tpv-cemcoya-tipo').value : 'debito';
+  var tipoMp = document.getElementById('c-mp-tipo') ? document.getElementById('c-mp-tipo').value : 'debito';
+  var netoIzzEl = document.getElementById('c-tpv-izz-neto');
+  var netoCemEl = document.getElementById('c-tpv-cemcoya-neto');
+  var netoMpEl = document.getElementById('c-mp-neto');
+  if(netoIzzEl) {
+    var ni = netoTerminal(tpvIzz, 'IZZ', 'BBVA', tipoIzz);
+    netoIzzEl.textContent = tpvIzz > 0 ? ('Comisión ' + fmtMoney(ni.comision + ni.ivaCom) + ' · Neto ' + fmtMoney(ni.neto)) : '';
+  }
+  if(netoCemEl) {
+    var nc = netoTerminal(tpvCem, 'CEM', 'BBVA', tipoCem);
+    netoCemEl.textContent = tpvCem > 0 ? ('Comisión ' + fmtMoney(nc.comision + nc.ivaCom) + ' · Neto ' + fmtMoney(nc.neto)) : '';
+  }
+  if(netoMpEl) {
+    var nm = netoTerminal(mp, 'IZZ', 'MERCADO PAGO', tipoMp);
+    netoMpEl.textContent = mp > 0 ? ('Comisión ' + fmtMoney(nm.comision + nm.ivaCom) + ' · Neto ' + fmtMoney(nm.neto)) : '';
+  }
 }
 
 function agregarTransfer() {
@@ -3006,12 +3225,14 @@ function eliminarTransfer(idx) {
 function imprimirCorte() {
   var ef = parseFloat(document.getElementById('c-efectivo').value||0);
   var ret = parseFloat(document.getElementById('c-retiros').value||0);
+  var tpvIzz = parseFloat(document.getElementById('c-tpv-izz').value||0);
+  var tpvIzzOps = document.getElementById('c-tpv-izz-ops').value||0;
   var tpvCem = parseFloat(document.getElementById('c-tpv-cemcoya').value||0);
   var tpvCemOps = document.getElementById('c-tpv-cemcoya-ops').value||0;
   var mp = parseFloat(document.getElementById('c-mp').value||0);
   var mpOps = document.getElementById('c-mp-ops').value||0;
   var totalTransfers = transfersCorte.reduce(function(a,t){return a+(parseFloat(t.monto)||0);},0);
-  var granTotal = ef + ret + tpvCem + mp + totalTransfers;
+  var granTotal = ef + ret + tpvIzz + tpvCem + mp + totalTransfers;
   var fecha = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   var hora = new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
   var quien = currentUser ? currentUser.name : 'Ventas';
@@ -3023,7 +3244,7 @@ function imprimirCorte() {
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Corte de Caja</title><style>body{font-family:Arial,sans-serif;margin:0;padding:16px;font-size:12px;}.header{text-align:center;border-bottom:2px solid #E8500A;padding-bottom:12px;margin-bottom:12px;}.logo{font-size:20px;font-weight:900;letter-spacing:2px;color:#E8500A;}.sub{font-size:10px;color:#666;}.seccion{margin-bottom:10px;border:1px solid #DDD;border-radius:6px;overflow:hidden;}.sec-title{background:#1A1A1A;color:#fff;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;}table{width:100%;border-collapse:collapse;}td{padding:5px 10px;border-bottom:1px solid #F0EDE8;}.subtotal td{font-weight:700;background:#F5F2EE;}.total-row{background:#E8500A;color:#fff;}.total-row td{font-weight:700;font-size:14px;padding:8px 10px;}.footer{text-align:center;margin-top:16px;font-size:10px;color:#888;border-top:1px dashed #CCC;padding-top:10px;}.firma{margin-top:30px;display:flex;justify-content:space-around;}.firma-line{text-align:center;width:140px;}.firma-line hr{border:none;border-top:1px solid #333;margin-bottom:4px;}.firma-line p{font-size:10px;color:#666;margin:0;}@media print{body{margin:0;padding:8px;}}</style></head><body>');
   w.document.write('<div class="header"><div class="logo">MATERIALES TRONCOSO</div><div class="sub">Fco. del Paso y Troncoso #943 · Iztacalco, CDMX</div><div class="sub">Tel: 5555906802 / 5591800148</div><div style="margin-top:6px;font-size:11px;"><strong>CORTE DE CAJA</strong></div><div class="sub">'+fecha+' · '+hora+' · Elaboró: '+quien+'</div></div>');
   w.document.write('<div class="seccion"><div class="sec-title">💵 Efectivo</div><table><tr><td>Efectivo en caja</td><td style="text-align:right;">'+fmtMoney(ef)+'</td></tr><tr><td>Retiros del día</td><td style="text-align:right;">'+fmtMoney(ret)+'</td></tr><tr class="subtotal"><td>Subtotal efectivo</td><td style="text-align:right;">'+fmtMoney(ef+ret)+'</td></tr></table></div>');
-  w.document.write('<div class="seccion"><div class="sec-title">💳 Terminales</div><table><tr><td>TPV BBVA Cemcoya ('+tpvCemOps+' ops)</td><td style="text-align:right;">'+fmtMoney(tpvCem)+'</td></tr><tr><td>Mercado Pago Itzayana ('+mpOps+' ops)</td><td style="text-align:right;">'+fmtMoney(mp)+'</td></tr><tr class="subtotal"><td>Subtotal terminales</td><td style="text-align:right;">'+fmtMoney(tpvCem+mp)+'</td></tr></table></div>');
+  w.document.write('<div class="seccion"><div class="sec-title">💳 Terminales</div><table><tr><td>TPV BBVA Itzayana ('+tpvIzzOps+' ops)</td><td style="text-align:right;">'+fmtMoney(tpvIzz)+'</td></tr><tr><td>TPV BBVA Cemcoya ('+tpvCemOps+' ops)</td><td style="text-align:right;">'+fmtMoney(tpvCem)+'</td></tr><tr><td>Mercado Pago Itzayana ('+mpOps+' ops)</td><td style="text-align:right;">'+fmtMoney(mp)+'</td></tr><tr class="subtotal"><td>Subtotal terminales</td><td style="text-align:right;">'+fmtMoney(tpvIzz+tpvCem+mp)+'</td></tr></table></div>');
   w.document.write('<div class="seccion"><div class="sec-title">📲 Transferencias</div><table>'+transferLines+'<tr class="subtotal"><td>Subtotal transferencias</td><td style="text-align:right;">'+fmtMoney(totalTransfers)+'</td></tr></table></div>');
   w.document.write('<table style="margin-top:8px;"><tr class="total-row"><td>TOTAL DEL DÍA</td><td style="text-align:right;font-size:18px;">'+fmtMoney(granTotal)+'</td></tr></table>');
   if(notas) w.document.write('<div style="margin-top:10px;font-size:10px;padding:8px;background:#F5F2EE;border-radius:4px;"><strong>Notas:</strong> '+notas+'</div>');
@@ -3036,10 +3257,11 @@ function imprimirCorte() {
 function enviarCorteWhatsApp() {
   var ef = parseFloat(document.getElementById('c-efectivo').value||0);
   var ret = parseFloat(document.getElementById('c-retiros').value||0);
+  var tpvIzz = parseFloat(document.getElementById('c-tpv-izz').value||0);
   var tpvCem = parseFloat(document.getElementById('c-tpv-cemcoya').value||0);
   var mp = parseFloat(document.getElementById('c-mp').value||0);
   var totalTransfers = transfersCorte.reduce(function(a,t){return a+(parseFloat(t.monto)||0);},0);
-  var granTotal = ef + ret + tpvCem + mp + totalTransfers;
+  var granTotal = ef + ret + tpvIzz + tpvCem + mp + totalTransfers;
   var fecha = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
   var quien = currentUser ? currentUser.name : 'Ventas';
   var transferLines = transfersCorte.length
@@ -3054,9 +3276,10 @@ function enviarCorteWhatsApp() {
     '  Retiros: '+fmtMoney(ret)+'\n'+
     '  Subtotal: *'+fmtMoney(ef+ret)+'*\n\n'+
     '💳 *TERMINALES*\n'+
+    '  TPV BBVA Itzayana: '+fmtMoney(tpvIzz)+'\n'+
     '  TPV BBVA Cemcoya: '+fmtMoney(tpvCem)+'\n'+
     '  Mercado Pago Itzayana: '+fmtMoney(mp)+'\n'+
-    '  Subtotal: *'+fmtMoney(tpvCem+mp)+'*\n\n'+
+    '  Subtotal: *'+fmtMoney(tpvIzz+tpvCem+mp)+'*\n\n'+
     '📲 *TRANSFERENCIAS*\n'+
     transferLines+'\n'+
     '  Subtotal: *'+fmtMoney(totalTransfers)+'*\n\n'+
@@ -3108,14 +3331,28 @@ function cargarTransferenciasConfirmadas() {
 function enviarCorte() {
   var ef = parseFloat(document.getElementById('c-efectivo').value||0);
   var ret = parseFloat(document.getElementById('c-retiros').value||0);
+  var tpvIzz = parseFloat(document.getElementById('c-tpv-izz').value||0);
+  var tpvIzzOps = parseInt(document.getElementById('c-tpv-izz-ops').value||0);
   var tpvCem = parseFloat(document.getElementById('c-tpv-cemcoya').value||0);
   var tpvCemOps = parseInt(document.getElementById('c-tpv-cemcoya-ops').value||0);
   var mp = parseFloat(document.getElementById('c-mp').value||0);
   var mpOps = parseInt(document.getElementById('c-mp-ops').value||0);
   var totalTransfers = transfersCorte.reduce(function(a,t){ return a+(parseFloat(t.monto)||0); },0);
-  var granTotal = ef + ret + tpvCem + mp + totalTransfers;
+  var granTotal = ef + ret + tpvIzz + tpvCem + mp + totalTransfers;
 
   if(granTotal === 0) { showToast('⚠️ Captura al menos un monto antes de enviar'); return; }
+
+  var tipoIzz = document.getElementById('c-tpv-izz-tipo') ? document.getElementById('c-tpv-izz-tipo').value : 'debito';
+  var tipoCem = document.getElementById('c-tpv-cemcoya-tipo') ? document.getElementById('c-tpv-cemcoya-tipo').value : 'debito';
+  var tipoMp = document.getElementById('c-mp-tipo') ? document.getElementById('c-mp-tipo').value : 'debito';
+  var netoIzz = netoTerminal(tpvIzz, 'IZZ', 'BBVA', tipoIzz);
+  var netoCem = netoTerminal(tpvCem, 'CEM', 'BBVA', tipoCem);
+  var netoMp = netoTerminal(mp, 'IZZ', 'MERCADO PAGO', tipoMp);
+  var terminalesDetalle = [
+    {rs:'IZZ', banco:'BBVA', tipoTarjeta:tipoIzz, bruto:netoIzz.bruto, comision:netoIzz.comision, ivaCom:netoIzz.ivaCom, neto:netoIzz.neto},
+    {rs:'CEM', banco:'BBVA', tipoTarjeta:tipoCem, bruto:netoCem.bruto, comision:netoCem.comision, ivaCom:netoCem.ivaCom, neto:netoCem.neto},
+    {rs:'IZZ', banco:'MERCADO PAGO', tipoTarjeta:tipoMp, bruto:netoMp.bruto, comision:netoMp.comision, ivaCom:netoMp.ivaCom, neto:netoMp.neto}
+  ];
 
   var corte = {
     fecha: fechaISOLocal(),
@@ -3124,6 +3361,8 @@ function enviarCorte() {
     efectivo: ef,
     retiros: ret,
     retirosMotivo: document.getElementById('c-retiro-motivo').value,
+    tpvIzz: tpvIzz,
+    tpvIzzOps: tpvIzzOps,
     tpvCemcoya: tpvCem,
     tpvCemcoyaOps: tpvCemOps,
     mercadoPago: mp,
@@ -3131,8 +3370,10 @@ function enviarCorte() {
     transferencias: transfersCorte.map(function(t){return{desc:t.desc,monto:t.monto};}),
     totalTransferencias: totalTransfers,
     totalEfectivo: ef + ret,
-    totalTpv: tpvCem + mp,
+    totalTpv: tpvIzz + tpvCem + mp,
     granTotal: granTotal,
+    terminalesDetalle: terminalesDetalle,
+    netoTerminalesTotal: netoIzz.neto + netoCem.neto + netoMp.neto,
     notas: document.getElementById('c-notas').value,
     status: 'pendiente_validacion'
   };
@@ -3141,7 +3382,7 @@ function enviarCorte() {
     db.collection('cortes').add(corte).then(function(){
       showToast('✅ Corte enviado a Viridiana para validación');
       // Limpiar formulario
-      ['c-efectivo','c-retiros','c-tpv-cemcoya','c-tpv-cemcoya-ops','c-mp','c-mp-ops','c-notas','c-retiro-motivo'].forEach(function(id){
+      ['c-efectivo','c-retiros','c-tpv-izz','c-tpv-izz-ops','c-tpv-cemcoya','c-tpv-cemcoya-ops','c-mp','c-mp-ops','c-notas','c-retiro-motivo'].forEach(function(id){
         var el = document.getElementById(id);
         if(el) el.value = '';
       });
@@ -5687,6 +5928,18 @@ function mostrarDashboardParaUsuario() {
   }
 }
 
+// Fiscal es SOLO Director (9900) — a diferencia del Dashboard, Gerencia (5678) no entra.
+// Datos más sensibles: CLABEs, comisiones, constancias fiscales.
+function mostrarFiscalParaUsuario() {
+  if(!currentPin) return;
+  const tabBtn = document.getElementById('tab-fiscal-btn');
+  if(currentPin === '9900') {
+    if(tabBtn) tabBtn.style.display = 'inline-block';
+  } else {
+    if(tabBtn) tabBtn.style.display = 'none';
+  }
+}
+
 function formatoFecha(d) {
   return d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
 }
@@ -5872,6 +6125,182 @@ async function cargarDashboard() {
     console.error('Stack:', err.stack);
     showToast('⚠️ Error: ' + err.message);
   }
+}
+
+// ════════════════════════════════════════════
+//  FISCAL — Expediente Fiscal Parte 1: Razones Sociales
+// ════════════════════════════════════════════
+function iniciarFiscal() {
+  if(currentPin !== '9900') { showToast('⚠️ Solo el Director tiene acceso a Fiscal'); return; }
+  cargarRazonesSociales(renderFiscalCards);
+  cargarTerminales(renderFiscalTerminales);
+}
+
+function campoFiscal(codigo, campo, label, valor, tipo) {
+  return '<div class="field">' +
+    '<label>' + label + '</label>' +
+    '<input type="' + (tipo || 'text') + '" id="fis-' + codigo + '-' + campo + '" value="' + (valor === undefined || valor === null ? '' : valor) + '">' +
+    '</div>';
+}
+
+function cardFiscalHTML(codigo) {
+  var raz = razonesSocialesCache[codigo] || {};
+  var badges = '';
+  var hoyISO = new Date().toISOString().slice(0,10);
+  if(raz.opinionVigenteHasta && raz.opinionVigenteHasta < hoyISO) {
+    badges += '<span style="background:#FEE2E2;color:#CC0000;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;margin-right:6px;">⚠️ Opinión 32-D vencida</span>';
+  }
+  if(!raz.tieneAPI) {
+    badges += '<span style="background:#E5E5E5;color:#555;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;">Sin API — captura manual</span>';
+  }
+
+  var cuentasHTML = (raz.cuentas || []).map(function(c){
+    return '<div style="font-size:11px;color:var(--suave);padding:6px 0;border-bottom:1px solid #F0EDE8;">' +
+      (c.principal ? '⭐ ' : '') + c.banco + ' · Cta ' + c.cuenta + ' · CLABE ' + c.clabe +
+      '</div>';
+  }).join('');
+
+  return '' +
+    '<div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-bottom:14px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px;">' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:1px;">' + codigo + ' — ' + (raz.razonSocial || '') + '</div>' +
+        '<div>' + badges + '</div>' +
+      '</div>' +
+      '<div class="form-grid">' +
+        campoFiscal(codigo, 'razonSocial', 'Razón social', raz.razonSocial) +
+        campoFiscal(codigo, 'rfc', 'RFC', raz.rfc) +
+        campoFiscal(codigo, 'tipoPersona', 'Tipo de persona', raz.tipoPersona) +
+        campoFiscal(codigo, 'regimenFiscal', 'Régimen fiscal', raz.regimenFiscal) +
+        campoFiscal(codigo, 'regimenDesc', 'Descripción de régimen', raz.regimenDesc) +
+        campoFiscal(codigo, 'cpFiscal', 'CP fiscal', raz.cpFiscal) +
+        campoFiscal(codigo, 'domicilioFiscal', 'Domicilio fiscal', raz.domicilioFiscal) +
+        campoFiscal(codigo, 'plataformaFactura', 'Plataforma de factura', raz.plataformaFactura) +
+        campoFiscal(codigo, 'serieFactura', 'Serie de factura', raz.serieFactura) +
+        campoFiscal(codigo, 'folioActual', 'Folio actual', raz.folioActual) +
+        campoFiscal(codigo, 'opinionVigenteHasta', 'Opinión 32-D vigente hasta', raz.opinionVigenteHasta, 'date') +
+      '</div>' +
+      '<div style="margin:10px 0;">' +
+        '<label style="font-size:11px;color:var(--suave);"><input type="checkbox" id="fis-' + codigo + '-tieneAPI" ' + (raz.tieneAPI ? 'checked' : '') + '> Tiene API de facturación</label>' +
+      '</div>' +
+      '<div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:10px;margin-bottom:10px;">' +
+        '<div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Cuentas bancarias</div>' +
+        (cuentasHTML || '<div style="font-size:11px;color:#999;">Sin cuentas registradas</div>') +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' +
+        '<button class="btn btn-naranja" onclick="guardarRazonSocial(\'' + codigo + '\')" style="font-size:11px;padding:7px 14px;">💾 Guardar</button>' +
+        '<button class="btn btn-gris" onclick="copiarDatosEmisor(\'' + codigo + '\')" style="font-size:11px;padding:7px 14px;">📋 Copiar datos de emisor</button>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+        '<div>' +
+          '<label style="font-size:10px;color:var(--suave);">Constancia de situación fiscal (PDF)</label><br>' +
+          '<input type="file" accept="application/pdf" onchange="subirPdfFiscal(\'' + codigo + '\',\'constancia\',this)">' +
+          (raz.constanciaURL ? '<br><a href="' + raz.constanciaURL + '" target="_blank" style="font-size:10px;">Ver archivo actual</a>' : '') +
+        '</div>' +
+        '<div>' +
+          '<label style="font-size:10px;color:var(--suave);">Opinión de cumplimiento 32-D (PDF)</label><br>' +
+          '<input type="file" accept="application/pdf" onchange="subirPdfFiscal(\'' + codigo + '\',\'opinion32d\',this)">' +
+          (raz.opinion32dURL ? '<br><a href="' + raz.opinion32dURL + '" target="_blank" style="font-size:10px;">Ver archivo actual</a>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+function renderFiscalCards() {
+  var html = '';
+  ['JMG','IZZ','CEM'].forEach(function(codigo){
+    html += cardFiscalHTML(codigo);
+  });
+  document.getElementById('fiscal-cards').innerHTML = html;
+}
+
+function guardarRazonSocial(codigo) {
+  if(!db) { showToast('⚠️ Sin conexión a Firebase'); return; }
+  var campos = ['razonSocial','rfc','tipoPersona','regimenFiscal','regimenDesc','cpFiscal','domicilioFiscal','plataformaFactura','serieFactura','folioActual','opinionVigenteHasta'];
+  var update = {};
+  campos.forEach(function(campo){
+    var el = document.getElementById('fis-' + codigo + '-' + campo);
+    if(!el) return;
+    update[campo] = campo === 'folioActual' ? (parseInt(el.value) || 0) : el.value;
+  });
+  var chkAPI = document.getElementById('fis-' + codigo + '-tieneAPI');
+  update.tieneAPI = chkAPI ? chkAPI.checked : false;
+  db.collection('razones_sociales').doc(codigo).set(update, {merge:true}).then(function(){
+    if(!razonesSocialesCache[codigo]) razonesSocialesCache[codigo] = {};
+    Object.keys(update).forEach(function(k){ razonesSocialesCache[codigo][k] = update[k]; });
+    showToast('✅ ' + codigo + ' actualizado');
+    renderFiscalCards();
+  }).catch(function(e){
+    console.log('Error guardando razón social:', e);
+    showToast('⚠️ Error al guardar');
+  });
+}
+
+function copiarDatosEmisor(codigo) {
+  var raz = razonesSocialesCache[codigo];
+  if(!raz) return;
+  var texto = 'RFC: ' + raz.rfc + '\n' +
+    'Razón social: ' + raz.razonSocial + '\n' +
+    'Régimen fiscal: ' + raz.regimenFiscal + ' - ' + raz.regimenDesc + '\n' +
+    'CP: ' + raz.cpFiscal;
+  navigator.clipboard.writeText(texto).then(function(){
+    showToast('✅ Datos de emisor copiados');
+  }).catch(function(){
+    showToast('⚠️ No se pudo copiar');
+  });
+}
+
+function esArchivoFiscalProhibido(nombreArchivo) {
+  var n = (nombreArchivo || '').toLowerCase();
+  return n.endsWith('.cer') || n.endsWith('.key') || n.indexOf('sello') !== -1;
+}
+
+function subirPdfFiscal(codigo, tipo, inputEl) {
+  var file = inputEl.files && inputEl.files[0];
+  if(!file) return;
+  if(esArchivoFiscalProhibido(file.name)) {
+    showToast('🚫 Los sellos digitales no se guardan en el CRM');
+    inputEl.value = '';
+    return;
+  }
+  if(!storage || !db) { showToast('⚠️ Sin conexión a Storage'); return; }
+  var campo = tipo === 'constancia' ? 'constanciaURL' : 'opinion32dURL';
+  var nombreArchivo = tipo + '_' + Date.now() + '.pdf';
+  var ref = storage.ref('fiscal/razones_sociales/' + codigo + '/' + nombreArchivo);
+  showToast('⏳ Subiendo PDF...');
+  ref.put(file).then(function(snapshot){
+    return snapshot.ref.getDownloadURL();
+  }).then(function(url){
+    var update = {};
+    update[campo] = url;
+    return db.collection('razones_sociales').doc(codigo).set(update, {merge:true}).then(function(){ return url; });
+  }).then(function(url){
+    if(!razonesSocialesCache[codigo]) razonesSocialesCache[codigo] = {};
+    razonesSocialesCache[codigo][campo] = url;
+    showToast('✅ PDF subido');
+    renderFiscalCards();
+  }).catch(function(e){
+    console.log('Error subiendo PDF fiscal:', e);
+    showToast('⚠️ Error al subir PDF');
+  });
+}
+
+function renderFiscalTerminales() {
+  var rows = terminalesCache.map(function(t){
+    var tasaPct = (t.tasaDebito * 100).toFixed(2) + '%';
+    var conIva = (t.tasaDebito * (1 + t.iva) * 100).toFixed(3) + '%';
+    var alerta = '';
+    if(t.rs === 'CEM' && t.banco === 'BBVA') {
+      alerta = '<div style="margin-top:4px;font-size:10px;color:#B45309;font-weight:700;">⚠️ Tasa 81% mayor que IZZ — renegociar con BBVA</div>';
+    }
+    return '<div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;margin-bottom:8px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">' +
+        '<div style="font-weight:700;font-size:13px;">' + t.rs + ' — ' + t.banco + '</div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--naranja);">' + tasaPct + ' <span style="font-size:10px;color:#888;">(' + conIva + ' con IVA)</span></div>' +
+      '</div>' +
+      alerta +
+    '</div>';
+  }).join('');
+  document.getElementById('fiscal-terminales').innerHTML = rows;
 }
 
 // ════ PEDIDOS ════
