@@ -233,6 +233,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <button class="btn btn-verde" onclick="whatsappCliente()">📱 WhatsApp</button>
             <button class="btn btn-gris" onclick="nuevaNotaDesdeCliente()">🖨 Nota de Venta</button>
           </div>
+          <div id="cli-fiscal"></div>
         </div>
       </div>
     </div>
@@ -2684,6 +2685,7 @@ function seleccionarCliente(id) {
   document.getElementById('det-id').textContent = '#' + c.id;
   document.getElementById('det-dom').textContent = c.domicilio || 'Sin dirección';
   document.getElementById('cli-detalle').classList.add('visible');
+  document.getElementById('cli-fiscal').innerHTML = renderClienteFiscal(c);
 }
 function whatsappCliente() {
   if(!clienteSeleccionado) return;
@@ -2699,6 +2701,116 @@ function nuevaCotizacionDesdeCliente() {
   if(document.getElementById('prod-body').children.length === 0) agregarProducto();
 }
 function nuevaNotaDesdeCliente() { clienteCotizacion = clienteSeleccionado; generarNota(); }
+
+// ════ EXPEDIENTE FISCAL — Parte 2: Datos fiscales por cliente ════
+var USO_CFDI_OPCIONES = [
+  ['', 'Sin especificar'],
+  ['G01', 'G01 — Adquisición de mercancías'],
+  ['G03', 'G03 — Gastos en general'],
+  ['I01', 'I01 — Construcciones'],
+  ['I08', 'I08 — Otra maquinaria y equipo'],
+  ['P01', 'P01 — Por definir'],
+  ['S01', 'S01 — Sin efectos fiscales']
+];
+
+function campoClienteFiscal(id, campo, label, valor, tipo, mayusculas) {
+  return '<div class="field">' +
+    '<label>' + label + '</label>' +
+    '<input type="' + (tipo || 'text') + '" id="cf-' + id + '-' + campo + '" value="' + (valor === undefined || valor === null ? '' : valor) + '"' +
+    (mayusculas ? ' oninput="this.value=this.value.toUpperCase()"' : '') +
+    '>' +
+    '</div>';
+}
+
+function renderClienteFiscal(c) {
+  var badge = !c.rfc ? '<span style="background:#E5E5E5;color:#555;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;">Sin RFC — no facturable</span>' : '';
+
+  var usoSelectHTML = USO_CFDI_OPCIONES.map(function(o){
+    return '<option value="' + o[0] + '"' + (c.usoCFDI === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+  }).join('');
+
+  return '' +
+    '<div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-top:12px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px;">' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;letter-spacing:1px;">📄 DATOS FISCALES</div>' +
+        badge +
+      '</div>' +
+      '<div class="form-grid">' +
+        campoClienteFiscal(c.id, 'rfc', 'RFC', c.rfc, 'text', true) +
+        campoClienteFiscal(c.id, 'razonSocialFiscal', 'Razón social (exacta, según constancia SAT)', c.razonSocialFiscal, 'text', true) +
+        campoClienteFiscal(c.id, 'regimenFiscalReceptor', 'Régimen fiscal (clave SAT)', c.regimenFiscalReceptor) +
+        campoClienteFiscal(c.id, 'cpFiscal', 'CP fiscal', c.cpFiscal) +
+        campoClienteFiscal(c.id, 'emailFactura', 'Email para factura', c.emailFactura, 'email') +
+      '</div>' +
+      '<div class="field" style="margin-top:10px;">' +
+        '<label>Uso de CFDI</label>' +
+        '<select id="cf-' + c.id + '-usoCFDI">' + usoSelectHTML + '</select>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;">' +
+        '<button class="btn btn-naranja" onclick="guardarDatosFiscalesCliente(\'' + c.id + '\')" style="font-size:11px;padding:7px 14px;">💾 Guardar datos fiscales</button>' +
+      '</div>' +
+      '<div>' +
+        '<label style="font-size:10px;color:var(--suave);">Constancia de situación fiscal (PDF, opcional)</label><br>' +
+        '<input type="file" accept="application/pdf" onchange="subirConstanciaFiscalCliente(\'' + c.id + '\',this)">' +
+        (c.constanciaFiscalURL ? '<br><a href="' + c.constanciaFiscalURL + '" target="_blank" style="font-size:10px;">Ver archivo actual</a>' : '') +
+      '</div>' +
+    '</div>';
+}
+
+function guardarDatosFiscalesCliente(id) {
+  if(!db) { showToast('⚠️ Sin conexión a Firebase'); return; }
+  var campos = ['rfc','razonSocialFiscal','regimenFiscalReceptor','cpFiscal','emailFactura','usoCFDI'];
+  var update = {};
+  campos.forEach(function(campo){
+    var el = document.getElementById('cf-' + id + '-' + campo);
+    if(!el) return;
+    update[campo] = el.value.trim();
+  });
+  db.collection('clientes').doc(id).set(update, {merge:true}).then(function(){
+    var c = clientesCache.find(function(x){ return x.id === id; });
+    if(c) {
+      Object.keys(update).forEach(function(k){ c[k] = update[k]; });
+      if(clienteSeleccionado && clienteSeleccionado.id === id) {
+        clienteSeleccionado = c;
+        document.getElementById('cli-fiscal').innerHTML = renderClienteFiscal(c);
+      }
+    }
+    showToast('✅ Datos fiscales guardados');
+  }).catch(function(e){
+    console.log('Error guardando datos fiscales de cliente:', e);
+    showToast('⚠️ Error al guardar');
+  });
+}
+
+function subirConstanciaFiscalCliente(id, inputEl) {
+  var file = inputEl.files && inputEl.files[0];
+  if(!file) return;
+  if(esArchivoFiscalProhibido(file.name)) {
+    showToast('🚫 Los sellos digitales no se guardan en el CRM');
+    inputEl.value = '';
+    return;
+  }
+  if(!storage || !db) { showToast('⚠️ Sin conexión a Storage'); return; }
+  var nombreArchivo = 'constancia_' + Date.now() + '.pdf';
+  var ref = storage.ref('fiscal/clientes/' + id + '/' + nombreArchivo);
+  showToast('⏳ Subiendo PDF...');
+  ref.put(file).then(function(snapshot){
+    return snapshot.ref.getDownloadURL();
+  }).then(function(url){
+    return db.collection('clientes').doc(id).set({constanciaFiscalURL: url}, {merge:true}).then(function(){ return url; });
+  }).then(function(url){
+    var c = clientesCache.find(function(x){ return x.id === id; });
+    if(c) c.constanciaFiscalURL = url;
+    if(clienteSeleccionado && clienteSeleccionado.id === id) {
+      clienteSeleccionado = c;
+      document.getElementById('cli-fiscal').innerHTML = renderClienteFiscal(c);
+    }
+    showToast('✅ PDF subido');
+  }).catch(function(e){
+    console.log('Error subiendo constancia fiscal de cliente:', e);
+    showToast('⚠️ Error al subir PDF');
+  });
+}
 
 // ════ COTIZACIÓN ════
 function buscarClienteCot() {
