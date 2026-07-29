@@ -8,6 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <style>
 :root{--naranja:#E8500A;--gris-oscuro:#1A1A1A;--gris-claro:#F5F2EE;--blanco:#fff;--borde:#D8D0C8;--texto:#1A1A1A;--suave:#6B6560;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -1719,6 +1720,19 @@ try {
   storage = firebase.storage();
 } catch(e) { console.log('Firebase error:', e); }
 
+// ════ AUTH ANÓNIMA — requerida por las reglas de Firestore/Storage ════
+// No cambia el sistema de PINes: solo autentica la conexión antes de
+// que cualquier función (teclado de PIN, magic link de fondeos) toque Firestore.
+firebase.auth().onAuthStateChanged(function(user) {
+  if (user) {
+    buildPinGrid();
+    checkMagicLinkFondeo();
+  }
+});
+firebase.auth().signInAnonymously().catch(function(e) {
+  console.log('Error de autenticación anónima:', e);
+});
+
 // ════ USUARIOS — mismo sistema de PIN que Sistema Troncoso ════
 const USERS = {
   '1111':{name:'Ivette',role:'Ventas'},
@@ -2080,8 +2094,8 @@ function logout(){
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
 }
-buildPinGrid();
-checkMagicLinkFondeo();
+// buildPinGrid() y checkMagicLinkFondeo() ahora se disparan desde
+// firebase.auth().onAuthStateChanged() arriba, no sueltos aquí.
 
 // ════ INIT APP — carga clientes y cotizaciones de Firestore ════
 function initApp(){
