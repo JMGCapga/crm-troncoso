@@ -197,6 +197,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <button class="tab" id="tab-nc-btn" onclick="switchTab('nc',this)">📝 Notas de Crédito</button>
     <button class="tab" id="tab-fondeos-btn" onclick="switchTab('fondeos',this)">💸 Fondeos</button>
     <button class="tab" id="tab-compras-btn" onclick="switchTab('compras',this)">🛒 Compras</button>
+    <button class="tab" id="tab-proveedores-btn" onclick="switchTab('proveedores',this)">🏢 Proveedores</button>
     <button class="tab" id="tab-cuentas-btn" onclick="switchTab('cuentas',this)">💰 Cuentas</button>
     <button class="tab" id="tab-inventario-btn" onclick="switchTab('inventario',this)" style="display:none">📦 Inventario</button>
     <button class="tab" id="tab-nomina-btn" onclick="switchTab('nomina',this)">👷 Nómina</button>
@@ -1119,6 +1120,29 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 
     </div>
 
+    <!-- ===== EXPEDIENTE FISCAL — Parte 3: Directorio de Proveedores ===== -->
+    <div class="panel" id="panel-proveedores">
+      <div class="card">
+        <div class="card-title">Directorio de Proveedores</div>
+        <div class="search-wrap">
+          <span class="ico">🔍</span>
+          <input type="text" id="prov-dir-search" placeholder="Buscar por nombre..." oninput="buscarProveedorDir()" autocomplete="off">
+        </div>
+        <div class="cli-count" id="prov-dir-count">Ingresa un nombre para buscar</div>
+        <div class="cli-list" id="prov-dir-list"></div>
+        <div class="cli-detalle" id="prov-dir-detalle">
+          <h3 id="prov-dir-nombre"></h3>
+          <div class="cli-info">
+            <div class="cli-info-item"><label>Teléfono</label><span id="prov-dir-tel"></span></div>
+            <div class="cli-info-item"><label>Categoría</label><span id="prov-dir-cat"></span></div>
+            <div class="cli-info-item"><label>Condiciones</label><span id="prov-dir-cond"></span></div>
+            <div class="cli-info-item"><label>Última compra</label><span id="prov-dir-ult"></span></div>
+          </div>
+          <div id="prov-dir-fiscal"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ===== INVENTARIO ===== -->
     <div class="panel" id="panel-inventario">
       <div class="card">
@@ -1719,6 +1743,8 @@ const RAZONES = {
 // Esta sección solo alimenta el tab 📄 Fiscal (solo director).
 var razonesSocialesCache = {};
 var terminalesCache = [];
+var proveedoresDirCache = [];
+var proveedoresDirCargados = false;
 
 const RAZONES_SOCIALES_SEED = {
   JMG: {
@@ -1989,17 +2015,17 @@ function checkPin(){
     var tabsMecanico = ['tab-flota-btn'];
     var tabsVentas = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
-      'tab-fondeos-btn','tab-compras-btn','tab-pedidos-btn'];
+      'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-pedidos-btn'];
     var tabsCompras = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
-      'tab-fondeos-btn','tab-compras-btn','tab-pedidos-btn','tab-inventario-btn'];
+      'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-pedidos-btn','tab-inventario-btn'];
     var tabsGerencia = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
-      'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-cuentas-btn','tab-nomina-btn',
+      'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-cuentas-btn','tab-nomina-btn',
       'tab-pedidos-btn','tab-flota-btn','tab-dashboard-btn','tab-inventario-btn'];
     var tabsDirector = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
-      'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-cuentas-btn','tab-nomina-btn',
+      'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-cuentas-btn','tab-nomina-btn',
       'tab-pedidos-btn','tab-flota-btn','tab-dashboard-btn','tab-inventario-btn'];
 
     var tabsVisibles = role === 'Operador' ? tabsOperador :
@@ -2088,7 +2114,7 @@ function aplicarCandadoOperador() {
   var esOperador = currentUser && currentUser.role === 'Operador';
   var esMecanico = currentUser && currentUser.role === 'Mecanico';
   if(!esOperador && !esMecanico) return; // otros roles ya fueron filtrados por checkPin()
-  var idsOcultos = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn','tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-nomina-btn'];
+  var idsOcultos = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn','tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-nomina-btn'];
   idsOcultos.forEach(function(id){
     var b = document.getElementById(id);
     if(b) b.style.display = 'none';
@@ -2556,6 +2582,7 @@ function switchTab(tab, btn) {
   if(tab === 'dashboard') cargarDashboard();
   if(tab === 'inventario') iniciarInventario();
   if(tab === 'fiscal') iniciarFiscal();
+  if(tab === 'proveedores') iniciarProveedoresDir();
 }
 
 function showToast(msg) {
@@ -4827,6 +4854,116 @@ function guardarNuevoProveedor() {
   }).catch(function(e) {
     console.log(e);
     showToast('⚠️ Error al crear proveedor');
+  });
+}
+
+// ════ EXPEDIENTE FISCAL — Parte 3: Directorio de Proveedores ════
+function iniciarProveedoresDir() {
+  if(!proveedoresDirCargados) cargarProveedoresDir();
+}
+
+function cargarProveedoresDir() {
+  if(!db) return;
+  db.collection('proveedores').get().then(function(snap){
+    proveedoresDirCache = [];
+    snap.forEach(function(doc){
+      var p = doc.data();
+      p.id = doc.id;
+      proveedoresDirCache.push(p);
+    });
+    proveedoresDirCargados = true;
+    buscarProveedorDir();
+  }).catch(function(e){
+    console.log('Error cargando proveedores:', e);
+  });
+}
+
+function buscarProveedorDir() {
+  var q = document.getElementById('prov-dir-search').value.trim().toLowerCase();
+  var list = document.getElementById('prov-dir-list');
+  var count = document.getElementById('prov-dir-count');
+  if(q.length < 2) { list.innerHTML = ''; count.textContent = 'Ingresa al menos 2 caracteres'; document.getElementById('prov-dir-detalle').classList.remove('visible'); return; }
+  var res = proveedoresDirCache.filter(function(p){
+    return (p.nombre || '').toLowerCase().indexOf(q) !== -1 ||
+      (p.telefono || '').replace(/[^0-9]/g,'').indexOf(q.replace(/[^0-9]/g,'')) !== -1;
+  }).slice(0, 30);
+  count.textContent = res.length === 0 ? 'Sin resultados' : res.length + ' proveedores encontrados';
+  list.innerHTML = res.map(function(p){
+    return '<div class="cli-item" onclick="seleccionarProveedorDir(\'' + p.id + '\')">' +
+      '<div class="cli-nombre">' + p.nombre + '</div>' +
+      '<div class="cli-tel">' + (p.telefono || 'Sin teléfono') + ' · ' + (p.categoria || 'Sin categoría') + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function seleccionarProveedorDir(id) {
+  var p = proveedoresDirCache.find(function(x){ return x.id === id; });
+  if(!p) return;
+  document.getElementById('prov-dir-nombre').textContent = p.nombre;
+  document.getElementById('prov-dir-tel').textContent = p.telefono || 'No registrado';
+  document.getElementById('prov-dir-cat').textContent = p.categoria || '—';
+  document.getElementById('prov-dir-cond').textContent = p.condicionesPago || '—';
+  document.getElementById('prov-dir-ult').textContent = p.ultimaCompra || 'Nunca';
+  document.getElementById('prov-dir-detalle').classList.add('visible');
+  document.getElementById('prov-dir-fiscal').innerHTML = renderProveedorFiscal(p);
+}
+
+function campoProveedorFiscal(id, campo, label, valor, mayusculas) {
+  return '<div class="field">' +
+    '<label>' + label + '</label>' +
+    '<input type="text" id="pf-' + id + '-' + campo + '" value="' + (valor === undefined || valor === null ? '' : valor) + '"' +
+    (mayusculas ? ' oninput="this.value=this.value.toUpperCase()"' : '') +
+    '>' +
+    '</div>';
+}
+
+function renderProveedorFiscal(p) {
+  var badge = !p.rfc ? '<span style="background:#E5E5E5;color:#555;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;">Sin RFC — no deducible</span>' : '';
+
+  return '' +
+    '<div style="background:#FFF;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-top:12px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px;">' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;letter-spacing:1px;">📄 DATOS FISCALES</div>' +
+        badge +
+      '</div>' +
+      '<div class="form-grid">' +
+        campoProveedorFiscal(p.id, 'rfc', 'RFC', p.rfc, true) +
+        campoProveedorFiscal(p.id, 'razonSocialFiscal', 'Razón social (exacta, según constancia SAT)', p.razonSocialFiscal, true) +
+        campoProveedorFiscal(p.id, 'regimenFiscalProveedor', 'Régimen fiscal (clave SAT)', p.regimenFiscalProveedor) +
+      '</div>' +
+      '<div class="field" style="margin-top:10px;">' +
+        '<label>Tipo de persona</label>' +
+        '<select id="pf-' + p.id + '-tipoPersona">' +
+          '<option value=""' + (!p.tipoPersona ? ' selected' : '') + '>Sin especificar</option>' +
+          '<option value="fisica"' + (p.tipoPersona === 'fisica' ? ' selected' : '') + '>Física</option>' +
+          '<option value="moral"' + (p.tipoPersona === 'moral' ? ' selected' : '') + '>Moral</option>' +
+        '</select>' +
+      '</div>' +
+      '<div style="margin-top:12px;">' +
+        '<button class="btn btn-naranja" onclick="guardarDatosFiscalesProveedor(\'' + p.id + '\')" style="font-size:11px;padding:7px 14px;">💾 Guardar datos fiscales</button>' +
+      '</div>' +
+    '</div>';
+}
+
+function guardarDatosFiscalesProveedor(id) {
+  if(!db) { showToast('⚠️ Sin conexión a Firebase'); return; }
+  var campos = ['rfc','razonSocialFiscal','regimenFiscalProveedor','tipoPersona'];
+  var update = {};
+  campos.forEach(function(campo){
+    var el = document.getElementById('pf-' + id + '-' + campo);
+    if(!el) return;
+    update[campo] = el.value.trim();
+  });
+  db.collection('proveedores').doc(id).set(update, {merge:true}).then(function(){
+    var p = proveedoresDirCache.find(function(x){ return x.id === id; });
+    if(p) {
+      Object.keys(update).forEach(function(k){ p[k] = update[k]; });
+      document.getElementById('prov-dir-fiscal').innerHTML = renderProveedorFiscal(p);
+    }
+    showToast('✅ Datos fiscales guardados');
+  }).catch(function(e){
+    console.log('Error guardando datos fiscales de proveedor:', e);
+    showToast('⚠️ Error al guardar');
   });
 }
 
