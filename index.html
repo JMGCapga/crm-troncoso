@@ -6741,11 +6741,157 @@ function pedidoCardVentas(p) {
         ${waBtn}
         <button class="btn btn-gris" onclick="generarNotaDesdePedido('${p._docId}')" style="font-size:10px;padding:5px 10px;">🖨 Nota de Venta</button>
         <button class="btn btn-gris" onclick="reasignarOperador('${p._docId}')" style="font-size:10px;padding:5px 10px;">🔄 Reasignar</button>
+        ${botonFacturarPedido(p)}
         ${histBtn}
         ${cancelBtn}
       </div>
     </div>
   `;
+}
+
+// ════ FACTURACIÓN — Pendiente 7: datos listos para copiar + estado por pedido ════
+// NO timbra CFDI real (este CRM no tiene backend propio para guardar credenciales
+// de PAC con seguridad). Arma los datos de emisor/receptor/conceptos para pegar en
+// Factura Total / Timbrame / Portal SAT, y guarda si ya se facturó + folio.
+function botonFacturarPedido(p) {
+  if(p.facturado) {
+    return '<button class="btn btn-verde" onclick="abrirFacturarPedido(\'' + p._docId + '\')" style="font-size:10px;padding:5px 10px;">✅ Facturado' + (p.facturaFolio ? ' #' + p.facturaFolio : '') + '</button>';
+  }
+  return '<button class="btn btn-naranja" onclick="abrirFacturarPedido(\'' + p._docId + '\')" style="font-size:10px;padding:5px 10px;">🧾 Facturar</button>';
+}
+
+function buscarClientePorId(clienteId, resolve) {
+  if(!clienteId) { resolve(null); return; }
+  var c = clientesCache.find(function(x){ return x.id === clienteId; });
+  if(c) { resolve(c); return; }
+  if(!db) { resolve(null); return; }
+  db.collection('clientes').doc(clienteId).get().then(function(doc){
+    resolve(doc.exists ? doc.data() : null);
+  }).catch(function(){ resolve(null); });
+}
+
+function buscarClienteFiscalDePedido(p) {
+  return new Promise(function(resolve){
+    var cotId = p.cotizacionId;
+    if(!cotId) { resolve(null); return; }
+    var cotLocal = cotizaciones.find(function(c){ return c._docId === cotId; });
+    if(cotLocal) { buscarClientePorId(cotLocal.clienteId, resolve); return; }
+    if(!db) { resolve(null); return; }
+    db.collection('cotizaciones').doc(cotId).get().then(function(doc){
+      if(!doc.exists) { resolve(null); return; }
+      buscarClientePorId(doc.data().clienteId, resolve);
+    }).catch(function(){ resolve(null); });
+  });
+}
+
+async function abrirFacturarPedido(docId) {
+  var p = pedidosCache.find(function(x){ return x._docId === docId; });
+  if(!p) return;
+  var emisorCodigo = p.razonSocial || 'JMG';
+  if(!razonesSocialesCache[emisorCodigo]) {
+    await new Promise(function(resolve){ cargarRazonesSociales(resolve); });
+  }
+  var emisor = razonesSocialesCache[emisorCodigo] || RAZONES_SOCIALES_SEED[emisorCodigo] || {};
+  var cliente = await buscarClienteFiscalDePedido(p);
+  mostrarModalFacturar(p, emisor, emisorCodigo, cliente);
+}
+
+function textoDatosParaFacturar(p, emisor, emisorCodigo, cliente) {
+  var conceptos = (p.productos && p.productos.length)
+    ? p.productos.map(function(item){
+        return '• ' + item.cant + ' ' + item.desc + ' — ' + fmtMoney(item.precio||0) + ' c/u — ' + fmtMoney(item.imp||0);
+      }).join('\n')
+    : (p.p || '');
+
+  var receptorNombre = (cliente && cliente.razonSocialFiscal) ? cliente.razonSocialFiscal : (p.cliente || p.c || '');
+  var receptorRFC = (cliente && cliente.rfc) ? cliente.rfc : 'SIN RFC';
+  var receptorRegimen = (cliente && cliente.regimenFiscalReceptor) ? cliente.regimenFiscalReceptor : '';
+  var receptorCP = (cliente && cliente.cpFiscal) ? cliente.cpFiscal : '';
+  var receptorUso = (cliente && cliente.usoCFDI) ? cliente.usoCFDI : '';
+  var receptorEmail = (cliente && cliente.emailFactura) ? cliente.emailFactura : '';
+
+  return 'DATOS PARA FACTURAR — Pedido ' + (p.id||'') + '\n\n' +
+    'EMISOR\n' +
+    'Razón social: ' + (emisor.razonSocial || '') + '\n' +
+    'RFC: ' + (emisor.rfc || '') + '\n' +
+    'Régimen fiscal: ' + (emisor.regimenFiscal || '') + ' - ' + (emisor.regimenDesc || '') + '\n' +
+    'CP: ' + (emisor.cpFiscal || '') + '\n\n' +
+    'RECEPTOR\n' +
+    'Razón social: ' + receptorNombre + '\n' +
+    'RFC: ' + receptorRFC + '\n' +
+    'Régimen fiscal: ' + receptorRegimen + '\n' +
+    'CP: ' + receptorCP + '\n' +
+    'Uso de CFDI: ' + receptorUso + '\n' +
+    'Email: ' + receptorEmail + '\n\n' +
+    'CONCEPTOS\n' + (conceptos || 'Sin productos capturados') + '\n\n' +
+    'TOTAL: ' + fmtMoney(p.m || 0) + '\n' +
+    'Plataforma: ' + (emisor.plataformaFactura || emisorCodigo) + (emisor.tieneAPI === false ? ' (sin API — captura manual)' : '');
+}
+
+function mostrarModalFacturar(p, emisor, emisorCodigo, cliente) {
+  var existente = document.getElementById('modal-facturar');
+  if(existente) existente.remove();
+
+  var avisoCliente = (!cliente || !cliente.rfc)
+    ? '<div style="background:#FEE2E2;color:#DC2626;border-radius:8px;padding:10px;font-size:11px;margin-bottom:12px;">⚠️ Este cliente no tiene RFC capturado. Ve a Clientes y llena sus datos fiscales antes de timbrar.</div>'
+    : '';
+
+  window._facturarContexto = window._facturarContexto || {};
+  window._facturarContexto[p._docId] = { p: p, emisor: emisor, emisorCodigo: emisorCodigo, cliente: cliente };
+
+  var modal = document.createElement('div');
+  modal.id = 'modal-facturar';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;color:#1A1A1A;margin-bottom:4px;">🧾 FACTURAR PEDIDO ' + (p.id||'') + '</div>' +
+      '<div style="font-size:12px;color:#6B6560;margin-bottom:14px;">' + (p.cliente||p.c||'') + ' · ' + fmtMoney(p.m||0) + '</div>' +
+      avisoCliente +
+      '<div style="background:#F5F2EE;border-radius:8px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--suave);">' +
+        'Plataforma: <strong>' + (emisor.plataformaFactura || emisorCodigo) + '</strong>' + (emisor.tieneAPI === false ? ' (sin API — captura manual)' : '') +
+      '</div>' +
+      '<button class="btn btn-naranja" onclick="copiarDatosParaFacturar(\'' + p._docId + '\')" style="width:100%;margin-bottom:16px;">📋 Copiar datos para facturar</button>' +
+      '<div style="border-top:1px solid #D8D0C8;padding-top:14px;">' +
+        '<label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Folio de factura</label>' +
+        '<input type="text" id="fact-folio" value="' + (p.facturaFolio||'') + '" placeholder="ej: FAC-14559" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;margin-bottom:10px;">' +
+        '<label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Fecha de factura</label>' +
+        '<input type="date" id="fact-fecha" value="' + (p.facturaFecha || fechaISOLocal()) + '" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;margin-bottom:14px;">' +
+        '<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:14px;"><input type="checkbox" id="fact-facturado" ' + (p.facturado ? 'checked' : '') + '> Ya se facturó</label>' +
+      '</div>' +
+      '<div style="display:flex;gap:10px;">' +
+        '<button onclick="document.getElementById(\'modal-facturar\').remove()" style="flex:1;padding:12px;border:1.5px solid #D8D0C8;border-radius:8px;background:#fff;font-family:\'Barlow\',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Cerrar</button>' +
+        '<button onclick="guardarEstadoFactura(\'' + p._docId + '\')" style="flex:2;padding:12px;border:none;border-radius:8px;background:#E8500A;color:#fff;font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:1px;cursor:pointer;">💾 GUARDAR</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+}
+
+function copiarDatosParaFacturar(docId) {
+  var ctx = (window._facturarContexto || {})[docId];
+  if(!ctx) return;
+  var texto = textoDatosParaFacturar(ctx.p, ctx.emisor, ctx.emisorCodigo, ctx.cliente);
+  navigator.clipboard.writeText(texto).then(function(){
+    showToast('✅ Datos copiados — pégalos en ' + (ctx.emisor.plataformaFactura || 'tu plataforma de facturación'));
+  }).catch(function(){
+    showToast('⚠️ No se pudo copiar');
+  });
+}
+
+function guardarEstadoFactura(docId) {
+  if(!db) { showToast('⚠️ Sin conexión a Firebase'); return; }
+  var folio = document.getElementById('fact-folio').value.trim();
+  var fecha = document.getElementById('fact-fecha').value;
+  var facturado = document.getElementById('fact-facturado').checked;
+  var update = { facturado: facturado, facturaFolio: folio, facturaFecha: fecha };
+
+  db.collection('pedidos').doc(docId).update(update).then(function(){
+    var idx = pedidosCache.findIndex(function(x){ return x._docId === docId; });
+    if(idx >= 0) { Object.keys(update).forEach(function(k){ pedidosCache[idx][k] = update[k]; }); }
+    showToast('✅ Estado de facturación guardado');
+    var modal = document.getElementById('modal-facturar');
+    if(modal) modal.remove();
+    renderActivaPedidos();
+  }).catch(function(e){ console.log('Error guardando estado de factura:', e); showToast('⚠️ Error al guardar'); });
 }
 
 function cambiarStatusPedido(docId, status) {
