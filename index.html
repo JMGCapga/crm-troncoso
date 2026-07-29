@@ -1196,6 +1196,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       <div id="pedidos-ventas" style="display:none;">
         <div class="card">
           <div class="card-title">📦 Gestión de Pedidos</div>
+          <div id="ped-alertas-incompletas"></div>
           <div style="font-size:12px;color:var(--suave);margin-bottom:12px;" id="pedidos-resumen-ventas"></div>
           <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
             <button class="btn btn-naranja" onclick="filtrarPedidosFecha('hoy')" id="ped-f-hoy" style="font-size:11px;padding:7px 14px;">Hoy</button>
@@ -1857,78 +1858,41 @@ function mensajeEncuestaWA(pedido) {
     '&cliente='+encodeURIComponent(pedido.cliente||pedido.c||'');
 
   return '📦 *MATERIALES TRONCOSO*\n'+
-    '¡Su pedido '+(pedido.id||'')+' fue entregado! ¡Gracias por su preferencia!\n\n'+
+    '¡Su pedido '+(pedido.id||'')+' fue entregado! ¡Gracias!\n\n'+
     '⭐ ¿Nos regala 30 segundos?\n'+
-    'Su opinión nos ayuda a mejorar el servicio:\n'+
+    'Su opinión nos ayuda a mejorar:\n'+
     '👉 '+linkEncuesta+'\n\n'+
     '🎁 Si quedó satisfecho y nos deja una reseña en Google,\n'+
-    '¡le regalamos una playera Materiales Troncoso\n'+
-    'en su próxima visita!\n\n'+
+    '¡le regalamos una playera Materiales Troncoso!\n'+
+    '👉 https://maps.app.goo.gl/Usi4bN3xMT2SsWz17\n\n'+
     '📞 5555906802\n'+
     'materialestroncoso.com';
 }
 
-// Muestra encuesta embedded después de confirmar entrega
-function mostrarEncuestaEmbedded(pedido) {
-  var existente = document.getElementById('modal-encuesta-troncoso');
-  if(existente) existente.remove();
-
-  var container = document.createElement('div');
-  container.id = 'modal-encuesta-troncoso';
-  container.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;padding:0;';
-
-  var iframeContainer = document.createElement('div');
-  iframeContainer.style.cssText = 'width:100%;height:100%;max-width:500px;max-height:100vh;background:white;border-radius:0;overflow:hidden;display:flex;flex-direction:column;';
-
-  var iframe = document.createElement('iframe');
-  iframe.src = 'https://jmgcapga.github.io/encuesta-troncoso?embedded=true';
-  iframe.style.cssText = 'border:none;flex:1;width:100%;';
-
-  iframeContainer.appendChild(iframe);
-  container.appendChild(iframeContainer);
-  document.body.appendChild(container);
-
-  // Esperar a que cargue el iframe y llamar a la función
-  setTimeout(function() {
-    try {
-      iframe.contentWindow.mostrarEncuesta({
-        pedidoId: pedido.id || 'SIN-FOLIO',
-        clienteNombre: pedido.cliente || pedido.c || 'Cliente',
-        onCompleta: function(datos) {
-          console.log('Encuesta completada:', datos);
-          setTimeout(function() {
-            container.remove();
-            // Aquí irá el envío de WhatsApp a dos números
-            enviarEncuestaADosNumeros(pedido);
-          }, 2000);
-        }
-      });
-    } catch(e) {
-      console.log('Error al mostrar encuesta:', e);
-      container.remove();
-    }
-  }, 1000);
-}
-
-// Envía WhatsApp con link de encuesta a dos números si están disponibles
-function enviarEncuestaADosNumeros(pedido) {
-  var mensaje = mensajeEncuestaWA(pedido);
-  var numeros = [];
-
-  // Número 1: teléfono del cliente en pedido (quien pagó)
-  if(pedido.telefono) {
-    numeros.push(pedido.telefono);
+// Envía WhatsApp de encuesta post-entrega directo al cliente. Si el pedido viene
+// de una cotización con un teléfono distinto (quien pagó ≠ quien recibió), manda
+// un segundo WhatsApp a ese número 1500ms después para no abrir las dos pestañas juntas.
+function enviarEncuestaPostEntrega(pedido) {
+  var msg = mensajeEncuestaWA(pedido);
+  var tel1 = (pedido.telefono || '').replace(/[^0-9]/g,'');
+  if(tel1) {
+    var num1 = tel1.indexOf('52') === 0 ? tel1 : '52' + tel1;
+    window.open('https://wa.me/' + num1 + '?text=' + encodeURIComponent(msg), '_blank');
   }
 
-  // Número 2: teléfono del que recibe (si es diferente) — si existe en cotización original
-  // Se buscaría de la cotización asociada al pedido
-  // Por ahora solo enviamos al teléfono del cliente
-
-  numeros.forEach(function(tel) {
-    var url = 'https://wa.me/'+tel.replace(/\D/g,'')+
-      '?text='+encodeURIComponent(mensaje);
-    window.open(url);
-  });
+  if(pedido.cotizacionId && db) {
+    db.collection('cotizaciones').doc(pedido.cotizacionId).get().then(function(doc){
+      if(!doc.exists) return;
+      var cot = doc.data();
+      var telCot = (cot.clienteTel || '').replace(/[^0-9]/g,'');
+      if(telCot && telCot !== tel1) {
+        setTimeout(function(){
+          var num2 = telCot.indexOf('52') === 0 ? telCot : '52' + telCot;
+          window.open('https://wa.me/' + num2 + '?text=' + encodeURIComponent(msg), '_blank');
+        }, 1500);
+      }
+    }).catch(function(e){ console.log('Error buscando cotización original:', e); });
+  }
 }
 
 // Muestra botón para enviar cotización por WhatsApp con políticas
@@ -2121,6 +2085,7 @@ function initApp(){
   mostrarDashboardParaUsuario();
   mostrarFiscalParaUsuario();
   aplicarCandadoOperador();
+  verificarAlertasEntregasIncompletas();
 }
 
 // ════ CANDADO OPERADORES — solo ven/tocan Pedidos, no cotizaciones ════
@@ -3041,6 +3006,7 @@ function renderSeguimiento() {
       </div>
       <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
         ${c.clienteTel ? `<button class="btn btn-verde" onclick="waFollow('${c.clienteTel}','${c.cliente}','${c.folio}')" style="font-size:10px;padding:5px 10px;">📱 WhatsApp</button>` : ''}
+        ${botonCotizacionCompletaWA(c)}
         <button class="btn btn-gris" onclick="cambiarStatus('${c._docId||c.folio}','contactado')" style="font-size:10px;padding:5px 10px;">✅ Contactado</button>
         <button class="btn btn-naranja" onclick="cambiarStatus('${c._docId||c.folio}','cerrado')" style="font-size:10px;padding:5px 10px;">🎯 Cerrado</button>
         <button class="btn btn-gris" onclick="cambiarStatus('${c._docId||c.folio}','perdido')" style="font-size:10px;padding:5px 10px;background:#FEE2E2;color:#DC2626;">❌ Perdido</button>
@@ -3052,6 +3018,19 @@ function waFollow(tel, nombre, folio) {
   const t = tel.replace(/[^0-9]/g,'');
   const num = t.startsWith('52') ? t : '52' + t;
   const msg = `Hola ${nombre}, somos Materiales Troncoso. Le contactamos respecto a su cotización #${folio}. ¿Tiene alguna duda o desea proceder con su pedido?`;
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
+}
+// Botón para reenviar la cotización completa (productos + políticas) desde Seguimiento — solo JMG con teléfono
+function botonCotizacionCompletaWA(c) {
+  if(c.rs !== 'JMG' || !c.clienteTel) return '';
+  return '<button class="btn btn-naranja" onclick="reenviarCotizacionCompletaWA(\'' + (c._docId||c.folio) + '\')" style="font-size:10px;padding:5px 10px;">📋 Cotización completa</button>';
+}
+function reenviarCotizacionCompletaWA(docId) {
+  var cot = cotizaciones.find(function(c){ return (c._docId||c.folio) == docId; });
+  if(!cot) return;
+  var msg = mensajeCotizacionWA(cot);
+  var tel = cot.clienteTel.replace(/[^0-9]/g,'');
+  var num = tel.indexOf('52') === 0 ? tel : '52' + tel;
   window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
 }
 function cambiarStatus(docId, status) {
@@ -6596,6 +6575,60 @@ function notificarOperadorPedido(pedido, operadorNombre) {
   window.open('https://wa.me/'+operadorUser.tel+'?text='+encodeURIComponent(msg),'_blank');
 }
 
+// ════ ALERTAS — entregas incompletas (badge Ivette) ════
+function mostrarBadgeAlertasPedidos() {
+  var btn = document.getElementById('tab-pedidos-btn');
+  if(!btn || document.getElementById('badge-alertas-pedidos')) return;
+  var badge = document.createElement('span');
+  badge.id = 'badge-alertas-pedidos';
+  badge.style.cssText = 'background:#EF4444;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;';
+  badge.textContent = '!';
+  btn.appendChild(badge);
+}
+function quitarBadgeAlertasPedidos() {
+  var badge = document.getElementById('badge-alertas-pedidos');
+  if(badge) badge.remove();
+}
+function verificarAlertasEntregasIncompletas() {
+  if(!db) return;
+  db.collection('alertas').where('tipo','==','entrega_incompleta').where('resuelta','==',false).limit(1).get().then(function(snap){
+    if(!snap.empty) mostrarBadgeAlertasPedidos();
+  }).catch(function(e){ console.log('Error verificando alertas de entrega:', e); });
+}
+function cargarAlertasIncompletas() {
+  var cont = document.getElementById('ped-alertas-incompletas');
+  if(!cont) return;
+  if(!db) { cont.innerHTML = ''; return; }
+  db.collection('alertas').where('tipo','==','entrega_incompleta').where('resuelta','==',false).get().then(function(snap){
+    if(snap.empty) { cont.innerHTML = ''; quitarBadgeAlertasPedidos(); return; }
+    var docs = snap.docs.slice().sort(function(a,b){ return (b.data().timestamp||0) - (a.data().timestamp||0); });
+    var html = '<div style="background:#FEE2E2;border:1px solid #EF4444;border-radius:10px;padding:14px;margin-bottom:14px;">' +
+      '<div style="font-weight:700;color:#DC2626;margin-bottom:8px;">⚠️ Entregas incompletas pendientes de resolver</div>';
+    docs.forEach(function(doc){
+      var a = doc.data();
+      html += '<div style="background:#fff;border-radius:8px;padding:10px;margin-bottom:8px;">' +
+        '<div style="font-size:12px;font-weight:700;">Pedido ' + (a.pedidoId||'') + ' · ' + (a.cliente||'') + '</div>' +
+        '<div style="font-size:11px;color:var(--suave);margin:4px 0;">' + (a.notaFaltante || 'Sin detalle') + '</div>' +
+        '<div style="font-size:10px;color:#AAA;margin-bottom:6px;">' + (a.fecha||'') + '</div>' +
+        '<button class="btn btn-verde" onclick="resolverAlertaEntrega(\'' + doc.id + '\')" style="font-size:10px;padding:5px 10px;">✅ Marcar resuelta</button>' +
+        '</div>';
+    });
+    html += '</div>';
+    cont.innerHTML = html;
+  }).catch(function(e){ console.log('Error cargando alertas de entrega:', e); });
+}
+function resolverAlertaEntrega(alertaDocId) {
+  if(!db) return;
+  db.collection('alertas').doc(alertaDocId).update({
+    resuelta: true,
+    resueltaPor: currentUser ? currentUser.name : '',
+    resueltaTimestamp: Date.now()
+  }).then(function(){
+    showToast('✅ Alerta marcada como resuelta');
+    cargarAlertasIncompletas();
+  }).catch(function(e){ console.log('Error resolviendo alerta:', e); showToast('⚠️ Error al resolver alerta'); });
+}
+
 function iniciarPedidos() {
   var role = currentUser ? currentUser.role : '';
   document.getElementById('pedidos-ventas').style.display = 'none';
@@ -6606,6 +6639,7 @@ function iniciarPedidos() {
     if(role === 'Ventas' || role === 'Compras') {
       document.getElementById('pedidos-ventas').style.display = 'block';
       filtrarPedidosFecha('hoy');
+      cargarAlertasIncompletas();
     } else if(role === 'Operador') {
       document.getElementById('pedidos-operador').style.display = 'block';
       renderPedidosOperador();
@@ -7065,17 +7099,33 @@ function confirmarEntregaFinal(docId) {
   window._entregaCompleta = true;
   showToast(completa ? '✅ Entrega confirmada con firma y foto' : '⚠️ Entrega parcial registrada');
 
-  // Mostrar encuesta embedded si es JMG, hay teléfono y entrega completa
   if(completa && pedidosCache[idx]) {
+    // Encuesta post-entrega — solo si es JMG y hay teléfono
     var pedido = pedidosCache[idx];
     var rs = pedido.razonSocial || pedido.rs || 'JMG';
     var telCliente = pedido.telefono || '';
 
     if(rs === 'JMG' && telCliente) {
       setTimeout(function() {
-        mostrarEncuestaEmbedded(pedido);
+        enviarEncuestaPostEntrega(pedido);
       }, 500);
     }
+  } else if(!completa && db) {
+    // Entrega incompleta — alerta para que Ivette le dé seguimiento al cliente
+    var pedidoAlerta = pedidosCache[idx];
+    db.collection('alertas').add({
+      tipo: 'entrega_incompleta',
+      pedidoId: pedidoAlerta.id || docId,
+      pedidoDocId: docId,
+      cliente: pedidoAlerta.cliente || pedidoAlerta.c || '',
+      notaFaltante: notaFaltante,
+      fecha: fechaISOLocal(),
+      timestamp: Date.now(),
+      resuelta: false,
+      creadoPor: currentUser ? currentUser.name : ''
+    }).then(function(){
+      mostrarBadgeAlertasPedidos();
+    }).catch(function(e){ console.log('Error creando alerta de entrega incompleta:', e); });
   }
 
   renderPedidosOperador();
