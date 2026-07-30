@@ -1148,6 +1148,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <div class="panel" id="panel-inventario">
       <div class="card">
         <div class="card-title">📦 Inventario</div>
+        <button type="button" class="btn btn-naranja" id="inv-btn-nuevo" style="display:none;width:100%;margin-bottom:10px;" onclick="abrirNuevoProducto()">➕ Nuevo Producto</button>
         <div class="search-wrap">
           <span class="ico">🔍</span>
           <input type="text" id="inv-search" placeholder="Buscar por clave o descripción..." oninput="renderInventarioLista()" autocomplete="off">
@@ -1157,6 +1158,11 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         </select>
         <div id="inv-count" class="cli-count"></div>
         <div id="inv-lista" style="max-height:60vh;overflow-y:auto;border:1px solid var(--borde);border-radius:10px;"></div>
+      </div>
+      <div class="card" id="inv-permisos-panel" style="display:none;">
+        <div class="card-title">⚙️ Permisos por rol</div>
+        <div id="inv-permisos-tabla" style="overflow-x:auto;"></div>
+        <button type="button" class="btn btn-naranja" style="width:100%;margin-top:10px;" onclick="guardarPanelPermisos()">Guardar permisos</button>
       </div>
     </div>
 
@@ -1752,6 +1758,48 @@ const RAZONES = {
   CEM: { nombre: 'Abastecedora Cemcoya', rfc: 'ACE230216MR0' }
 };
 
+// ════ ALTA DE PRODUCTOS — familias/series reales del catálogo ════
+var FAMILIAS_SERIES = [
+  { serie:'100', familia:'POLVOS SECOS' },
+  { serie:'110', familia:'MADERA' },
+  { serie:'140', familia:'CONCRETOS' },
+  { serie:'200', familia:'AGREGADOS' },
+  { serie:'300', familia:'ACERO, VARILLA, MALLAS Y CLAVOS' },
+  { serie:'400', familia:'PLOMERÍA' },
+  { serie:'600', familia:'ADITIVOS, PEGAMENTOS E IMPERMEABILIZANTES' },
+  { serie:'700', familia:'BLOCK Y TABIQUE' },
+  { serie:'800', familia:'FERRETERÍA GENERAL' },
+  { serie:'900', familia:'CONSTRUCCIÓN LIGERA' }
+];
+
+// ════ PERMISOS POR ROL — matriz editable (tab Inventario, solo Director/Gerencia) ════
+var PERMISOS_ROLES_DEFAULT = {
+  Ventas:   { agregarProducto:true,  agregarTruper:false, editar:false, borrar:false, ajustarExistencia:false },
+  Compras:  { agregarProducto:true,  agregarTruper:true,  editar:false, borrar:false, ajustarExistencia:true  },
+  Gerencia: { agregarProducto:true,  agregarTruper:true,  editar:true,  borrar:true,  ajustarExistencia:true  },
+  Director: { agregarProducto:true,  agregarTruper:true,  editar:true,  borrar:true,  ajustarExistencia:true  }
+};
+var permisosRolesCache = JSON.parse(JSON.stringify(PERMISOS_ROLES_DEFAULT));
+
+function cargarPermisosRoles(){
+  if(!db) return;
+  db.collection('permisos_roles').doc('matriz').get().then(function(doc){
+    if(doc.exists){
+      permisosRolesCache = doc.data();
+    } else {
+      db.collection('permisos_roles').doc('matriz').set(PERMISOS_ROLES_DEFAULT).catch(function(e){ console.log('Error creando permisos_roles:', e); });
+    }
+  }).catch(function(e){ console.log('Error cargando permisos_roles:', e); });
+}
+
+// El PIN de Director (9900) siempre pasa — nunca se puede autobloquear desde el panel.
+function tienePermisoRol(accion){
+  if(currentPin === '9900') return true;
+  if(!currentUser) return false;
+  var rol = permisosRolesCache[currentUser.role];
+  return !!(rol && rol[accion]);
+}
+
 // ════ EXPEDIENTE FISCAL — Parte 1: Razones Sociales + Terminales ════
 // NOTA: esto NO reemplaza RAZONES (arriba). RAZONES sigue siendo la fuente
 // rápida de nombre+RFC para cotizaciones/pedidos/NC/compras/fondeos.
@@ -1993,7 +2041,7 @@ function checkPin(){
     var tabsMecanico = ['tab-flota-btn'];
     var tabsVentas = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
-      'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-pedidos-btn'];
+      'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-pedidos-btn','tab-inventario-btn'];
     var tabsCompras = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
       'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
       'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-pedidos-btn','tab-inventario-btn'];
@@ -2071,6 +2119,7 @@ function initApp(){
     cargarNotasCredito();
     cargarFondeos();
     cargarProductos();
+    cargarPermisosRoles();
     mostrarDashboardParaUsuario();
     mostrarFiscalParaUsuario();
     aplicarCandadoOperador();
@@ -2082,6 +2131,7 @@ function initApp(){
   cargarNotasCredito();
   cargarFondeos();
   cargarProductos();
+  cargarPermisosRoles();
   mostrarDashboardParaUsuario();
   mostrarFiscalParaUsuario();
   aplicarCandadoOperador();
@@ -2342,19 +2392,38 @@ function actualizarCacheLocalInventario(deltas, signo){
 
 // ════ INVENTARIO — panel, permisos, ajustes ════
 function puedeVerInventario() {
-  return currentUser && (currentUser.role === 'Director' || currentUser.role === 'Compras' || currentUser.role === 'Gerencia');
+  return currentUser && (currentUser.role === 'Director' || currentUser.role === 'Compras' || currentUser.role === 'Gerencia' || currentUser.role === 'Ventas');
 }
 function puedeAjustarInventario() {
-  return currentUser && (currentUser.role === 'Director' || currentUser.role === 'Compras' || currentPin === '9900' || currentPin === '5678');
+  return tienePermisoRol('ajustarExistencia');
 }
 function esSuperAdminInventario() {
-  return currentPin === '9900' || currentPin === '5678';
+  return tienePermisoRol('editar');
+}
+function puedeBorrarProducto() {
+  return tienePermisoRol('borrar');
+}
+function puedeAgregarProducto() {
+  return tienePermisoRol('agregarProducto');
+}
+function puedeAgregarProductoTruper() {
+  return tienePermisoRol('agregarTruper');
+}
+function puedeVerPanelPermisos() {
+  return currentPin === '9900' || (currentUser && currentUser.role === 'Gerencia');
 }
 
 function iniciarInventario() {
   if(!puedeVerInventario()) { showToast('⚠️ No tienes acceso a Inventario'); return; }
   poblarFiltroFamiliaInventario();
   renderInventarioLista();
+  var btnNuevo = document.getElementById('inv-btn-nuevo');
+  if(btnNuevo) btnNuevo.style.display = puedeAgregarProducto() ? '' : 'none';
+  var panelPermisos = document.getElementById('inv-permisos-panel');
+  if(panelPermisos) {
+    if(puedeVerPanelPermisos()) { panelPermisos.style.display = ''; renderPanelPermisos(); }
+    else panelPermisos.style.display = 'none';
+  }
 }
 
 function poblarFiltroFamiliaInventario() {
@@ -2490,7 +2559,7 @@ function abrirEditarProducto(clave) {
           '<option value="stock"' + (p.tipo==='stock'?' selected':'') + '>stock</option>' +
           '<option value="servicio"' + (p.tipo==='servicio'?' selected':'') + '>servicio</option>' +
         '</select></div>' +
-        '<div class="field"><label>Activo</label><select id="ep-activo">' +
+        '<div class="field"><label>Activo</label><select id="ep-activo"' + (puedeBorrarProducto() ? '' : ' disabled') + '>' +
           '<option value="true"' + (p.activo!==false?' selected':'') + '>Sí</option>' +
           '<option value="false"' + (p.activo===false?' selected':'') + '>No</option>' +
         '</select></div>' +
@@ -2516,10 +2585,12 @@ function guardarEdicionProducto(clave) {
     min: parseFloat(document.getElementById('ep-min').value) || 0,
     max: parseFloat(document.getElementById('ep-max').value) || 0,
     tipo: document.getElementById('ep-tipo').value,
-    activo: document.getElementById('ep-activo').value === 'true',
     insumoClave: document.getElementById('ep-insumoclave').value.trim() || null,
     insumoCant: parseFloat(document.getElementById('ep-insumocant').value) || 0
   };
+  if(puedeBorrarProducto()) {
+    cambios.activo = document.getElementById('ep-activo').value === 'true';
+  }
   db.collection('productos').doc(clave).update(cambios).then(function(){
     Object.assign(p, cambios);
     reindexProductos();
@@ -2528,6 +2599,213 @@ function guardarEdicionProducto(clave) {
     if(modal) modal.remove();
     renderInventarioLista();
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al actualizar producto'); });
+}
+
+// ════ INVENTARIO — Alta de producto nuevo ════
+function calcularSiguienteClave(serie){
+  var max = parseInt(serie + '000', 10);
+  productos.forEach(function(p){
+    if(p.serie === serie){
+      var n = parseInt(p.clave, 10);
+      if(!isNaN(n) && n > max) max = n;
+    }
+  });
+  var siguiente = max + 1;
+  while(productosIndex[String(siguiente)]) siguiente++;
+  return String(siguiente);
+}
+
+function calcularTipoAutomatico(familia, descripcion){
+  if(familia === 'CONCRETOS') return 'servicio';
+  if(/ESCOMBRO/i.test(descripcion || '')) return 'servicio';
+  return 'stock';
+}
+
+function abrirNuevoProducto() {
+  if(!puedeAgregarProducto()) { showToast('⚠️ Sin permisos'); return; }
+  var existente = document.getElementById('modal-nuevo-prod');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-nuevo-prod';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  var opcionesFamilia = FAMILIAS_SERIES.map(function(f){
+    return '<option value="' + f.serie + '">' + f.familia + ' (' + f.serie + ')</option>';
+  }).join('');
+
+  var togglerTruper = puedeAgregarProductoTruper()
+    ? '<button type="button" class="btn btn-gris" id="np-btn-truper" style="margin-bottom:14px;width:100%;" onclick="toggleModoTruperNuevoProducto()">🏭 Es producto GRUPO TRUPER</button>'
+    : '';
+
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:1px;margin-bottom:14px;">➕ NUEVO PRODUCTO</div>' +
+      togglerTruper +
+      '<div id="np-modo-normal">' +
+        '<div class="form-grid">' +
+          '<div class="field" style="grid-column:1/-1;"><label>Familia</label><select id="np-familia" onchange="actualizarClaveNuevoProducto()">' + opcionesFamilia + '</select></div>' +
+          '<div class="field"><label>Clave (automática)</label><input type="text" id="np-clave" value="" disabled style="background:#F0EDE8;"></div>' +
+          '<div class="field"><label>Tipo (automático)</label><input type="text" id="np-tipo-preview" value="STOCK" disabled style="background:#F0EDE8;"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="np-modo-truper" style="display:none;">' +
+        '<div class="field" style="margin-bottom:14px;"><label>Clave de fábrica (Truper)</label><input type="text" id="np-clave-truper" placeholder="ej: 802671"></div>' +
+      '</div>' +
+      '<div class="form-grid">' +
+        '<div class="field" style="grid-column:1/-1;"><label>Descripción</label><input type="text" id="np-descripcion" placeholder="PRODUCTO + ESPECIFICACIÓN + MEDIDA + MARCA" oninput="actualizarClaveNuevoProducto()"></div>' +
+        '<div class="field"><label>Marca</label><input type="text" id="np-marca" value="SIN MARCA"></div>' +
+        '<div class="field"><label>Ubicación</label><input type="text" id="np-ubicacion" value=""></div>' +
+        '<div class="field"><label>Mínimo</label><input type="number" id="np-min" value="0" step="0.01"></div>' +
+        '<div class="field"><label>Máximo</label><input type="number" id="np-max" value="0" step="0.01"></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:10px;">' +
+        '<button class="btn btn-naranja" style="flex:1;" onclick="guardarNuevoProducto()">Crear producto</button>' +
+        '<button class="btn btn-gris" style="flex:1;" onclick="document.getElementById(\'modal-nuevo-prod\').remove()">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  actualizarClaveNuevoProducto();
+}
+
+function toggleModoTruperNuevoProducto() {
+  var modoTruper = document.getElementById('np-modo-truper').style.display === 'none';
+  document.getElementById('np-modo-truper').style.display = modoTruper ? '' : 'none';
+  document.getElementById('np-modo-normal').style.display = modoTruper ? 'none' : '';
+  var btn = document.getElementById('np-btn-truper');
+  if(btn) btn.textContent = modoTruper ? '📦 Es producto normal (catálogo propio)' : '🏭 Es producto GRUPO TRUPER';
+}
+
+function actualizarClaveNuevoProducto() {
+  var familiaSel = document.getElementById('np-familia');
+  var claveInput = document.getElementById('np-clave');
+  var tipoPreview = document.getElementById('np-tipo-preview');
+  if(!familiaSel || !claveInput) return;
+  var serie = familiaSel.value;
+  var familiaTexto = (FAMILIAS_SERIES.find(function(f){ return f.serie === serie; }) || {}).familia || '';
+  claveInput.value = calcularSiguienteClave(serie);
+  var descripcion = document.getElementById('np-descripcion') ? document.getElementById('np-descripcion').value : '';
+  var tipo = calcularTipoAutomatico(familiaTexto, descripcion);
+  if(tipoPreview) tipoPreview.value = tipo.toUpperCase() + (tipo === 'servicio' ? ' (sin inventario)' : '');
+}
+
+function guardarNuevoProducto() {
+  if(!puedeAgregarProducto()) { showToast('⚠️ Sin permisos'); return; }
+  if(!db) { showToast('⚠️ Sin conexión a Firebase'); return; }
+
+  var esTruper = document.getElementById('np-modo-truper').style.display !== 'none';
+  var descripcion = document.getElementById('np-descripcion').value.trim().toUpperCase();
+  if(!descripcion) { showToast('⚠️ Ingresa la descripción'); return; }
+  var marca = document.getElementById('np-marca').value.trim() || 'SIN MARCA';
+  var ubicacion = document.getElementById('np-ubicacion').value.trim();
+  var min = parseFloat(document.getElementById('np-min').value) || 0;
+  var max = parseFloat(document.getElementById('np-max').value) || 0;
+
+  if(esTruper) {
+    if(!puedeAgregarProductoTruper()) { showToast('⚠️ Sin permisos para Truper'); return; }
+    var claveTruper = document.getElementById('np-clave-truper').value.trim();
+    if(!claveTruper) { showToast('⚠️ Ingresa la clave de fábrica'); return; }
+    if(productosIndex[claveTruper]) { showToast('⚠️ Esa clave ya existe'); return; }
+    if(!confirm('¿Crear producto ' + claveTruper + ' - ' + descripcion + '?')) return;
+    db.collection('productos').doc(claveTruper).get().then(function(doc){
+      if(doc.exists) { showToast('⚠️ Esa clave ya existe en la nube'); return; }
+      var producto = {
+        clave: claveTruper, descripcion: descripcion, serie: 'TRUPER', familia: 'GRUPO TRUPER',
+        marca: marca, ubicacion: ubicacion, min: min, max: max, existencia: 0,
+        tipo: 'stock', insumoClave: null, insumoCant: 0, activo: true
+      };
+      db.collection('productos').doc(claveTruper).set(producto).then(function(){
+        productos.push(producto);
+        reindexProductos();
+        showToast('✅ Producto ' + claveTruper + ' creado');
+        var modal = document.getElementById('modal-nuevo-prod');
+        if(modal) modal.remove();
+        renderInventarioLista();
+      }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear producto'); });
+    }).catch(function(e){ console.log(e); showToast('⚠️ Error al validar clave'); });
+    return;
+  }
+
+  var serie = document.getElementById('np-familia').value;
+  var familia = (FAMILIAS_SERIES.find(function(f){ return f.serie === serie; }) || {}).familia || '';
+  var tipo = calcularTipoAutomatico(familia, descripcion);
+  var clave = calcularSiguienteClave(serie);
+
+  if(!confirm('¿Crear producto ' + clave + ' - ' + descripcion + '?')) return;
+
+  function intentarGuardar(claveIntento, intentos) {
+    if(intentos > 20) { showToast('⚠️ No se pudo asignar código, intenta de nuevo'); return; }
+    db.collection('productos').doc(claveIntento).get().then(function(doc){
+      if(doc.exists) {
+        intentarGuardar(String(parseInt(claveIntento, 10) + 1), intentos + 1);
+        return;
+      }
+      var producto = {
+        clave: claveIntento, descripcion: descripcion, serie: serie, familia: familia,
+        marca: marca, ubicacion: ubicacion, min: min, max: max, existencia: 0,
+        tipo: tipo, insumoClave: null, insumoCant: 0, activo: true
+      };
+      db.collection('productos').doc(claveIntento).set(producto).then(function(){
+        productos.push(producto);
+        reindexProductos();
+        showToast('✅ Producto ' + claveIntento + ' creado');
+        var modal = document.getElementById('modal-nuevo-prod');
+        if(modal) modal.remove();
+        renderInventarioLista();
+      }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear producto'); });
+    }).catch(function(e){ console.log(e); showToast('⚠️ Error al validar clave'); });
+  }
+  intentarGuardar(clave, 0);
+}
+
+// ════ INVENTARIO — Panel de permisos por rol (Director/Gerencia) ════
+var PERMISOS_ACCIONES = [
+  { key:'agregarProducto', label:'Agregar producto' },
+  { key:'agregarTruper', label:'Agregar Truper' },
+  { key:'editar', label:'Editar' },
+  { key:'borrar', label:'Borrar/desactivar' },
+  { key:'ajustarExistencia', label:'Ajustar existencia' }
+];
+var PERMISOS_ROLES_ORDEN = ['Ventas', 'Compras', 'Gerencia', 'Director'];
+
+function renderPanelPermisos() {
+  var cont = document.getElementById('inv-permisos-tabla');
+  if(!cont) return;
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+  html += '<tr><th style="text-align:left;padding:6px;">Rol</th>';
+  PERMISOS_ACCIONES.forEach(function(a){ html += '<th style="padding:6px;">' + a.label + '</th>'; });
+  html += '</tr>';
+  PERMISOS_ROLES_ORDEN.forEach(function(rol){
+    var esDirector = rol === 'Director';
+    var permisos = permisosRolesCache[rol] || {};
+    html += '<tr><td style="padding:6px;font-weight:700;">' + rol + '</td>';
+    PERMISOS_ACCIONES.forEach(function(a){
+      var checked = esDirector ? true : !!permisos[a.key];
+      html += '<td style="text-align:center;padding:6px;"><input type="checkbox" id="perm-' + rol + '-' + a.key + '"' +
+        (checked ? ' checked' : '') + (esDirector ? ' disabled' : '') + '></td>';
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+  cont.innerHTML = html;
+}
+
+function guardarPanelPermisos() {
+  if(!puedeVerPanelPermisos()) { showToast('⚠️ Sin permisos'); return; }
+  if(!db) { showToast('⚠️ Sin conexión a Firebase'); return; }
+  var nuevaMatriz = {};
+  PERMISOS_ROLES_ORDEN.forEach(function(rol){
+    if(rol === 'Director') { nuevaMatriz[rol] = PERMISOS_ROLES_DEFAULT.Director; return; }
+    nuevaMatriz[rol] = {};
+    PERMISOS_ACCIONES.forEach(function(a){
+      var el = document.getElementById('perm-' + rol + '-' + a.key);
+      nuevaMatriz[rol][a.key] = !!(el && el.checked);
+    });
+  });
+  db.collection('permisos_roles').doc('matriz').set(nuevaMatriz).then(function(){
+    permisosRolesCache = nuevaMatriz;
+    showToast('✅ Permisos actualizados');
+    iniciarInventario();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar permisos'); });
 }
 
 function cargarCotizaciones(){
