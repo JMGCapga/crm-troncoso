@@ -191,8 +191,6 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <button class="tab active" id="tab-clientes-btn" onclick="switchTab('clientes',this)">👥 Clientes</button>
     <button class="tab" id="tab-ventas-btn" onclick="switchTab('seguimiento',document.getElementById('tab-ventas-btn'))">🛍️ Ventas</button>
     <button class="tab" id="tab-consultas-btn" onclick="switchTab('consultas',this)">🔍 Consultas</button>
-    <button class="tab" id="tab-nota-btn" onclick="switchTab('nota',this)">🖨 Recibo rápido</button>
-    <button class="tab" id="tab-ticket-btn" onclick="switchTab('ticket',this)">🧾 Recibo corto</button>
     <button class="tab" id="tab-corte-btn" onclick="switchTab('corte',this)">💰 Corte de Caja</button>
     <button class="tab" id="tab-salidas-btn" onclick="switchTab('salidas',this)">📤 Salidas</button>
     <button class="tab" id="tab-nc-btn" onclick="switchTab('nc',this)">📝 Notas de Crédito</button>
@@ -2161,17 +2159,17 @@ function checkPin(){
     var tabsOperador = ['tab-ventas-btn','tab-flota-btn'];
     var tabsMecanico = ['tab-flota-btn'];
     var tabsVentas = ['tab-clientes-btn','tab-ventas-btn','tab-consultas-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
+      'tab-corte-btn','tab-salidas-btn','tab-nc-btn',
       'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-inventario-btn'];
     var tabsCompras = ['tab-clientes-btn','tab-ventas-btn','tab-consultas-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
+      'tab-corte-btn','tab-salidas-btn','tab-nc-btn',
       'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-inventario-btn'];
     var tabsGerencia = ['tab-clientes-btn','tab-ventas-btn','tab-consultas-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
+      'tab-corte-btn','tab-salidas-btn',
       'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-cuentas-btn','tab-nomina-btn',
       'tab-flota-btn','tab-dashboard-btn','tab-inventario-btn'];
     var tabsDirector = ['tab-clientes-btn','tab-ventas-btn','tab-consultas-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
+      'tab-corte-btn','tab-salidas-btn',
       'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-cuentas-btn','tab-nomina-btn',
       'tab-flota-btn','tab-dashboard-btn','tab-inventario-btn'];
 
@@ -2264,7 +2262,7 @@ function aplicarCandadoOperador() {
   var esOperador = currentUser && currentUser.role === 'Operador';
   var esMecanico = currentUser && currentUser.role === 'Mecanico';
   if(!esOperador && !esMecanico) return; // otros roles ya fueron filtrados por checkPin()
-  var idsOcultos = ['tab-clientes-btn','tab-consultas-btn','tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-nomina-btn'];
+  var idsOcultos = ['tab-clientes-btn','tab-consultas-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-nomina-btn'];
   idsOcultos.forEach(function(id){
     var b = document.getElementById(id);
     if(b) b.style.display = 'none';
@@ -7897,9 +7895,9 @@ function renderListaTickets() {
   var filas = ticketsCache.map(function(t){
     var cancelado = t.status === 'cancelado';
     var accion = !cancelado
-      ? '<button class="btn btn-gris" onclick="cancelarTicket(\''+t._docId+'\')" style="font-size:10px;padding:5px 10px;background:#FEE2E2;color:#DC2626;">❌ Cancelar</button>'
+      ? '<button class="btn btn-gris" onclick="event.stopPropagation();cancelarTicket(\''+t._docId+'\')" style="font-size:10px;padding:5px 10px;background:#FEE2E2;color:#DC2626;">❌ Cancelar</button>'
       : '<span style="font-size:10px;color:#DC2626;font-weight:700;">CANCELADO</span>';
-    return '<tr style="border-bottom:1px solid #F0EDE8;' + (cancelado ? 'opacity:0.5;' : '') + '">' +
+    return '<tr onclick="abrirDetalleTicket(\''+t._docId+'\')" style="cursor:pointer;border-bottom:1px solid #F0EDE8;' + (cancelado ? 'opacity:0.5;' : '') + '">' +
       '<td style="padding:8px 10px;font-weight:700;">'+t.folio+'</td>' +
       '<td style="padding:8px 10px;">'+t.cliente+'</td>' +
       '<td style="padding:8px 10px;text-align:right;font-weight:700;">'+fmtMoney(t.total||0)+'</td>' +
@@ -7912,6 +7910,40 @@ function renderListaTickets() {
     '<tbody>' + filas + '</tbody>' +
     '<tfoot><tr><td colspan="2" style="padding:10px;font-weight:700;">TOTAL DEL DÍA</td><td style="padding:10px;text-align:right;font-weight:700;">'+fmtMoney(totalDia)+'</td><td colspan="2"></td></tr></tfoot>' +
     '</table></div>';
+}
+
+function abrirDetalleTicket(docId) {
+  var t = ticketsCache.find(function(x){ return x._docId === docId; });
+  if(!t) return;
+  var cancelado = t.status === 'cancelado';
+  var filas = (t.productos || []).map(function(p){
+    return '<div class="cot-meta">'+p.cant+' × '+p.desc+' — '+fmtMoney((p.cant||0)*(p.precio||0))+'</div>';
+  }).join('');
+  var cancelBtn = !cancelado
+    ? '<button class="btn btn-gris" onclick="cancelarTicket(\''+t._docId+'\');document.getElementById(\'modal-detalle-tk\').remove();" style="font-size:10px;padding:5px 10px;background:#FEE2E2;color:#DC2626;">❌ Cancelar</button>'
+    : '<span style="font-size:11px;color:#DC2626;font-weight:700;">CANCELADO</span>';
+
+  var existente = document.getElementById('modal-detalle-tk');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-detalle-tk';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation();">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;">'+t.folio+' · '+t.cliente+'</div>' +
+        '<div class="cot-total">'+fmtMoney(t.total||0)+'</div>' +
+      '</div>' +
+      '<div class="cot-meta" style="margin-bottom:8px;">'+labelMetodoPago(t.metodoPago)+(t.razonSocial ? ' · '+t.razonSocial : '')+' · '+t.fecha+'</div>' +
+      filas +
+      '<div style="margin-top:14px;display:flex;gap:6px;flex-wrap:wrap;">' +
+        '<button class="btn btn-naranja" onclick="imprimirTicketVenta(ticketsCache.find(function(x){return x._docId===\''+t._docId+'\';}))" style="font-size:11px;padding:7px 12px;">🖨️ Imprimir ticket</button>' +
+        cancelBtn +
+      '</div>' +
+      '<button class="btn btn-gris" onclick="document.getElementById(\'modal-detalle-tk\').remove()" style="width:100%;margin-top:16px;">Cerrar</button>' +
+    '</div>';
+  modal.onclick = function(){ modal.remove(); };
+  document.body.appendChild(modal);
 }
 
 function cancelarTicket(docId) {
