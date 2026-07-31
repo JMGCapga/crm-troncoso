@@ -189,11 +189,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 
   <div class="tabs no-print">
     <button class="tab active" id="tab-clientes-btn" onclick="switchTab('clientes',this)">👥 Clientes</button>
-    <button class="tab" id="tab-cotizacion-btn" onclick="switchTab('cotizacion',this)">📋 Nueva Cotización</button>
-    <button class="tab" id="tab-seguimiento-btn" onclick="switchTab('seguimiento',this)">📊 Seguimiento</button>
+    <button class="tab" id="tab-ventas-btn" onclick="switchTab('seguimiento',document.getElementById('tab-ventas-btn'))">🛍️ Ventas</button>
+    <button class="tab" id="tab-consultas-btn" onclick="switchTab('consultas',this)">🔍 Consultas</button>
     <button class="tab" id="tab-nota-btn" onclick="switchTab('nota',this)">🖨 Recibo rápido</button>
     <button class="tab" id="tab-ticket-btn" onclick="switchTab('ticket',this)">🧾 Recibo corto</button>
-    <button class="tab" id="tab-tickets-btn" onclick="switchTab('tickets',this)">🎫 Tickets</button>
     <button class="tab" id="tab-corte-btn" onclick="switchTab('corte',this)">💰 Corte de Caja</button>
     <button class="tab" id="tab-salidas-btn" onclick="switchTab('salidas',this)">📤 Salidas</button>
     <button class="tab" id="tab-nc-btn" onclick="switchTab('nc',this)">📝 Notas de Crédito</button>
@@ -203,7 +202,6 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <button class="tab" id="tab-cuentas-btn" onclick="switchTab('cuentas',this)">💰 Cuentas</button>
     <button class="tab" id="tab-inventario-btn" onclick="switchTab('inventario',this)" style="display:none">📦 Inventario</button>
     <button class="tab" id="tab-nomina-btn" onclick="switchTab('nomina',this)">👷 Nómina</button>
-    <button class="tab" id="tab-pedidos-btn" onclick="switchTab('pedidos',this)">📄 Notas de Venta</button>
     <button class="tab" id="tab-flota-btn" onclick="switchTab('flota',this)" style="display:none">🚛 Flota</button>
     <button class="tab" id="tab-dashboard-btn" onclick="switchTab('dashboard',this)" style="display:none">📊 Dashboard</button>
     <button class="tab" id="tab-fiscal-btn" onclick="switchTab('fiscal',this)" style="display:none">📄 Fiscal</button>
@@ -242,6 +240,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     </div>
 
     <div class="panel" id="panel-cotizacion">
+      <div id="ventas-subnav-cot"></div>
       <div class="card">
         <div class="card-title">Nueva Cotización</div>
         <div class="form-grid">
@@ -325,8 +324,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     </div>
 
     <div class="panel" id="panel-seguimiento">
+      <div id="ventas-subnav-seg"></div>
       <div class="card">
         <div class="card-title">Seguimiento de Cotizaciones</div>
+        <button class="btn btn-naranja" onclick="switchTab('cotizacion', document.getElementById('tab-ventas-btn'))" style="width:100%;margin-bottom:14px;">📋 Nueva Cotización</button>
         <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
           <button class="btn btn-naranja" onclick="filtrarSeg('todas')" id="seg-f-todas" style="font-size:11px;padding:7px 14px;">Todas</button>
           <button class="btn btn-gris" onclick="filtrarSeg('alta')" id="seg-f-alta" style="font-size:11px;padding:7px 14px;">🟢 Alta</button>
@@ -341,7 +342,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <div class="panel" id="panel-nota">
       <div style="margin-bottom:12px;display:flex;gap:8px;" class="no-print">
         <button class="btn btn-naranja" onclick="window.print()">🖨 Imprimir</button>
-        <button class="btn btn-gris" onclick="switchTab('cotizacion',document.querySelectorAll('.tab')[1])">← Volver</button>
+        <button class="btn btn-gris" onclick="switchTab('cotizacion',document.getElementById('tab-ventas-btn'))">← Volver</button>
       </div>
       <div class="nota-paper" id="nota-content">
         <div class="nota-header">
@@ -386,7 +387,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <div class="panel" id="panel-ticket">
       <div style="margin-bottom:12px;display:flex;gap:8px;" class="no-print">
         <button class="btn btn-naranja" onclick="window.print()">🖨 Imprimir Ticket</button>
-        <button class="btn btn-gris" onclick="switchTab('cotizacion',document.querySelectorAll('.tab')[1])">← Volver</button>
+        <button class="btn btn-gris" onclick="switchTab('cotizacion',document.getElementById('tab-ventas-btn'))">← Volver</button>
       </div>
       <div class="ticket-paper" id="ticket-content">
         <div class="t-header">
@@ -405,10 +406,53 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 
     <!-- ===== TICKETS DE MOSTRADOR (venta rápida presencial) ===== -->
     <div class="panel" id="panel-tickets">
+      <div id="ventas-subnav-tk"></div>
       <div class="card">
         <div class="card-title">🎫 Tickets de Mostrador</div>
         <button class="btn btn-naranja" onclick="abrirNuevoTicket()" style="width:100%;margin-bottom:14px;">🎫 Nuevo Ticket</button>
         <div id="tks-lista" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;"></div>
+      </div>
+    </div>
+
+    <!-- ===== CONSULTAS — buscador global (Cotizaciones + Notas de Venta + Tickets) ===== -->
+    <div class="panel" id="panel-consultas">
+      <div class="card">
+        <div class="card-title">🔍 Consultas</div>
+        <div class="form-grid">
+          <div class="field" style="grid-column:1/-1;">
+            <label>Buscar (folio, cliente, producto)</label>
+            <input type="text" id="cons-texto" placeholder="ej: García, COSTAL, 007..." oninput="buscarConsultas()" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Desde</label>
+            <input type="date" id="cons-desde" onchange="buscarConsultas()">
+          </div>
+          <div class="field">
+            <label>Hasta</label>
+            <input type="date" id="cons-hasta" onchange="buscarConsultas()">
+          </div>
+          <div class="field">
+            <label>Estado</label>
+            <select id="cons-estado" onchange="buscarConsultas()">
+              <option value="todas">Todas</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="entregado">Entregado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Método de pago</label>
+            <select id="cons-pago" onchange="buscarConsultas()">
+              <option value="todos">Todos</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="debito">Tarjeta Débito</option>
+              <option value="credito">Tarjeta Crédito</option>
+              <option value="transferencia">Transferencia</option>
+            </select>
+          </div>
+        </div>
+        <div id="cons-count" class="cli-count"></div>
+        <div id="cons-lista" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;"></div>
       </div>
     </div>
 
@@ -1263,6 +1307,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 
     <!-- ===== PEDIDOS ===== -->
     <div class="panel" id="panel-pedidos">
+      <div id="ventas-subnav-ped"></div>
 
       <!-- VISTA VENTAS/COMPRAS (Ivette/Erika) -->
       <div id="pedidos-ventas" style="display:none;">
@@ -2113,22 +2158,22 @@ function checkPin(){
     document.getElementById('hdr-user').textContent = u.name + ' · ' + u.role;
     // Filtrar tabs según rol
     var role = u.role;
-    var tabsOperador = ['tab-pedidos-btn','tab-flota-btn'];
+    var tabsOperador = ['tab-ventas-btn','tab-flota-btn'];
     var tabsMecanico = ['tab-flota-btn'];
-    var tabsVentas = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-tickets-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
-      'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-pedidos-btn','tab-inventario-btn'];
-    var tabsCompras = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-tickets-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
-      'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-pedidos-btn','tab-inventario-btn'];
-    var tabsGerencia = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-tickets-btn','tab-corte-btn','tab-salidas-btn',
+    var tabsVentas = ['tab-clientes-btn','tab-ventas-btn','tab-consultas-btn',
+      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
+      'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-inventario-btn'];
+    var tabsCompras = ['tab-clientes-btn','tab-ventas-btn','tab-consultas-btn',
+      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
+      'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-inventario-btn'];
+    var tabsGerencia = ['tab-clientes-btn','tab-ventas-btn','tab-consultas-btn',
+      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
       'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-cuentas-btn','tab-nomina-btn',
-      'tab-pedidos-btn','tab-flota-btn','tab-dashboard-btn','tab-inventario-btn'];
-    var tabsDirector = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-tickets-btn','tab-corte-btn','tab-salidas-btn',
+      'tab-flota-btn','tab-dashboard-btn','tab-inventario-btn'];
+    var tabsDirector = ['tab-clientes-btn','tab-ventas-btn','tab-consultas-btn',
+      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
       'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-cuentas-btn','tab-nomina-btn',
-      'tab-pedidos-btn','tab-flota-btn','tab-dashboard-btn','tab-inventario-btn'];
+      'tab-flota-btn','tab-dashboard-btn','tab-inventario-btn'];
 
     var tabsVisibles = role === 'Operador' ? tabsOperador :
                        role === 'Mecanico' ? tabsMecanico :
@@ -2148,7 +2193,7 @@ function checkPin(){
     });
     // Si es operador, ir directo a pedidos
     if(role === 'Operador') {
-      switchTab('pedidos', document.getElementById('tab-pedidos-btn'));
+      switchTab('pedidos', document.getElementById('tab-ventas-btn'));
     }
     // Si es Mecanico, ir directo a Flota (es su único tab)
     if(role === 'Mecanico') {
@@ -2165,7 +2210,7 @@ function checkPin(){
     }
     // Si es Operador, mandar directo a Pedidos (candado: no ve ni puede tocar cotizaciones)
     if(u.role === 'Operador') {
-      setTimeout(() => switchTab('pedidos', document.getElementById('tab-pedidos-btn')), 300);
+      setTimeout(() => switchTab('pedidos', document.getElementById('tab-ventas-btn')), 300);
     }
     // Si es Mecanico, mandar directo a Flota
     if(u.role === 'Mecanico') {
@@ -2219,14 +2264,14 @@ function aplicarCandadoOperador() {
   var esOperador = currentUser && currentUser.role === 'Operador';
   var esMecanico = currentUser && currentUser.role === 'Mecanico';
   if(!esOperador && !esMecanico) return; // otros roles ya fueron filtrados por checkPin()
-  var idsOcultos = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn','tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-nomina-btn'];
+  var idsOcultos = ['tab-clientes-btn','tab-consultas-btn','tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-nomina-btn'];
   idsOcultos.forEach(function(id){
     var b = document.getElementById(id);
     if(b) b.style.display = 'none';
   });
   // Candado Mecánico: solo ve Flota (no Pedidos ni Dashboard, que no están en idsOcultos)
   if(esMecanico){
-    ['tab-pedidos-btn','tab-dashboard-btn'].forEach(function(id){
+    ['tab-ventas-btn','tab-dashboard-btn'].forEach(function(id){
       var b = document.getElementById(id);
       if(b) b.style.display = 'none';
     });
@@ -2918,6 +2963,29 @@ function switchTab(tab, btn) {
   if(tab === 'inventario') iniciarInventario();
   if(tab === 'fiscal') iniciarFiscal();
   if(tab === 'proveedores') iniciarProveedoresDir();
+  if(tab === 'consultas') iniciarConsultas();
+  if(tab === 'cotizacion' || tab === 'seguimiento' || tab === 'pedidos' || tab === 'tickets') renderVentasSubnavGlobal(tab);
+}
+
+// ════ VENTAS — subnav interno (Cotizaciones / Notas de Venta / Tickets) ════
+function renderVentasSubnav(activoTab) {
+  var esOperador = currentUser && currentUser.role === 'Operador';
+  var botones = [];
+  if(!esOperador) botones.push({ tab:'seguimiento', label:'📋 Cotizaciones', match:['seguimiento','cotizacion'] });
+  botones.push({ tab:'pedidos', label:'📄 Notas de Venta', match:['pedidos'] });
+  if(!esOperador) botones.push({ tab:'tickets', label:'🎫 Tickets', match:['tickets'] });
+  return '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">' +
+    botones.map(function(b){
+      var activo = b.match.indexOf(activoTab) !== -1;
+      return '<button class="btn ' + (activo ? 'btn-naranja' : 'btn-gris') + '" onclick="switchTab(\'' + b.tab + '\', document.getElementById(\'tab-ventas-btn\'))" style="font-size:12px;padding:8px 16px;">' + b.label + '</button>';
+    }).join('') +
+    '</div>';
+}
+function renderVentasSubnavGlobal(activoTab) {
+  ['cot','seg','ped','tk'].forEach(function(id){
+    var el = document.getElementById('ventas-subnav-' + id);
+    if(el) el.innerHTML = renderVentasSubnav(activoTab);
+  });
 }
 
 function showToast(msg) {
@@ -3059,7 +3127,7 @@ function whatsappCliente() {
 function nuevaCotizacionDesdeCliente() {
   clienteCotizacion = clienteSeleccionado;
   document.getElementById('cot-cliente-input').value = clienteSeleccionado.nombre;
-  switchTab('cotizacion', document.querySelectorAll('.tab')[1]);
+  switchTab('cotizacion', document.getElementById('tab-ventas-btn'));
   if(document.getElementById('prod-body').children.length === 0) agregarProducto();
 }
 function nuevaNotaDesdeCliente() { clienteCotizacion = clienteSeleccionado; generarNota(); }
@@ -3751,6 +3819,19 @@ function cargarVentasDelDiaCorte() {
     var pedidosSnap = results[0], ticketsSnap = results[1], salidasSnap = results[2];
     var buckets = { efectivo:0, debito:0, credito:0, transferencia:0 };
     var comisiones = 0;
+    var terminales = {
+      'IZZ-BBVA':          { debito:0, credito:0, comDebito:0, comCredito:0 },
+      'CEM-BBVA':          { debito:0, credito:0, comDebito:0, comCredito:0 },
+      'IZZ-MERCADO PAGO':  { total:0, comision:0 }
+    };
+
+    function registrarTarjeta(terminalKey, tipoTarjeta, monto, comision) {
+      var t = terminales[terminalKey];
+      if(!t) return;
+      if(terminalKey === 'IZZ-MERCADO PAGO') { t.total += monto; t.comision += comision; return; }
+      if(tipoTarjeta === 'credito') { t.credito += monto; t.comCredito += comision; }
+      else { t.debito += monto; t.comDebito += comision; }
+    }
 
     pedidosSnap.forEach(function(doc){
       var p = doc.data();
@@ -3764,7 +3845,9 @@ function cargarVentasDelDiaCorte() {
         var tipoTarjeta = p.tipoTarjeta || 'debito';
         if(tipoTarjeta === 'credito') buckets.credito += monto; else buckets.debito += monto;
         var n = netoTerminal(monto, rs, banco, tipoTarjeta);
-        comisiones += n.comision + n.ivaCom;
+        var com = n.comision + n.ivaCom;
+        comisiones += com;
+        registrarTarjeta(p.terminal, tipoTarjeta, monto, com);
       }
       // pago === 'credito' (cuenta por cobrar / crédito a cliente) no se cuenta como cobrado hoy
     });
@@ -3775,12 +3858,34 @@ function cargarVentasDelDiaCorte() {
       var monto = t.total || 0;
       if(t.metodoPago === 'efectivo') buckets.efectivo += monto;
       else if(t.metodoPago === 'transferencia') buckets.transferencia += monto;
-      else if(t.metodoPago === 'debito') { buckets.debito += monto; comisiones += t.comision || 0; }
-      else if(t.metodoPago === 'credito') { buckets.credito += monto; comisiones += t.comision || 0; }
+      else if(t.metodoPago === 'debito') { buckets.debito += monto; comisiones += t.comision || 0; registrarTarjeta(t.razonSocial, 'debito', monto, t.comision || 0); }
+      else if(t.metodoPago === 'credito') { buckets.credito += monto; comisiones += t.comision || 0; registrarTarjeta(t.razonSocial, 'credito', monto, t.comision || 0); }
     });
 
     var totalVentas = buckets.efectivo + buckets.debito + buckets.credito + buckets.transferencia;
     var neto = totalVentas - comisiones;
+
+    var izzBbva = terminales['IZZ-BBVA'], cemBbva = terminales['CEM-BBVA'], izzMp = terminales['IZZ-MERCADO PAGO'];
+    var totalNetoTarjetas = (izzBbva.debito + izzBbva.credito - izzBbva.comDebito - izzBbva.comCredito) +
+      (cemBbva.debito + cemBbva.credito - cemBbva.comDebito - cemBbva.comCredito) +
+      (izzMp.total - izzMp.comision);
+    function filaTarjeta(label, monto, comision) {
+      return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>'+label+'</span><span>'+fmtMoney(monto)+' → -'+fmtMoney(comision)+' → <strong>'+fmtMoney(monto-comision)+'</strong></span></div>';
+    }
+    var htmlTerminales =
+      '<div style="background:#F5F2EE;border-radius:10px;padding:14px;margin-bottom:10px;">' +
+        '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">TARJETAS POR TERMINAL</div>' +
+        '<div style="font-size:11px;font-weight:700;color:var(--suave);margin-top:6px;">IZZ — BBVA (0.85%)</div>' +
+        filaTarjeta('Débito', izzBbva.debito, izzBbva.comDebito) +
+        filaTarjeta('Crédito', izzBbva.credito, izzBbva.comCredito) +
+        '<div style="font-size:11px;font-weight:700;color:var(--suave);margin-top:8px;">CEM — BBVA (1.54%)</div>' +
+        filaTarjeta('Débito', cemBbva.debito, cemBbva.comDebito) +
+        filaTarjeta('Crédito', cemBbva.credito, cemBbva.comCredito) +
+        '<div style="font-size:11px;font-weight:700;color:var(--suave);margin-top:8px;">MERCADO PAGO — IZZ (3.50%)</div>' +
+        filaTarjeta('Total', izzMp.total, izzMp.comision) +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;padding:6px 0 2px;border-top:1px solid #E0DBD3;margin-top:8px;color:#DC2626;"><span>TOTAL COMISIONES DEL DÍA</span><span>-'+fmtMoney(comisiones)+'</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:4px 0;color:var(--naranja);"><span>TOTAL NETO TARJETAS</span><span>'+fmtMoney(totalNetoTarjetas)+'</span></div>' +
+      '</div>';
 
     var salidasPorCategoria = {};
     var totalSalidas = 0;
@@ -3806,6 +3911,7 @@ function cargarVentasDelDiaCorte() {
         '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#DC2626;"><span>💸 Comisiones terminal</span><span>-'+fmtMoney(comisiones)+'</span></div>' +
         '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:4px 0;color:var(--naranja);"><span>📊 NETO</span><span>'+fmtMoney(neto)+'</span></div>' +
       '</div>' +
+      htmlTerminales +
       '<div style="background:#F5F2EE;border-radius:10px;padding:14px;">' +
         '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">SALIDAS EN EFECTIVO</div>' +
         filasSalidas +
@@ -7302,7 +7408,7 @@ function notificarOperadorPedido(pedido, operadorNombre) {
 
 // ════ ALERTAS — entregas incompletas (badge Ivette) ════
 function mostrarBadgeAlertasPedidos() {
-  var btn = document.getElementById('tab-pedidos-btn');
+  var btn = document.getElementById('tab-ventas-btn');
   if(!btn || document.getElementById('badge-alertas-pedidos')) return;
   var badge = document.createElement('span');
   badge.id = 'badge-alertas-pedidos';
@@ -7828,6 +7934,118 @@ switchTab = function(tab, btn) {
   _origSwitchTabTickets(tab, btn);
   if(tab === 'tickets') cargarTicketsHoy();
 };
+
+// ════ CONSULTAS — buscador global (Cotizaciones + Notas de Venta + Tickets) ════
+var consultasCache = [];
+var consultasCargadas = false;
+
+function pagoNormDeRegistro(pago, tipoTarjeta, metodoPago) {
+  if(metodoPago) return metodoPago;
+  if(pago === 'tpv') return tipoTarjeta === 'credito' ? 'credito' : 'debito';
+  return pago || '';
+}
+
+function iniciarConsultas() {
+  if(consultasCargadas) { buscarConsultas(); return; }
+  var cont = document.getElementById('cons-lista');
+  cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">Cargando...</div>';
+  if(!db) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);">Sin conexión</div>'; return; }
+
+  Promise.all([
+    db.collection('cotizaciones').orderBy('timestamp','desc').limit(300).get(),
+    db.collection('pedidos').orderBy('timestamp','desc').limit(300).get(),
+    db.collection('tickets').orderBy('timestamp','desc').limit(300).get()
+  ]).then(function(results){
+    var cotSnap = results[0], pedSnap = results[1], tkSnap = results[2];
+    consultasCache = [];
+
+    cotSnap.forEach(function(doc){
+      var c = doc.data();
+      consultasCache.push({
+        tipo: 'COT', docId: doc.id, folio: 'COT-' + String(c.folio).padStart(3,'0'),
+        cliente: c.cliente || '', total: c.total || 0,
+        estado: c.status || 'pendiente',
+        estadoNorm: c.status === 'pendiente' ? 'pendiente' : (c.status || ''),
+        pago: c.pago || '', pagoNorm: pagoNormDeRegistro(c.pago, c.tipoTarjeta),
+        fecha: c.fecha || '', timestamp: c.timestamp || 0,
+        texto: normalizar((c.cliente||'') + ' ' + c.folio + ' ' + (c.productos||[]).map(function(p){return p.desc;}).join(' '))
+      });
+    });
+
+    pedSnap.forEach(function(doc){
+      var p = doc.data();
+      var estado = normStatusPedido(p);
+      consultasCache.push({
+        tipo: 'NV', docId: doc.id, folio: p.id || '',
+        cliente: p.cliente || p.c || '', total: p.m || 0,
+        estado: (STATUS_PEDIDO[estado] ? STATUS_PEDIDO[estado].label : estado),
+        estadoNorm: estado === 'entregado' ? 'entregado' : (estado === 'cancelado' ? 'cancelado' : 'pendiente'),
+        pago: p.pago || '', pagoNorm: pagoNormDeRegistro(p.pago, p.tipoTarjeta),
+        fecha: p.fecha || '', timestamp: p.timestamp || 0,
+        texto: normalizar((p.cliente||p.c||'') + ' ' + (p.id||'') + ' ' + (p.p||''))
+      });
+    });
+
+    tkSnap.forEach(function(doc){
+      var t = doc.data();
+      consultasCache.push({
+        tipo: 'TK', docId: doc.id, folio: t.folio || '',
+        cliente: t.cliente || '', total: t.total || 0,
+        estado: t.status === 'cancelado' ? 'Cancelado' : 'Activo',
+        estadoNorm: t.status === 'cancelado' ? 'cancelado' : 'entregado',
+        pago: t.metodoPago || '', pagoNorm: pagoNormDeRegistro(null, null, t.metodoPago),
+        fecha: t.fecha || '', timestamp: t.timestamp || 0,
+        texto: normalizar((t.cliente||'') + ' ' + (t.folio||'') + ' ' + (t.productos||[]).map(function(p){return p.desc;}).join(' '))
+      });
+    });
+
+    consultasCache.sort(function(a,b){ return (b.timestamp||0) - (a.timestamp||0); });
+    consultasCargadas = true;
+    buscarConsultas();
+  }).catch(function(e){ console.log('Error cargando consultas:', e); cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);">Error al cargar</div>'; });
+}
+
+function buscarConsultas() {
+  var cont = document.getElementById('cons-lista');
+  var texto = normalizar(document.getElementById('cons-texto').value || '');
+  var desde = document.getElementById('cons-desde').value;
+  var hasta = document.getElementById('cons-hasta').value;
+  var estado = document.getElementById('cons-estado').value;
+  var pago = document.getElementById('cons-pago').value;
+
+  var res = consultasCache.filter(function(r){
+    if(texto && r.texto.indexOf(texto) === -1) return false;
+    if(desde && r.fecha && r.fecha < desde) return false;
+    if(hasta && r.fecha && r.fecha > hasta) return false;
+    if(estado !== 'todas' && r.estadoNorm !== estado) return false;
+    if(pago !== 'todos' && r.pagoNorm !== pago) return false;
+    return true;
+  }).slice(0, 200);
+
+  document.getElementById('cons-count').textContent = res.length + ' resultados';
+  if(!res.length) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">Sin resultados</div>'; return; }
+
+  var badgeColor = { COT:'9C36B5', NV:'1D7A4F', TK:'E8500A' };
+  var filas = res.map(function(r){
+    return '<tr style="border-bottom:1px solid #F0EDE8;cursor:pointer;" onclick="abrirDetalleConsulta(\''+r.tipo+'\',\''+r.docId+'\')">' +
+      '<td style="padding:8px 10px;"><span style="background:#'+badgeColor[r.tipo]+'20;color:#'+badgeColor[r.tipo]+';border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">'+r.tipo+'</span></td>' +
+      '<td style="padding:8px 10px;font-weight:700;">'+r.folio+'</td>' +
+      '<td style="padding:8px 10px;">'+r.cliente+'</td>' +
+      '<td style="padding:8px 10px;text-align:right;font-weight:700;">'+fmtMoney(r.total)+'</td>' +
+      '<td style="padding:8px 10px;">'+r.estado+'</td>' +
+      '<td style="padding:8px 10px;">'+r.fecha+'</td>' +
+    '</tr>';
+  }).join('');
+  cont.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px;">' +
+    '<thead><tr style="background:#1A1A1A;color:#fff;text-align:left;"><th style="padding:8px 10px;">Tipo</th><th style="padding:8px 10px;">Folio</th><th style="padding:8px 10px;">Cliente</th><th style="padding:8px 10px;text-align:right;">Total</th><th style="padding:8px 10px;">Estado</th><th style="padding:8px 10px;">Fecha</th></tr></thead>' +
+    '<tbody>' + filas + '</tbody></table></div>';
+}
+
+function abrirDetalleConsulta(tipo, docId) {
+  if(tipo === 'NV') { switchTab('pedidos', document.getElementById('tab-ventas-btn')); setTimeout(function(){ abrirDetalleNotaVenta(docId); }, 300); return; }
+  if(tipo === 'COT') { switchTab('seguimiento', document.getElementById('tab-ventas-btn')); return; }
+  if(tipo === 'TK') { switchTab('tickets', document.getElementById('tab-ventas-btn')); return; }
+}
 
 // ════ FACTURACIÓN — Pendiente 7: datos listos para copiar + estado por pedido ════
 // NO timbra CFDI real (este CRM no tiene backend propio para guardar credenciales
