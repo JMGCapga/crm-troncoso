@@ -191,8 +191,9 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <button class="tab active" id="tab-clientes-btn" onclick="switchTab('clientes',this)">👥 Clientes</button>
     <button class="tab" id="tab-cotizacion-btn" onclick="switchTab('cotizacion',this)">📋 Nueva Cotización</button>
     <button class="tab" id="tab-seguimiento-btn" onclick="switchTab('seguimiento',this)">📊 Seguimiento</button>
-    <button class="tab" id="tab-nota-btn" onclick="switchTab('nota',this)">🖨 Nota de Venta</button>
-    <button class="tab" id="tab-ticket-btn" onclick="switchTab('ticket',this)">🧾 Ticket</button>
+    <button class="tab" id="tab-nota-btn" onclick="switchTab('nota',this)">🖨 Recibo rápido</button>
+    <button class="tab" id="tab-ticket-btn" onclick="switchTab('ticket',this)">🧾 Recibo corto</button>
+    <button class="tab" id="tab-tickets-btn" onclick="switchTab('tickets',this)">🎫 Tickets</button>
     <button class="tab" id="tab-corte-btn" onclick="switchTab('corte',this)">💰 Corte de Caja</button>
     <button class="tab" id="tab-salidas-btn" onclick="switchTab('salidas',this)">📤 Salidas</button>
     <button class="tab" id="tab-nc-btn" onclick="switchTab('nc',this)">📝 Notas de Crédito</button>
@@ -202,7 +203,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <button class="tab" id="tab-cuentas-btn" onclick="switchTab('cuentas',this)">💰 Cuentas</button>
     <button class="tab" id="tab-inventario-btn" onclick="switchTab('inventario',this)" style="display:none">📦 Inventario</button>
     <button class="tab" id="tab-nomina-btn" onclick="switchTab('nomina',this)">👷 Nómina</button>
-    <button class="tab" id="tab-pedidos-btn" onclick="switchTab('pedidos',this)">📦 Pedidos</button>
+    <button class="tab" id="tab-pedidos-btn" onclick="switchTab('pedidos',this)">📄 Notas de Venta</button>
     <button class="tab" id="tab-flota-btn" onclick="switchTab('flota',this)" style="display:none">🚛 Flota</button>
     <button class="tab" id="tab-dashboard-btn" onclick="switchTab('dashboard',this)" style="display:none">📊 Dashboard</button>
     <button class="tab" id="tab-fiscal-btn" onclick="switchTab('fiscal',this)" style="display:none">📄 Fiscal</button>
@@ -248,6 +249,16 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <label>Cliente</label>
             <input type="text" id="cot-cliente-input" placeholder="Buscar cliente..." oninput="buscarClienteCot()" autocomplete="off">
             <div id="cot-cliente-lista" style="border:1px solid var(--borde);border-radius:8px;max-height:150px;overflow-y:auto;display:none;position:absolute;background:#fff;z-index:100;width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+            <a href="javascript:void(0)" onclick="toggleNuevoClienteCot()" style="display:inline-block;margin-top:6px;font-size:11px;color:var(--naranja);font-weight:700;">+ Nuevo Cliente</a>
+            <div id="cot-nuevo-cliente-form" style="display:none;margin-top:8px;border:1.5px dashed var(--borde);border-radius:8px;padding:10px;background:#FAFAF8;">
+              <input type="text" id="cot-nc-nombre" placeholder="Nombre del cliente" style="width:100%;border:1.5px solid var(--borde);border-radius:6px;padding:7px 9px;font-size:12px;margin-bottom:6px;">
+              <input type="text" id="cot-nc-telefono" placeholder="Teléfono" style="width:100%;border:1.5px solid var(--borde);border-radius:6px;padding:7px 9px;font-size:12px;margin-bottom:6px;">
+              <input type="text" id="cot-nc-domicilio" placeholder="Dirección de entrega" style="width:100%;border:1.5px solid var(--borde);border-radius:6px;padding:7px 9px;font-size:12px;margin-bottom:8px;">
+              <div style="display:flex;gap:6px;">
+                <button type="button" class="btn btn-naranja" onclick="guardarNuevoClienteCot()" style="flex:1;font-size:11px;padding:7px;">Guardar cliente</button>
+                <button type="button" class="btn btn-gris" onclick="toggleNuevoClienteCot()" style="flex:1;font-size:11px;padding:7px;">Cancelar</button>
+              </div>
+            </div>
           </div>
           <div class="field">
             <label>Razón Social</label>
@@ -259,12 +270,25 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           </div>
           <div class="field">
             <label>Forma de pago</label>
-            <select id="cot-pago">
+            <select id="cot-pago" onchange="actualizarComisionCot()">
               <option value="efectivo">Efectivo</option>
               <option value="transferencia">Transferencia</option>
               <option value="tpv">TPV / Tarjeta</option>
               <option value="credito">Crédito</option>
             </select>
+          </div>
+          <div class="field" id="cot-tarjeta-wrap" style="display:none;">
+            <label>Terminal / Razón social</label>
+            <select id="cot-terminal" onchange="actualizarComisionCot()">
+              <option value="IZZ-BBVA">IZZ — BBVA</option>
+              <option value="IZZ-MERCADO PAGO">IZZ — Mercado Pago</option>
+              <option value="CEM-BBVA">CEM — BBVA</option>
+            </select>
+            <select id="cot-tipo-tarjeta" onchange="actualizarComisionCot()" style="margin-top:6px;">
+              <option value="debito">Débito</option>
+              <option value="credito">Crédito</option>
+            </select>
+            <div class="ct-unit" id="cot-comision-estimada"></div>
           </div>
           <div class="field">
             <label>Probabilidad de cierre</label>
@@ -379,11 +403,26 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       </div>
     </div>
 
+    <!-- ===== TICKETS DE MOSTRADOR (venta rápida presencial) ===== -->
+    <div class="panel" id="panel-tickets">
+      <div class="card">
+        <div class="card-title">🎫 Tickets de Mostrador</div>
+        <button class="btn btn-naranja" onclick="abrirNuevoTicket()" style="width:100%;margin-bottom:14px;">🎫 Nuevo Ticket</button>
+        <div id="tks-lista" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;"></div>
+      </div>
+    </div>
+
     <!-- ===== CORTE DE CAJA ===== -->
     <div class="panel" id="panel-corte">
 
       <!-- VISTA IVETTE — captura el corte -->
       <div id="corte-ivette">
+        <div class="card">
+          <div class="card-title">📊 Ventas del Día (sistema)</div>
+          <div style="font-size:11px;color:var(--suave);margin-bottom:12px;">Suma automática de Notas de Venta cerradas + Tickets de hoy. Úsalo para cuadrar contra lo contado abajo.</div>
+          <div id="corte-ventas-sistema"></div>
+        </div>
+
         <div class="card">
           <div class="card-title">💰 Corte de Caja del Día</div>
           <div style="font-size:12px;color:var(--suave);margin-bottom:16px;" id="corte-fecha-hoy"></div>
@@ -1228,7 +1267,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       <!-- VISTA VENTAS/COMPRAS (Ivette/Erika) -->
       <div id="pedidos-ventas" style="display:none;">
         <div class="card">
-          <div class="card-title">📦 Gestión de Pedidos</div>
+          <div class="card-title">📄 Gestión de Notas de Venta</div>
           <div id="ped-alertas-incompletas"></div>
           <div style="font-size:12px;color:var(--suave);margin-bottom:12px;" id="pedidos-resumen-ventas"></div>
           <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
@@ -1243,7 +1282,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <button class="btn btn-gris" onclick="filtrarPedidosStatus('entregado')" id="ped-s-entregado" style="font-size:11px;padding:7px 14px;">📦 Entregado</button>
             <button class="btn btn-gris" onclick="filtrarPedidosStatus('cancelado')" id="ped-s-cancelado" style="font-size:11px;padding:7px 14px;">❌ Cancelado</button>
           </div>
-          <button class="btn btn-naranja" onclick="abrirNuevoPedidoManual()" style="margin-bottom:14px;width:100%;">📋 Nuevo pedido manual</button>
+          <button class="btn btn-naranja" onclick="abrirNuevoPedidoManual()" style="margin-bottom:14px;width:100%;">📋 Nueva nota de venta manual</button>
           <div id="ped-lista-ventas" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;"></div>
         </div>
       </div>
@@ -1251,7 +1290,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       <!-- VISTA OPERADOR (Francisco/Agustín/Carlos) -->
       <div id="pedidos-operador" style="display:none;">
         <div class="card">
-          <div class="card-title">🙋 Pedidos Disponibles</div>
+          <div class="card-title">🙋 Notas de Venta Disponibles</div>
           <div id="ped-lista-disponibles" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;"></div>
         </div>
         <div class="card">
@@ -1263,7 +1302,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       <!-- VISTA DIRECTOR/GERENCIA (Viridiana/Jose Manuel) -->
       <div id="pedidos-jm" style="display:none;">
         <div class="card">
-          <div class="card-title">📊 Panel de Pedidos</div>
+          <div class="card-title">📊 Panel de Notas de Venta</div>
           <div id="ped-resumen-jm" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"></div>
           <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
             <button class="btn btn-naranja" onclick="filtrarPedidosFecha('hoy')" id="ped-jm-f-hoy" style="font-size:11px;padding:7px 14px;">Hoy</button>
@@ -1895,6 +1934,16 @@ const STATUS_PEDIDO = {
   entregado:  { label: '📦 Entregado',  color: '6B7280', bg: 'F3F4F6' },
   cancelado:  { label: '❌ Cancelado',  color: 'EF4444', bg: 'FEE2E2' }
 };
+const PAGO_LABELS = {
+  efectivo: '💵 Efectivo',
+  transferencia: '🏦 Transferencia',
+  tpv: '💳 Tarjeta',
+  credito: '📝 Crédito',
+  debito: '💳 Débito'
+};
+function labelMetodoPago(codigo) {
+  return PAGO_LABELS[codigo] || (codigo || '—');
+}
 var pedidosCache = [];
 var filtroPedFecha = 'hoy';
 var filtroPedStatus = 'todos';
@@ -2067,17 +2116,17 @@ function checkPin(){
     var tabsOperador = ['tab-pedidos-btn','tab-flota-btn'];
     var tabsMecanico = ['tab-flota-btn'];
     var tabsVentas = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
+      'tab-nota-btn','tab-ticket-btn','tab-tickets-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
       'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-pedidos-btn','tab-inventario-btn'];
     var tabsCompras = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
+      'tab-nota-btn','tab-ticket-btn','tab-tickets-btn','tab-corte-btn','tab-salidas-btn','tab-nc-btn',
       'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-pedidos-btn','tab-inventario-btn'];
     var tabsGerencia = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
+      'tab-nota-btn','tab-ticket-btn','tab-tickets-btn','tab-corte-btn','tab-salidas-btn',
       'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-cuentas-btn','tab-nomina-btn',
       'tab-pedidos-btn','tab-flota-btn','tab-dashboard-btn','tab-inventario-btn'];
     var tabsDirector = ['tab-clientes-btn','tab-cotizacion-btn','tab-seguimiento-btn',
-      'tab-nota-btn','tab-ticket-btn','tab-corte-btn','tab-salidas-btn',
+      'tab-nota-btn','tab-ticket-btn','tab-tickets-btn','tab-corte-btn','tab-salidas-btn',
       'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-cuentas-btn','tab-nomina-btn',
       'tab-pedidos-btn','tab-flota-btn','tab-dashboard-btn','tab-inventario-btn'];
 
@@ -2969,14 +3018,14 @@ function guardarNuevoCliente() {
 }
 
 function buscarCliente() {
-  const q = document.getElementById('cli-search').value.trim().toLowerCase();
+  const q = normalizar(document.getElementById('cli-search').value);
   const list = document.getElementById('cli-list');
   const count = document.getElementById('cli-count');
   if(q.length < 2) { list.innerHTML=''; count.textContent='Ingresa al menos 2 caracteres'; document.getElementById('cli-detalle').classList.remove('visible'); return; }
-  const res = clientesCache.filter(c => 
-    c.nombre.toLowerCase().includes(q) || 
+  const res = clientesCache.filter(c =>
+    normalizar(c.nombre).includes(q) ||
     (c.telefono||'').replace(/[^0-9]/g,'').includes(q.replace(/[^0-9]/g,'')) ||
-    (c.representante && c.representante.toLowerCase().includes(q))
+    (c.representante && normalizar(c.representante).includes(q))
   ).slice(0, 30);
   count.textContent = res.length === 0 ? 'Sin resultados' : res.length + ' clientes encontrados';
   list.innerHTML = res.map(c => `
@@ -3127,10 +3176,10 @@ function subirConstanciaFiscalCliente(id, inputEl) {
 
 // ════ COTIZACIÓN ════
 function buscarClienteCot() {
-  const q = document.getElementById('cot-cliente-input').value.trim().toLowerCase();
+  const q = normalizar(document.getElementById('cot-cliente-input').value);
   const lista = document.getElementById('cot-cliente-lista');
   if(q.length < 2) { lista.style.display = 'none'; return; }
-  const res = clientesCache.filter(c => c.nombre.toLowerCase().includes(q) || (c.telefono||'').includes(q)).slice(0, 8);
+  const res = clientesCache.filter(c => normalizar(c.nombre).includes(q) || (c.telefono||'').includes(q)).slice(0, 8);
   lista.style.display = res.length ? 'block' : 'none';
   lista.innerHTML = res.map(c => `
     <div style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #F0EDE8;font-size:13px;" onmousedown="elegirClienteCot('${c.id}')">
@@ -3144,6 +3193,50 @@ function elegirClienteCot(id) {
   clienteCotizacion = c;
   document.getElementById('cot-cliente-input').value = c.nombre;
   document.getElementById('cot-cliente-lista').style.display = 'none';
+}
+
+function toggleNuevoClienteCot() {
+  var form = document.getElementById('cot-nuevo-cliente-form');
+  var abrir = form.style.display === 'none';
+  form.style.display = abrir ? 'block' : 'none';
+  if(abrir) {
+    ['cot-nc-nombre','cot-nc-telefono','cot-nc-domicilio'].forEach(function(id){ document.getElementById(id).value = ''; });
+    setTimeout(function(){ document.getElementById('cot-nc-nombre').focus(); }, 100);
+  }
+}
+
+function guardarNuevoClienteCot() {
+  var nombre = document.getElementById('cot-nc-nombre').value.trim();
+  var telefono = document.getElementById('cot-nc-telefono').value.trim();
+  var domicilio = document.getElementById('cot-nc-domicilio').value.trim();
+  if(!nombre || !telefono) { showToast('⚠️ Nombre y teléfono son obligatorios'); return; }
+
+  var nuevoId = 'CRM-' + Date.now();
+  var cliente = {
+    id: nuevoId,
+    nombre: nombre.toUpperCase(),
+    telefono: telefono,
+    celular: '',
+    domicilio: domicilio,
+    representante: '',
+    rfc: '',
+    origen: 'crm',
+    creadoPor: currentUser ? currentUser.name : 'Ivette',
+    timestamp: Date.now()
+  };
+
+  clientesCache.unshift(cliente);
+  if(db) {
+    db.collection('clientes').doc(nuevoId).set(cliente).then(function(){
+      showToast('✅ Cliente ' + nombre + ' dado de alta');
+    }).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar en la nube'); });
+  } else {
+    showToast('✅ Cliente guardado localmente');
+  }
+
+  clienteCotizacion = cliente;
+  document.getElementById('cot-cliente-input').value = cliente.nombre;
+  toggleNuevoClienteCot();
 }
 function agregarProducto() {
   const idx = prodIdx++;
@@ -3164,6 +3257,10 @@ function agregarProducto() {
 }
 function eliminarProd(idx) { const el = document.getElementById('prod-' + idx); if(el) el.remove(); recalcular(); }
 function fmtMoney(n){ return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+// Búsqueda sin acentos ni mayúsculas — "garcia" encuentra "García", "plomeria" encuentra "Plomería"
+function normalizar(str) {
+  return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
 function recalcular() {
   const rows = document.getElementById('prod-body').children;
   let sub = 0;
@@ -3179,8 +3276,25 @@ function recalcular() {
   const desc = parseFloat(document.getElementById('cot-desc').value || 0);
   const total = sub * (1 - desc/100);
   document.getElementById('cot-total').textContent = fmtMoney(total);
+  var comisionEl = document.getElementById('cot-comision-estimada');
+  if(comisionEl && document.getElementById('cot-pago').value === 'tpv') actualizarComisionCot();
   return { sub, desc, total };
 }
+function actualizarComisionCot() {
+  var pago = document.getElementById('cot-pago').value;
+  var wrap = document.getElementById('cot-tarjeta-wrap');
+  if(pago !== 'tpv') { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  var terminal = document.getElementById('cot-terminal').value.split('-');
+  var rs = terminal[0], banco = terminal.slice(1).join('-');
+  var tipoTarjeta = document.getElementById('cot-tipo-tarjeta').value;
+  var total = parseFloat((document.getElementById('cot-total').textContent||'0').replace(/[^0-9.]/g,'')) || 0;
+  var n = netoTerminal(total, rs, banco, tipoTarjeta);
+  var pct = n.bruto > 0 ? ((n.comision + n.ivaCom) / n.bruto * 100) : 0;
+  document.getElementById('cot-comision-estimada').textContent =
+    total > 0 ? ('Comisión aprox: ' + fmtMoney(n.comision + n.ivaCom) + ' (' + pct.toFixed(2) + '%) · Neto: ' + fmtMoney(n.neto)) : '';
+}
+
 function getProductos() {
   const rows = document.getElementById('prod-body').children;
   return Array.from(rows).map(tr => {
@@ -3209,6 +3323,9 @@ function guardarCotizacion() {
     clienteDom: clienteCotizacion?.domicilio || '',
     rs: rs, rsNombre: RAZONES[rs].nombre, rsRFC: RAZONES[rs].rfc,
     pago: document.getElementById('cot-pago').value,
+    terminal: document.getElementById('cot-pago').value === 'tpv' ? document.getElementById('cot-terminal').value : null,
+    tipoTarjeta: document.getElementById('cot-pago').value === 'tpv' ? document.getElementById('cot-tipo-tarjeta').value : null,
+    comisionEstimadaTexto: document.getElementById('cot-pago').value === 'tpv' ? document.getElementById('cot-comision-estimada').textContent : '',
     prob: document.getElementById('cot-prob').value,
     notas: document.getElementById('cot-notas').value,
     productos: prods, subtotal: sub, descuento: desc, total: total,
@@ -3219,7 +3336,7 @@ function guardarCotizacion() {
       cot._docId = ref.id;
       cotizaciones.unshift(cot);
       folioActual++;
-      showToast('✅ Cotización #' + cot.folio + ' guardada en la nube');
+      showToast('✅ Cotización COT-' + String(cot.folio).padStart(3,'0') + ' guardada en la nube');
 
       // Mostrar botón de WhatsApp si hay teléfono y es JMG
       if(cot.clienteTel && cot.rs === 'JMG') {
@@ -3234,7 +3351,7 @@ function guardarCotizacion() {
   } else {
     cotizaciones.unshift(cot);
     localStorage.setItem('cot_troncoso', JSON.stringify(cotizaciones));
-    showToast('✅ Cotización #' + cot.folio + ' guardada');
+    showToast('✅ Cotización COT-' + String(cot.folio).padStart(3,'0') + ' guardada');
     folioActual++;
   }
 }
@@ -3303,7 +3420,7 @@ function renderSeguimiento() {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div>
           <div class="cot-cliente">${c.cliente}</div>
-          <div class="cot-meta">#${c.folio} · ${c.fecha} · ${c.rsNombre} · ${c.creadoPor||''}</div>
+          <div class="cot-meta">COT-${String(c.folio).padStart(3,'0')} · ${c.fecha} · ${c.rsNombre} · ${c.creadoPor||''}</div>
           <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">
             <span style="background:${colores[c.prob]}20;color:${colores[c.prob]};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700;">${c.prob.toUpperCase()}</span>
             <span style="background:#F0EDE8;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700;">${statusLabel[c.status] || c.status}</span>
@@ -3406,7 +3523,7 @@ function mostrarModalPedido(cot, docId) {
       
       <div style="display:flex;gap:10px;">
         <button onclick="document.getElementById('modal-pedido').remove()" style="flex:1;padding:12px;border:1.5px solid #D8D0C8;border-radius:8px;background:#fff;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Cancelar</button>
-        <button onclick="confirmarCierrePedido('${docId}')" style="flex:2;padding:12px;border:none;border-radius:8px;background:#E8500A;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;cursor:pointer;">✅ CREAR PEDIDO</button>
+        <button onclick="confirmarCierrePedido('${docId}')" style="flex:2;padding:12px;border:none;border-radius:8px;background:#E8500A;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;cursor:pointer;">✅ CREAR NOTA DE VENTA</button>
       </div>
     </div>
   `;
@@ -3483,7 +3600,7 @@ function confirmarCierrePedido(docId) {
   const tipo = document.getElementById('mp-tipo').value;
   const pago = document.getElementById('mp-pago').value;
 
-  siguienteFolioPedido().then(function(folioBase){
+  Promise.resolve('NV-' + String(cot.folio).padStart(3,'0')).then(function(folioBase){
     const pedido = {
       id: folioBase,
       c: cot.cliente,
@@ -3501,6 +3618,8 @@ function confirmarCierrePedido(docId) {
       operador: operador,
       tipo: tipo,
       pago: pago,
+      terminal: pago === 'tpv' ? (cot.terminal || null) : null,
+      tipoTarjeta: pago === 'tpv' ? (cot.tipoTarjeta || null) : null,
       razonSocial: cot.rs || 'JMG',
       rsNombre: cot.rsNombre || '',
       cotizacionFolio: cot.folio,
@@ -3544,7 +3663,7 @@ function confirmarCierrePedido(docId) {
         aplicarDeltasEnBatch(batch, inventarioDeltas, -1);
         batch.commit().then(function(){
           actualizarCacheLocalInventario(inventarioDeltas, -1);
-          showToast('🎯 Pedido '+folioBase+' creado en Sistema Operativo');
+          showToast('🎯 Nota de venta '+folioBase+' creada en Sistema Operativo');
           if(operador !== 'Sin asignar') notificarOperadorPedido(pedido, operador);
           if(totalApartado > 0) {
             db.collection('caja_apartada').add({
@@ -3618,6 +3737,83 @@ function cargarApartadoCaja() {
   }).catch(function(e){ console.log('Error cargando caja apartada:', e); });
 }
 
+// ════ CORTE — Ventas del día (Notas de Venta + Tickets) por método de pago ════
+function cargarVentasDelDiaCorte() {
+  var cont = document.getElementById('corte-ventas-sistema');
+  if(!cont) return;
+  if(!db) { cont.innerHTML = '<div style="color:var(--suave);font-size:12px;">Sin conexión</div>'; return; }
+  var hoy = fechaISOLocal();
+  Promise.all([
+    db.collection('pedidos').where('fecha','==',hoy).get(),
+    db.collection('tickets').where('fecha','==',hoy).get(),
+    db.collection('salidas').where('fecha','==',hoy).get()
+  ]).then(function(results){
+    var pedidosSnap = results[0], ticketsSnap = results[1], salidasSnap = results[2];
+    var buckets = { efectivo:0, debito:0, credito:0, transferencia:0 };
+    var comisiones = 0;
+
+    pedidosSnap.forEach(function(doc){
+      var p = doc.data();
+      if(p.s === 'cancelado') return;
+      var monto = p.m || 0;
+      if(p.pago === 'efectivo') buckets.efectivo += monto;
+      else if(p.pago === 'transferencia') buckets.transferencia += monto;
+      else if(p.pago === 'tpv' && p.terminal) {
+        var t = p.terminal.split('-');
+        var rs = t[0], banco = t.slice(1).join('-');
+        var tipoTarjeta = p.tipoTarjeta || 'debito';
+        if(tipoTarjeta === 'credito') buckets.credito += monto; else buckets.debito += monto;
+        var n = netoTerminal(monto, rs, banco, tipoTarjeta);
+        comisiones += n.comision + n.ivaCom;
+      }
+      // pago === 'credito' (cuenta por cobrar / crédito a cliente) no se cuenta como cobrado hoy
+    });
+
+    ticketsSnap.forEach(function(doc){
+      var t = doc.data();
+      if(t.status === 'cancelado') return;
+      var monto = t.total || 0;
+      if(t.metodoPago === 'efectivo') buckets.efectivo += monto;
+      else if(t.metodoPago === 'transferencia') buckets.transferencia += monto;
+      else if(t.metodoPago === 'debito') { buckets.debito += monto; comisiones += t.comision || 0; }
+      else if(t.metodoPago === 'credito') { buckets.credito += monto; comisiones += t.comision || 0; }
+    });
+
+    var totalVentas = buckets.efectivo + buckets.debito + buckets.credito + buckets.transferencia;
+    var neto = totalVentas - comisiones;
+
+    var salidasPorCategoria = {};
+    var totalSalidas = 0;
+    salidasSnap.forEach(function(doc){
+      var s = doc.data();
+      var cat = s.categoria || s.tipoLabel || 'Otro';
+      salidasPorCategoria[cat] = (salidasPorCategoria[cat] || 0) + (s.monto || 0);
+      totalSalidas += s.monto || 0;
+    });
+
+    var filasSalidas = Object.keys(salidasPorCategoria).map(function(cat){
+      return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span>'+cat+'</span><span>-'+fmtMoney(salidasPorCategoria[cat])+'</span></div>';
+    }).join('') || '<div style="font-size:12px;color:var(--suave);">Sin salidas hoy</div>';
+
+    cont.innerHTML =
+      '<div style="background:#F5F2EE;border-radius:10px;padding:14px;margin-bottom:10px;">' +
+        '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">VENTAS DEL DÍA</div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>💵 Efectivo</span><span>'+fmtMoney(buckets.efectivo)+'</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>💳 Tarjeta Débito</span><span>'+fmtMoney(buckets.debito)+'</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>💳 Tarjeta Crédito</span><span>'+fmtMoney(buckets.credito)+'</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>🏦 Transferencia</span><span>'+fmtMoney(buckets.transferencia)+'</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;padding:6px 0 2px;border-top:1px solid #E0DBD3;margin-top:4px;"><span>📊 TOTAL VENTAS</span><span>'+fmtMoney(totalVentas)+'</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#DC2626;"><span>💸 Comisiones terminal</span><span>-'+fmtMoney(comisiones)+'</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:4px 0;color:var(--naranja);"><span>📊 NETO</span><span>'+fmtMoney(neto)+'</span></div>' +
+      '</div>' +
+      '<div style="background:#F5F2EE;border-radius:10px;padding:14px;">' +
+        '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">SALIDAS EN EFECTIVO</div>' +
+        filasSalidas +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;padding:6px 0 2px;border-top:1px solid #E0DBD3;margin-top:4px;"><span>TOTAL SALIDAS</span><span>-'+fmtMoney(totalSalidas)+'</span></div>' +
+      '</div>';
+  }).catch(function(e){ console.log('Error cargando ventas del día:', e); cont.innerHTML = '<div style="color:var(--suave);font-size:12px;">Error al cargar</div>'; });
+}
+
 function iniciarCorte() {
   // Mostrar vista según rol
   var role = currentUser ? currentUser.role : '';
@@ -3630,6 +3826,7 @@ function iniciarCorte() {
     document.getElementById('corte-fecha-hoy').textContent = 'Fecha: ' + new Date().toLocaleDateString('es-MX', {weekday:'long', day:'2-digit', month:'long', year:'numeric'});
     cargarTransferenciasConfirmadas();
     cargarApartadoCaja();
+    cargarVentasDelDiaCorte();
   } else if(role === 'Gerencia') {
     document.getElementById('corte-viri').style.display = 'block';
     cargarCortesPendientes();
@@ -4278,10 +4475,10 @@ function cargarNotasCredito() {
 
 // ════ NC — cliente y cotización ════
 function buscarClienteNC() {
-  const q = document.getElementById('nc-cliente-input').value.trim().toLowerCase();
+  const q = normalizar(document.getElementById('nc-cliente-input').value);
   const lista = document.getElementById('nc-cliente-lista');
   if(q.length < 2) { lista.style.display = 'none'; return; }
-  const res = clientesCache.filter(c => c.nombre.toLowerCase().includes(q) || (c.telefono||'').includes(q)).slice(0, 8);
+  const res = clientesCache.filter(c => normalizar(c.nombre).includes(q) || (c.telefono||'').includes(q)).slice(0, 8);
   lista.style.display = res.length ? 'block' : 'none';
   lista.innerHTML = res.map(c => `
     <div style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #F0EDE8;font-size:13px;" onmousedown="elegirClienteNC('${c.id}')">
@@ -4404,11 +4601,11 @@ function _abrirModalBuscarProducto(idx, prefijo) {
 }
 
 function buscarProductoModal(idx, prefijo) {
-  var q = (document.getElementById('bp-search').value || '').trim().toLowerCase();
+  var q = normalizar(document.getElementById('bp-search').value || '');
   var lista = document.getElementById('bp-lista');
   if(q.length < 2) { lista.innerHTML = ''; return; }
   var res = productos.filter(function(p){
-    return p.activo !== false && (p.clave.toLowerCase().indexOf(q) !== -1 || (p.descripcion||'').toLowerCase().indexOf(q) !== -1);
+    return p.activo !== false && (normalizar(p.clave).indexOf(q) !== -1 || normalizar(p.descripcion||'').indexOf(q) !== -1);
   }).slice(0, 30);
   if(!res.length) { lista.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:13px;">Sin resultados</div>'; return; }
   lista.innerHTML = res.map(function(p){
@@ -5194,7 +5391,7 @@ function iniciarCompras() {
 }
 
 function buscarProveedor() {
-  var input = document.getElementById('cmp-prov-input').value.toLowerCase();
+  var input = normalizar(document.getElementById('cmp-prov-input').value);
   var lista = document.getElementById('cmp-prov-lista');
   if(!input) { lista.style.display = 'none'; return; }
   if(!db) return;
@@ -5217,7 +5414,7 @@ function buscarProveedor() {
 
 function renderResultadosProveedor(input, lista) {
   var resultados = comprasProveedoresCache.filter(function(prov) {
-    return prov.nombre && prov.nombre.toLowerCase().indexOf(input) !== -1;
+    return prov.nombre && normalizar(prov.nombre).indexOf(input) !== -1;
   }).slice(0, 10);
 
   if(resultados.length === 0) { lista.innerHTML = '<div style="padding:10px;color:var(--suave);font-size:11px;">No encontrado</div>'; lista.style.display='block'; return; }
@@ -7075,13 +7272,13 @@ function renderFiscalTerminales() {
 
 // ════ PEDIDOS ════
 function siguienteFolioPedido() {
-  if(!db) return Promise.resolve('TRO-' + String(Date.now()).slice(-4));
+  if(!db) return Promise.resolve('NV-' + String(Date.now()).slice(-4));
   return db.collection('pedidos').orderBy('timestamp','desc').limit(1).get().then(function(snap){
-    if(snap.empty) return 'TRO-001';
-    var last = snap.docs[0].data().id || 'TRO-000';
-    var num = parseInt(last.replace('TRO-','')) || 0;
-    return 'TRO-' + String(num + 1).padStart(3,'0');
-  }).catch(function(){ return 'TRO-' + String(Date.now()).slice(-4); });
+    if(snap.empty) return 'NV-001';
+    var last = snap.docs[0].data().id || 'NV-000';
+    var num = parseInt(last.replace('NV-','')) || 0;
+    return 'NV-' + String(num + 1).padStart(3,'0');
+  }).catch(function(){ return 'NV-' + String(Date.now()).slice(-4); });
 }
 
 function notificarOperadorPedido(pedido, operadorNombre) {
@@ -7228,54 +7425,409 @@ function renderPedidosVentas() {
   if(filtroPedStatus !== 'todos') list = list.filter(function(p){ return normStatusPedido(p) === filtroPedStatus; });
   var cont = document.getElementById('ped-lista-ventas');
   var totalMonto = list.reduce(function(a,p){ return a + (p.m||0); },0);
-  document.getElementById('pedidos-resumen-ventas').textContent = list.length + ' pedidos · ' + fmtMoney(totalMonto);
-  if(!list.length) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">No hay pedidos</div>'; return; }
-  cont.innerHTML = list.map(pedidoCardVentas).join('');
+  document.getElementById('pedidos-resumen-ventas').textContent = list.length + ' notas de venta · ' + fmtMoney(totalMonto);
+  if(!list.length) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">No hay notas de venta</div>'; return; }
+  cont.innerHTML = tablaNotasVenta(list);
 }
 
-function pedidoCardVentas(p) {
+function tablaNotasVenta(list) {
+  var filas = list.map(filaNotaVenta).join('');
+  return '<div style="overflow-x:auto;">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:640px;">' +
+    '<thead><tr style="background:#1A1A1A;color:#fff;text-align:left;">' +
+      '<th style="padding:8px 10px;">Folio</th>' +
+      '<th style="padding:8px 10px;">Cliente</th>' +
+      '<th style="padding:8px 10px;text-align:right;">Total</th>' +
+      '<th style="padding:8px 10px;">Método de pago</th>' +
+      '<th style="padding:8px 10px;">Estado</th>' +
+      '<th style="padding:8px 10px;">Acciones</th>' +
+    '</tr></thead><tbody>' + filas + '</tbody></table></div>';
+}
+
+function filaNotaVenta(p) {
   var estado = normStatusPedido(p);
   var st = STATUS_PEDIDO[estado] || STATUS_PEDIDO.confirmado;
-  var nextBtn = '';
-  // Botones para todos los status disponibles
+  var cancelBtn = (estado !== 'cancelado' && estado !== 'entregado')
+    ? '<button class="btn btn-gris" onclick="event.stopPropagation();cancelarPedido(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;background:#FEE2E2;color:#DC2626;">❌ Cancelar</button>' : '';
+  return `
+    <tr onclick="abrirDetalleNotaVenta('${p._docId}')" style="cursor:pointer;border-bottom:1px solid #F0EDE8;">
+      <td style="padding:8px 10px;font-weight:700;">${p.id}</td>
+      <td style="padding:8px 10px;">${p.cliente||p.c||''}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700;">${fmtMoney(p.m||0)}</td>
+      <td style="padding:8px 10px;">${labelMetodoPago(p.pago)}</td>
+      <td style="padding:8px 10px;"><span style="background:#${st.bg};color:#${st.color};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700;white-space:nowrap;">${st.label}</span></td>
+      <td style="padding:8px 10px;white-space:nowrap;">
+        <button class="btn btn-gris" onclick="event.stopPropagation();nvGenerarNC('${p._docId}')" style="font-size:10px;padding:5px 10px;">NC</button>
+        ${cancelBtn}
+      </td>
+    </tr>`;
+}
+
+// ════ Detalle de Nota de Venta (se abre al tocar la fila) ════
+function abrirDetalleNotaVenta(docId) {
+  var p = pedidosCache.find(function(x){ return x._docId === docId; });
+  if(!p) return;
+  var estado = normStatusPedido(p);
+  var st = STATUS_PEDIDO[estado] || STATUS_PEDIDO.confirmado;
   var todosStatus = [
     {s:'confirmado', label:'✅ Confirmado'},
     {s:'en-ruta',    label:'🚛 En ruta'},
     {s:'entregado',  label:'📦 Entregado'},
   ];
-  nextBtn = todosStatus
-    .filter(function(st){ return st.s !== estado; })
-    .map(function(st){
-      return '<button class="btn btn-gris" onclick="cambiarStatusPedido(\''+p._docId+'\',\''+st.s+'\')" style="font-size:10px;padding:5px 10px;">'+st.label+'</button>';
+  var nextBtn = todosStatus
+    .filter(function(s2){ return s2.s !== estado; })
+    .map(function(s2){
+      return '<button class="btn btn-gris" onclick="cambiarStatusPedido(\''+p._docId+'\',\''+s2.s+'\');document.getElementById(\'modal-detalle-nv\').remove();" style="font-size:10px;padding:5px 10px;">'+s2.label+'</button>';
     }).join('');
-  var cancelBtn = (estado !== 'cancelado' && estado !== 'entregado') ? '<button class="btn btn-gris" onclick="cancelarPedido(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;background:#FEE2E2;color:#DC2626;">❌ Cancelar</button>' : '';
   var waBtn = (p.telefono && estado !== 'cancelado') ? '<button class="btn btn-verde" onclick="waPedidoEnRuta(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;">📱 WhatsApp</button>' : '';
   var histBtn = (currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director'))
     ? '<button class="btn btn-gris" onclick="verHistorialPedido(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;">🕘 Historial</button>' : '';
-  return `
-    <div class="cot-list-item">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div>
-          <div class="cot-cliente">${p.id} · ${p.cliente||p.c||''}</div>
-          <div class="cot-meta">${p.direccion||''}</div>
-          <div class="cot-meta">${p.p||''}</div>
-          <div class="cot-meta">${p.fecha||''} ${p.h||''} · Operador: ${p.operador||p.ch||'Sin asignar'}</div>
-          <div style="margin-top:4px;"><span style="background:#${st.bg};color:#${st.color};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700;">${st.label}</span></div>
-        </div>
+
+  var existente = document.getElementById('modal-detalle-nv');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-detalle-nv';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:24px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);" onclick="event.stopPropagation();">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:#1A1A1A;">${p.id} · ${p.cliente||p.c||''}</div>
         <div class="cot-total">${fmtMoney(p.m||0)}</div>
       </div>
-      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+      <div style="margin-bottom:4px;"><span style="background:#${st.bg};color:#${st.color};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700;">${st.label}</span> <span style="font-size:11px;color:var(--suave);">${labelMetodoPago(p.pago)}</span></div>
+      <div class="cot-meta" style="margin-top:8px;">${p.direccion||''}</div>
+      <div class="cot-meta">${p.p||''}</div>
+      <div class="cot-meta">${p.fecha||''} ${p.h||''} · Operador: ${p.operador||p.ch||'Sin asignar'}</div>
+      <div style="margin-top:14px;display:flex;gap:6px;flex-wrap:wrap;">
         ${nextBtn}
         ${waBtn}
-        <button class="btn btn-gris" onclick="generarNotaDesdePedido('${p._docId}')" style="font-size:10px;padding:5px 10px;">🖨 Nota de Venta</button>
+        <button class="btn btn-gris" onclick="generarNotaDesdePedido('${p._docId}')" style="font-size:10px;padding:5px 10px;">🖨 Recibo rápido</button>
         <button class="btn btn-gris" onclick="reasignarOperador('${p._docId}')" style="font-size:10px;padding:5px 10px;">🔄 Reasignar</button>
         ${botonFacturarPedido(p)}
         ${histBtn}
-        ${cancelBtn}
       </div>
-    </div>
-  `;
+      <button class="btn btn-gris" onclick="document.getElementById('modal-detalle-nv').remove()" style="width:100%;margin-top:16px;">Cerrar</button>
+    </div>`;
+  modal.onclick = function(){ modal.remove(); };
+  document.body.appendChild(modal);
 }
+
+function nvGenerarNC(docId) {
+  var p = pedidosCache.find(function(x){ return x._docId === docId; });
+  if(!p) return;
+  switchTab('nc', document.getElementById('tab-nc-btn'));
+  setTimeout(function(){
+    var input = document.getElementById('nc-cot-folio');
+    if(input && p.cotizacionFolio) { input.value = p.cotizacionFolio; buscarCotizacionNC(); }
+  }, 300);
+}
+
+// ════ TICKETS DE MOSTRADOR — venta rápida presencial (TK-XXX) ════
+var ticketsCache = [];
+var ticketProductos = [];
+var ticketClienteSel = null;
+var creandoTicket = false;
+
+function siguienteFolioTicket() {
+  if(!db) return Promise.resolve('TK-' + String(Date.now()).slice(-4));
+  return db.collection('tickets').orderBy('timestamp','desc').limit(1).get().then(function(snap){
+    if(snap.empty) return 'TK-001';
+    var last = snap.docs[0].data().folio || 'TK-000';
+    var num = parseInt(last.replace('TK-','')) || 0;
+    return 'TK-' + String(num + 1).padStart(3,'0');
+  }).catch(function(){ return 'TK-' + String(Date.now()).slice(-4); });
+}
+
+function puedeHacerTicket() {
+  return currentUser && currentUser.role !== 'Operador' && currentUser.role !== 'Mecanico';
+}
+
+function abrirNuevoTicket() {
+  if(!puedeHacerTicket()) { showToast('⚠️ Sin permisos'); return; }
+  ticketProductos = [];
+  ticketClienteSel = null;
+  var existente = document.getElementById('modal-nuevo-ticket');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-nuevo-ticket';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:14px;">🎫 NUEVO TICKET</div>' +
+      '<div class="field" style="margin-bottom:10px;position:relative;">' +
+        '<label>Cliente</label>' +
+        '<input type="text" id="tk-nuevo-cliente" placeholder="Público general o buscar cliente..." oninput="buscarClienteTicket()" autocomplete="off">' +
+        '<div id="tk-nuevo-cliente-lista" style="border:1px solid var(--borde);border-radius:8px;max-height:130px;overflow-y:auto;display:none;position:absolute;background:#fff;z-index:100;width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>' +
+      '</div>' +
+      '<div style="margin-bottom:10px;">' +
+        '<label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--suave);margin-bottom:5px;">Productos</label>' +
+        '<div id="tk-nuevo-prod-lista"></div>' +
+        '<button type="button" class="btn btn-gris" onclick="agregarProductoTicket()" style="margin-top:6px;font-size:11px;padding:7px 12px;">+ Agregar producto</button>' +
+      '</div>' +
+      '<div class="field" style="margin-bottom:10px;">' +
+        '<label>Método de pago</label>' +
+        '<select id="tk-nuevo-metodo" onchange="actualizarComisionTicket()">' +
+          '<option value="efectivo">Efectivo</option>' +
+          '<option value="debito">Tarjeta Débito</option>' +
+          '<option value="credito">Tarjeta Crédito</option>' +
+          '<option value="transferencia">Transferencia</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="field" id="tk-nuevo-terminal-wrap" style="display:none;margin-bottom:10px;">' +
+        '<label>Terminal / Razón social</label>' +
+        '<select id="tk-nuevo-terminal" onchange="actualizarComisionTicket()">' +
+          '<option value="IZZ-BBVA">IZZ — BBVA</option>' +
+          '<option value="IZZ-MERCADO PAGO">IZZ — Mercado Pago</option>' +
+          '<option value="CEM-BBVA">CEM — BBVA</option>' +
+        '</select>' +
+        '<div class="ct-unit" id="tk-nuevo-comision"></div>' +
+      '</div>' +
+      '<div style="text-align:right;font-family:\'Bebas Neue\',sans-serif;font-size:22px;margin-bottom:14px;" id="tk-nuevo-total">TOTAL: $0.00</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button class="btn btn-naranja" style="flex:1;" onclick="guardarTicket()">Cobrar y crear ticket</button>' +
+        '<button class="btn btn-gris" style="flex:1;" onclick="document.getElementById(\'modal-nuevo-ticket\').remove()">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  agregarProductoTicket();
+}
+
+function buscarClienteTicket() {
+  var q = normalizar(document.getElementById('tk-nuevo-cliente').value);
+  var lista = document.getElementById('tk-nuevo-cliente-lista');
+  if(q.length < 2) { lista.style.display = 'none'; return; }
+  var res = clientesCache.filter(function(c){ return normalizar(c.nombre).indexOf(q) !== -1; }).slice(0, 8);
+  lista.style.display = res.length ? 'block' : 'none';
+  lista.innerHTML = res.map(function(c){
+    return '<div style="padding:9px 11px;cursor:pointer;border-bottom:1px solid #F0EDE8;font-size:12px;" onmousedown="elegirClienteTicket(\''+c.id+'\')"><strong>'+c.nombre+'</strong><br><span style="font-size:10px;color:#888;">'+(c.telefono||'')+'</span></div>';
+  }).join('');
+}
+function elegirClienteTicket(id) {
+  var c = clientesCache.find(function(x){ return x.id === id; });
+  if(!c) return;
+  ticketClienteSel = c;
+  document.getElementById('tk-nuevo-cliente').value = c.nombre;
+  document.getElementById('tk-nuevo-cliente-lista').style.display = 'none';
+}
+
+function agregarProductoTicket() {
+  ticketProductos.push({ clave:'', desc:'', cant:1, precio:0 });
+  renderProductosTicket();
+}
+function quitarProductoTicket(idx) {
+  ticketProductos.splice(idx,1);
+  renderProductosTicket();
+}
+function abrirBuscadorProductoTicket(idx) {
+  abrirSelectorProducto(function(p){
+    ticketProductos[idx].clave = p.clave;
+    ticketProductos[idx].desc = p.descripcion;
+    renderProductosTicket();
+  });
+}
+function renderProductosTicket() {
+  var cont = document.getElementById('tk-nuevo-prod-lista');
+  if(!cont) return;
+  cont.innerHTML = ticketProductos.map(function(p, idx){
+    return '<div style="display:flex;gap:4px;align-items:center;margin-bottom:6px;">' +
+      '<input type="text" value="'+(p.desc||'').replace(/"/g,'&quot;')+'" placeholder="Descripción" style="flex:2;border:1.5px solid var(--borde);border-radius:8px;padding:7px 9px;font-size:12px;" onchange="ticketProductos['+idx+'].desc=this.value;ticketProductos['+idx+'].clave=\'\';">' +
+      '<button type="button" class="btn btn-gris" onclick="abrirBuscadorProductoTicket('+idx+')" style="padding:6px 8px;font-size:11px;" title="Buscar en catálogo">🔍</button>' +
+      '<input type="number" value="'+p.cant+'" min="0" step="0.01" style="width:55px;border:1.5px solid var(--borde);border-radius:8px;padding:7px;font-size:12px;" onchange="ticketProductos['+idx+'].cant=parseFloat(this.value)||0;actualizarTotalTicket();">' +
+      '<input type="number" value="'+p.precio+'" min="0" step="0.01" style="width:70px;border:1.5px solid var(--borde);border-radius:8px;padding:7px;font-size:12px;" onchange="ticketProductos['+idx+'].precio=parseFloat(this.value)||0;actualizarTotalTicket();">' +
+      '<button type="button" class="btn-del" onclick="quitarProductoTicket('+idx+')">✕</button>' +
+    '</div>';
+  }).join('');
+  actualizarTotalTicket();
+}
+
+function totalTicket() {
+  return ticketProductos.reduce(function(a,p){ return a + ((p.cant||0) * (p.precio||0)); }, 0);
+}
+function actualizarTotalTicket() {
+  var el = document.getElementById('tk-nuevo-total');
+  if(el) el.textContent = 'TOTAL: ' + fmtMoney(totalTicket());
+  actualizarComisionTicket();
+}
+
+function actualizarComisionTicket() {
+  var metodoEl = document.getElementById('tk-nuevo-metodo');
+  var wrap = document.getElementById('tk-nuevo-terminal-wrap');
+  if(!metodoEl || !wrap) return;
+  var metodo = metodoEl.value;
+  if(metodo !== 'debito' && metodo !== 'credito') { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  var terminal = document.getElementById('tk-nuevo-terminal').value.split('-');
+  var rs = terminal[0], banco = terminal.slice(1).join('-');
+  var total = totalTicket();
+  var n = netoTerminal(total, rs, banco, metodo);
+  document.getElementById('tk-nuevo-comision').textContent =
+    total > 0 ? ('Comisión: ' + fmtMoney(n.comision + n.ivaCom) + ' · Neto: ' + fmtMoney(n.neto)) : '';
+}
+
+function guardarTicket() {
+  if(creandoTicket) return;
+  var productosValidos = ticketProductos.filter(function(p){ return p.desc && p.desc.trim() && p.cant > 0; });
+  if(!productosValidos.length) { showToast('⚠️ Agrega al menos un producto'); return; }
+  var total = totalTicket();
+  if(total <= 0) { showToast('⚠️ El total debe ser mayor a cero'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+  var metodo = document.getElementById('tk-nuevo-metodo').value;
+  var cliente = ticketClienteSel ? ticketClienteSel.nombre : (document.getElementById('tk-nuevo-cliente').value.trim() || 'Público General');
+
+  var terminal = null, comision = 0, neto = total;
+  if(metodo === 'debito' || metodo === 'credito') {
+    var t = document.getElementById('tk-nuevo-terminal').value.split('-');
+    var rs = t[0], banco = t.slice(1).join('-');
+    terminal = document.getElementById('tk-nuevo-terminal').value;
+    var n = netoTerminal(total, rs, banco, metodo);
+    comision = n.comision + n.ivaCom;
+    neto = n.neto;
+  }
+
+  creandoTicket = true;
+  siguienteFolioTicket().then(function(folio){
+    var ticket = {
+      folio: folio,
+      cliente: cliente,
+      clienteId: ticketClienteSel ? ticketClienteSel.id : null,
+      productos: productosValidos,
+      subtotal: total,
+      total: total,
+      metodoPago: metodo,
+      razonSocial: terminal,
+      comision: comision,
+      neto: neto,
+      usuario: currentUser ? currentUser.name : 'Desconocido',
+      fecha: fechaISOLocal(),
+      timestamp: Date.now(),
+      status: 'activo'
+    };
+    var deltas = calcularDeltasInventario(productosValidos);
+    ticket.inventarioDeltas = deltas;
+
+    // Apartado de efectivo: mismo criterio que Notas de Venta (productos apartable, pago en efectivo)
+    var totalApartado = 0;
+    if(metodo === 'efectivo') {
+      productosValidos.forEach(function(item){
+        if(!item.clave) return;
+        var prod = productosIndex[item.clave];
+        if(prod && prod.apartable) totalApartado += (item.cant||0) * (item.precio||0);
+      });
+    }
+
+    var ticketRef = db.collection('tickets').doc();
+    var batch = db.batch();
+    batch.set(ticketRef, ticket);
+    aplicarDeltasEnBatch(batch, deltas, -1);
+    batch.commit().then(function(){
+      actualizarCacheLocalInventario(deltas, -1);
+      ticket._docId = ticketRef.id;
+      ticketsCache.unshift(ticket);
+      if(totalApartado > 0) {
+        db.collection('caja_apartada').add({
+          fecha: ticket.fecha, monto: totalApartado, origen: 'ticket',
+          ticketId: ticketRef.id, timestamp: Date.now()
+        }).catch(function(e){ console.log('Error registrando caja_apartada:', e); });
+      }
+      showToast('✅ Ticket ' + folio + ' creado');
+      var modal = document.getElementById('modal-nuevo-ticket');
+      if(modal) modal.remove();
+      imprimirTicketVenta(ticket);
+      renderListaTickets();
+      creandoTicket = false;
+    }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear ticket'); creandoTicket = false; });
+  });
+}
+
+function imprimirTicketVenta(ticket) {
+  var filas = ticket.productos.map(function(p){
+    return '<tr><td>'+p.cant+' x '+p.desc+'</td><td style="text-align:right;">'+fmtMoney((p.cant||0)*(p.precio||0))+'</td></tr>';
+  }).join('');
+  var fecha = new Date(ticket.timestamp).toLocaleString('es-MX');
+  var w = window.open('', '_blank', 'width=320,height=600');
+  if(!w) { showToast('⚠️ Habilita las ventanas emergentes para imprimir'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+ticket.folio+'</title><style>' +
+    'body{font-family:monospace;width:78mm;margin:0;padding:8px;font-size:11px;}' +
+    'h2{font-size:14px;text-align:center;margin:0 0 2px;}' +
+    'p{text-align:center;margin:2px 0;font-size:10px;}' +
+    'table{width:100%;border-collapse:collapse;margin-top:8px;}' +
+    'td{padding:2px 0;font-size:11px;}' +
+    '.total{font-weight:bold;font-size:14px;border-top:1px dashed #000;margin-top:6px;padding-top:6px;text-align:right;}' +
+    '.footer{text-align:center;margin-top:10px;font-size:10px;}' +
+    '@media print{@page{margin:0;}}' +
+    '</style></head><body>' +
+    '<h2>MATERIALES TRONCOSO</h2>' +
+    '<p>Fco. del Paso y Troncoso #943<br>Iztacalco, CDMX · 5555906802</p>' +
+    '<p>'+ticket.folio+' &nbsp;|&nbsp; '+fecha+'</p>' +
+    '<p>Cliente: '+ticket.cliente+'</p>' +
+    '<table>'+filas+'</table>' +
+    '<div class="total">TOTAL: '+fmtMoney(ticket.total)+'</div>' +
+    '<p style="text-align:left;margin-top:6px;">Pago: '+labelMetodoPago(ticket.metodoPago)+'</p>' +
+    '<div class="footer">¡Gracias por su compra!<br>5555906802</div>' +
+    '</body></html>');
+  w.document.close();
+  var imprimio = false;
+  var doPrint = function(){ if(imprimio) return; imprimio = true; w.focus(); w.print(); };
+  w.onload = doPrint;
+  setTimeout(doPrint, 400);
+}
+
+function cargarTicketsHoy() {
+  var cont = document.getElementById('tks-lista');
+  if(!cont) return;
+  if(!db) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);">Sin conexión</div>'; return; }
+  db.collection('tickets').where('fecha','==',fechaISOLocal()).get().then(function(snap){
+    ticketsCache = snap.docs.map(function(d){ return Object.assign({_docId:d.id}, d.data()); });
+    ticketsCache.sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
+    renderListaTickets();
+  }).catch(function(e){ console.log(e); cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);">Error al cargar</div>'; });
+}
+
+function renderListaTickets() {
+  var cont = document.getElementById('tks-lista');
+  if(!cont) return;
+  if(!ticketsCache.length) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">Sin tickets hoy</div>'; return; }
+  var totalDia = ticketsCache.filter(function(t){ return t.status !== 'cancelado'; }).reduce(function(a,t){ return a + (t.total||0); }, 0);
+  var filas = ticketsCache.map(function(t){
+    var cancelado = t.status === 'cancelado';
+    var accion = !cancelado
+      ? '<button class="btn btn-gris" onclick="cancelarTicket(\''+t._docId+'\')" style="font-size:10px;padding:5px 10px;background:#FEE2E2;color:#DC2626;">❌ Cancelar</button>'
+      : '<span style="font-size:10px;color:#DC2626;font-weight:700;">CANCELADO</span>';
+    return '<tr style="border-bottom:1px solid #F0EDE8;' + (cancelado ? 'opacity:0.5;' : '') + '">' +
+      '<td style="padding:8px 10px;font-weight:700;">'+t.folio+'</td>' +
+      '<td style="padding:8px 10px;">'+t.cliente+'</td>' +
+      '<td style="padding:8px 10px;text-align:right;font-weight:700;">'+fmtMoney(t.total||0)+'</td>' +
+      '<td style="padding:8px 10px;">'+labelMetodoPago(t.metodoPago)+'</td>' +
+      '<td style="padding:8px 10px;">'+accion+'</td>' +
+    '</tr>';
+  }).join('');
+  cont.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:520px;">' +
+    '<thead><tr style="background:#1A1A1A;color:#fff;text-align:left;"><th style="padding:8px 10px;">Folio</th><th style="padding:8px 10px;">Cliente</th><th style="padding:8px 10px;text-align:right;">Total</th><th style="padding:8px 10px;">Método</th><th style="padding:8px 10px;">Acciones</th></tr></thead>' +
+    '<tbody>' + filas + '</tbody>' +
+    '<tfoot><tr><td colspan="2" style="padding:10px;font-weight:700;">TOTAL DEL DÍA</td><td style="padding:10px;text-align:right;font-weight:700;">'+fmtMoney(totalDia)+'</td><td colspan="2"></td></tr></tfoot>' +
+    '</table></div>';
+}
+
+function cancelarTicket(docId) {
+  if(!confirm('¿Cancelar este ticket? Se revertirá el inventario.')) return;
+  var t = ticketsCache.find(function(x){ return x._docId === docId; });
+  if(!t || !db) return;
+  var batch = db.batch();
+  batch.update(db.collection('tickets').doc(docId), { status: 'cancelado' });
+  aplicarDeltasEnBatch(batch, t.inventarioDeltas || {}, +1);
+  batch.commit().then(function(){
+    actualizarCacheLocalInventario(t.inventarioDeltas || {}, +1);
+    t.status = 'cancelado';
+    showToast('❌ Ticket cancelado — inventario revertido');
+    renderListaTickets();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al cancelar'); });
+}
+
+var _origSwitchTabTickets = switchTab;
+switchTab = function(tab, btn) {
+  _origSwitchTabTickets(tab, btn);
+  if(tab === 'tickets') cargarTicketsHoy();
+};
 
 // ════ FACTURACIÓN — Pendiente 7: datos listos para copiar + estado por pedido ════
 // NO timbra CFDI real (este CRM no tiene backend propio para guardar credenciales
@@ -7441,7 +7993,7 @@ function cancelarPedido(docId) {
   if(currentUser && currentUser.role === 'Operador') { showToast('No tienes permiso para cancelar'); return; }
   var motivo = prompt('Motivo de la cancelación:');
   if(motivo === null) return;
-  if(!confirm('¿Confirmar cancelación del pedido?')) return;
+  if(!confirm('¿Confirmar cancelación de la nota de venta?')) return;
   var idx = pedidosCache.findIndex(function(p){ return p._docId === docId; });
   if(idx < 0) return;
   var pedido = pedidosCache[idx];
@@ -7465,7 +8017,7 @@ function cancelarPedido(docId) {
       }
     }).catch(function(e){ console.log(e); showToast('⚠️ Error al cancelar / revertir inventario'); });
   }
-  showToast('❌ Pedido cancelado' + (necesitaRevertir ? ' — inventario revertido' : ''));
+  showToast('❌ Nota de venta cancelada' + (necesitaRevertir ? ' — inventario revertido' : ''));
   renderActivaPedidos();
 }
 
@@ -7555,7 +8107,7 @@ function renderPedidosDisponibles() {
   });
   var cont = document.getElementById('ped-lista-disponibles');
   if(!cont) return;
-  if(!list.length) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">No hay pedidos disponibles</div>'; return; }
+  if(!list.length) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">No hay notas de venta disponibles</div>'; return; }
   cont.innerHTML = list.map(pedidoCardDisponible).join('');
 }
 
@@ -7812,14 +8364,14 @@ function renderPedidosJM() {
   var entregados = list.filter(function(p){ return normStatusPedido(p) === 'entregado'; }).length;
   var totalMonto = list.reduce(function(a,p){ return a + (p.m||0); },0);
   document.getElementById('ped-resumen-jm').innerHTML = `
-    <div style="background:#F5F2EE;border-radius:10px;padding:14px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--suave);">Total pedidos</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--naranja);">${list.length}</div></div>
+    <div style="background:#F5F2EE;border-radius:10px;padding:14px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--suave);">Total notas de venta</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--naranja);">${list.length}</div></div>
     <div style="background:#F5F2EE;border-radius:10px;padding:14px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--suave);">Pendientes de entregar</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--naranja);">${pendientes}</div></div>
     <div style="background:#F5F2EE;border-radius:10px;padding:14px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--suave);">Entregados</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--naranja);">${entregados}</div></div>
     <div style="background:#F5F2EE;border-radius:10px;padding:14px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--suave);">Monto total</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--naranja);">${fmtMoney(totalMonto)}</div></div>
   `;
   var cont = document.getElementById('ped-lista-jm');
-  if(!list.length) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">No hay pedidos</div>'; return; }
-  cont.innerHTML = list.map(pedidoCardVentas).join('');
+  if(!list.length) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">No hay notas de venta</div>'; return; }
+  cont.innerHTML = tablaNotasVenta(list);
 }
 
 // ════ PEDIDOS — nuevo pedido manual ════
@@ -7871,7 +8423,7 @@ function abrirNuevoPedidoManual() {
   modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:14px;padding:24px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:#1A1A1A;margin-bottom:16px;">📋 NUEVO PEDIDO MANUAL</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:#1A1A1A;margin-bottom:16px;">📋 NUEVA NOTA DE VENTA MANUAL</div>
       <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:14px;">
         <div>
           <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Cliente</label>
@@ -7906,7 +8458,7 @@ function abrirNuevoPedidoManual() {
       </div>
       <div style="display:flex;gap:10px;">
         <button onclick="document.getElementById('modal-pedido-manual').remove()" style="flex:1;padding:12px;border:1.5px solid #D8D0C8;border-radius:8px;background:#fff;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Cancelar</button>
-        <button onclick="guardarPedidoManual()" style="flex:2;padding:12px;border:none;border-radius:8px;background:#E8500A;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;cursor:pointer;">✅ CREAR PEDIDO</button>
+        <button onclick="guardarPedidoManual()" style="flex:2;padding:12px;border:none;border-radius:8px;background:#E8500A;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;cursor:pointer;">✅ CREAR NOTA DE VENTA</button>
       </div>
     </div>
   `;
