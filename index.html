@@ -6375,6 +6375,7 @@ function switchNominaTab(tab) {
     var el = document.getElementById(id);
     if(el) el.className = el.onclick.toString().includes(tab) ? 'btn btn-naranja' : 'btn btn-gris';
   });
+  if(tab === 'historial') iniciarHistorialNomina();
 }
 
 function semanaISO() {
@@ -6941,45 +6942,240 @@ function liquidarPrestamo(prestamoId) {
     .catch(function(e) { console.log(e); });
 }
 
-function filtrarHistorial(filtro) {
+// ════ HISTORIAL DE NÓMINA ════
+// Se trae SOLO el filtro de status (índice simple, sin composite index) y se
+// ordena/filtra/pagina en cliente — mismo patrón que alertas y compras.
+var historialNominaCache = [];
+var historialNominaCargado = false;
+var historialNominaFiltro = 'todas';
+var historialNominaMostrados = 20;
+var PAGINA_HISTORIAL_NOMINA = 20;
+
+function puedeEditarNomina() {
+  return currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
+}
+function puedeBorrarNomina() {
+  return currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
+}
+
+function iniciarHistorialNomina() {
+  historialNominaFiltro = 'todas';
+  historialNominaMostrados = PAGINA_HISTORIAL_NOMINA;
+  cargarHistorialNomina();
+}
+
+function cargarHistorialNomina() {
   if(!db) return;
-
-  ['nom-hist-todas','nom-hist-mes','nom-hist-trimestre'].forEach(function(id) {
-    document.getElementById(id).className = id.includes(filtro) ? 'btn btn-naranja' : 'btn btn-gris';
-  });
-
   var div = document.getElementById('nom-historial-lista');
   div.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Cargando...</div>';
 
-  var query = db.collection('nomina_semanas').where('status', '==', 'procesada');
-
-  if(filtro === 'mes') {
-    var hace30 = new Date(); hace30.setDate(hace30.getDate()-30);
-    query = query.where('timestamp', '>=', hace30.getTime());
-  } else if(filtro === 'trimestre') {
-    var hace90 = new Date(); hace90.setDate(hace90.getDate()-90);
-    query = query.where('timestamp', '>=', hace90.getTime());
-  }
-
-  query.orderBy('timestamp', 'desc').limit(20).get().then(function(snap) {
-    if(snap.empty) { div.innerHTML = '<div style="padding:12px;color:var(--suave);">Sin registros</div>'; return; }
-
-    div.innerHTML = '';
+  db.collection('nomina_semanas').where('status', '==', 'procesada').get().then(function(snap) {
+    historialNominaCache = [];
     snap.forEach(function(doc) {
       var nom = doc.data();
-      var item = document.createElement('div');
-      item.style.cssText = 'padding:12px;border-bottom:1px solid #f0f0f0;cursor:pointer;';
-      item.onclick = function() { verDetalleNomina(nom); };
-      item.innerHTML =
-        '<div style="display:flex;justify-content:space-between;align-items:baseline;"><div style="font-weight:700;color:var(--naranja);">'+nom.semana+'</div><div style="font-weight:700;">$'+fmtNumero(nom.totalEfectivo)+'</div></div>'+
-        '<div style="font-size:12px;color:#666;margin-top:4px;">'+nom.empleados.length+' empleados | '+nom.procesadoPor+'</div>';
-      div.appendChild(item);
+      nom._docId = doc.id;
+      historialNominaCache.push(nom);
     });
-  }).catch(function(e) { console.log(e); });
+    historialNominaCache.sort(function(a,b) { return (b.timestamp||0) - (a.timestamp||0); });
+    historialNominaCargado = true;
+    renderHistorialNomina();
+  }).catch(function(e) { console.log('Error cargando historial de nómina:', e); div.innerHTML = '<div style="padding:12px;color:var(--suave);">Error al cargar</div>'; });
 }
 
-function verDetalleNomina(nom) {
+function filtrarHistorial(filtro) {
+  historialNominaFiltro = filtro;
+  historialNominaMostrados = PAGINA_HISTORIAL_NOMINA;
+  ['nom-hist-todas','nom-hist-mes','nom-hist-trimestre'].forEach(function(id) {
+    document.getElementById(id).className = id.includes(filtro) ? 'btn btn-naranja' : 'btn btn-gris';
+  });
+  if(!historialNominaCargado) { cargarHistorialNomina(); return; }
+  renderHistorialNomina();
+}
+
+function verMasHistorialNomina() {
+  historialNominaMostrados += PAGINA_HISTORIAL_NOMINA;
+  renderHistorialNomina();
+}
+
+function renderHistorialNomina() {
+  var div = document.getElementById('nom-historial-lista');
+  var ahora = Date.now();
+  var lista = historialNominaCache.filter(function(nom) {
+    if(historialNominaFiltro === 'mes') return (ahora - (nom.timestamp||0)) <= 30*24*60*60*1000;
+    if(historialNominaFiltro === 'trimestre') return (ahora - (nom.timestamp||0)) <= 90*24*60*60*1000;
+    return true;
+  });
+
+  if(!lista.length) { div.innerHTML = '<div style="padding:12px;color:var(--suave);">Sin registros</div>'; return; }
+
+  var visible = lista.slice(0, historialNominaMostrados);
+  var puedeEditar = puedeEditarNomina();
+  var puedeBorrar = puedeBorrarNomina();
+
+  var filas = visible.map(function(nom) {
+    var acciones = '<button class="btn btn-gris" onclick="event.stopPropagation();verDetalleNomina(\''+nom._docId+'\')" style="font-size:10px;padding:5px 10px;">👁 Ver</button>';
+    if(puedeEditar) acciones += ' <button class="btn btn-gris" onclick="event.stopPropagation();abrirEditarNomina(\''+nom._docId+'\')" style="font-size:10px;padding:5px 10px;">✏️ Editar</button>';
+    if(puedeBorrar) acciones += ' <button class="btn btn-gris" onclick="event.stopPropagation();borrarNomina(\''+nom._docId+'\')" style="font-size:10px;padding:5px 10px;background:#FEE2E2;color:#DC2626;">🗑 Borrar</button>';
+    return '<tr style="border-bottom:1px solid #F0EDE8;">' +
+      '<td style="padding:8px 10px;font-weight:700;">'+nom.semana+'</td>' +
+      '<td style="padding:8px 10px;">'+(nom.fechaSabado||'')+'</td>' +
+      '<td style="padding:8px 10px;text-align:center;">'+(nom.empleados?nom.empleados.length:0)+'</td>' +
+      '<td style="padding:8px 10px;text-align:right;font-weight:700;">$'+fmtNumero(nom.totalEfectivo||0)+'</td>' +
+      '<td style="padding:8px 10px;">✅ Pagada</td>' +
+      '<td style="padding:8px 10px;white-space:nowrap;">'+acciones+'</td>' +
+    '</tr>';
+  }).join('');
+
+  var verMasBtn = lista.length > historialNominaMostrados
+    ? '<button class="btn btn-gris" onclick="verMasHistorialNomina()" style="width:100%;margin-top:10px;">Ver más</button>' : '';
+
+  div.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px;">' +
+    '<thead><tr style="background:#1A1A1A;color:#fff;text-align:left;"><th style="padding:8px 10px;">Semana</th><th style="padding:8px 10px;">Fecha</th><th style="padding:8px 10px;text-align:center;">Empleados</th><th style="padding:8px 10px;text-align:right;">Total</th><th style="padding:8px 10px;">Estado</th><th style="padding:8px 10px;">Acciones</th></tr></thead>' +
+    '<tbody>' + filas + '</tbody></table></div>' + verMasBtn;
+}
+
+function verDetalleNomina(docId) {
+  var nom = historialNominaCache.find(function(x){ return x._docId === docId; });
+  if(!nom) return;
   alert('Semana: '+nom.semana+'\nEmpleados: '+nom.empleados.length+'\nTotal nómina: $'+fmtNumero(nom.totalNomina)+'\nTotal IMSS: $'+fmtNumero(nom.totalIMSS)+'\nTotal efectivo: $'+fmtNumero(nom.totalEfectivo));
+}
+
+function borrarNomina(docId) {
+  if(!puedeBorrarNomina()) { showToast('⚠️ Sin permisos'); return; }
+  var nom = historialNominaCache.find(function(x){ return x._docId === docId; });
+  if(!nom) return;
+  if(!confirm('¿Borrar nómina semana ' + nom.semana + '? Esta acción no se puede deshacer.')) return;
+  db.collection('nomina_semanas').doc(docId).delete().then(function(){
+    historialNominaCache = historialNominaCache.filter(function(x){ return x._docId !== docId; });
+    showToast('🗑 Nómina borrada');
+    renderHistorialNomina();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al borrar'); });
+}
+
+// ════ Edición de nómina cerrada (Gerencia/Director) — recalcula y audita ════
+var CAMPOS_EDITABLES_NOMINA = ['descuentoFaltas', 'prestamoSemanal', 'prestamoFijo', 'cajaAhorro', 'otrosDescuentos', 'bonos', 'pagoTransferencia'];
+var LABEL_CAMPO_NOMINA = {
+  descuentoFaltas: 'Desc. faltas', prestamoSemanal: 'Préstamo sem.', prestamoFijo: 'Préstamo fijo',
+  cajaAhorro: 'Caja ahorro', otrosDescuentos: 'Otros desc.', bonos: 'Bonos', pagoTransferencia: 'Transferencia'
+};
+
+function abrirEditarNomina(docId) {
+  if(!puedeEditarNomina()) { showToast('⚠️ Sin permisos'); return; }
+  var nom = historialNominaCache.find(function(x){ return x._docId === docId; });
+  if(!nom) return;
+
+  var existente = document.getElementById('modal-editar-nomina');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-editar-nomina';
+  modal.dataset.docId = docId;
+  modal.dataset.original = JSON.stringify(nom.empleados);
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  var filas = nom.empleados.map(function(emp, idx) {
+    return '<div style="border:1px solid var(--borde);border-radius:8px;padding:10px;margin-bottom:8px;">' +
+      '<div style="font-weight:700;font-size:12px;margin-bottom:6px;">' + emp.nombre + ' — sueldo $' + fmtNumero(emp.sueldoSemanal||0) + '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">' +
+      CAMPOS_EDITABLES_NOMINA.map(function(campo) {
+        return '<div><label style="display:block;font-size:9px;color:var(--suave);">' + LABEL_CAMPO_NOMINA[campo] + '</label>' +
+          '<input type="number" id="edn-' + idx + '-' + campo + '" value="' + (emp[campo]||0) + '" step="1" style="width:100%;border:1px solid var(--borde);border-radius:6px;padding:5px;font-size:11px;" oninput="recalcEdicionNomina(' + idx + ')"></div>';
+      }).join('') +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--suave);margin-top:6px;" id="edn-neto-' + idx + '">Neto: $' + fmtNumero(emp.netoAPagar||0) + ' · Efectivo: $' + fmtNumero(emp.efectivoViri||0) + '</div>' +
+    '</div>';
+  }).join('');
+
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:1px;margin-bottom:4px;">✏️ EDITAR NÓMINA — ' + nom.semana + '</div>' +
+      '<div style="font-size:11px;color:var(--suave);margin-bottom:14px;">Los cambios quedan registrados en el historial de auditoría.</div>' +
+      filas +
+      '<div style="display:flex;gap:8px;margin-top:10px;">' +
+        '<button class="btn btn-naranja" style="flex:1;" onclick="guardarEdicionNomina()">Guardar cambios</button>' +
+        '<button class="btn btn-gris" style="flex:1;" onclick="document.getElementById(\'modal-editar-nomina\').remove()">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+}
+
+function calcularNetoEmpleadoEditado(emp) {
+  var totalDesc = (parseFloat(emp.descuentoFaltas)||0) + (parseFloat(emp.prestamoSemanal)||0) + (parseFloat(emp.prestamoFijo)||0) + (parseFloat(emp.cajaAhorro)||0) + (parseFloat(emp.otrosDescuentos)||0);
+  var neto = (emp.sueldoSemanal||0) - totalDesc + (parseFloat(emp.bonos)||0);
+  var transferencia = parseFloat(emp.pagoTransferencia)||0;
+  var efectivo = emp.imss ? (neto - (emp.montoIMSS||0) - transferencia) : (neto - transferencia);
+  if(efectivo < 0) efectivo = 0;
+  return { totalDesc: totalDesc, neto: neto, efectivo: efectivo, transferencia: transferencia };
+}
+
+function recalcEdicionNomina(idx) {
+  var modal = document.getElementById('modal-editar-nomina');
+  var docId = modal.dataset.docId;
+  var nom = historialNominaCache.find(function(x){ return x._docId === docId; });
+  var emp = Object.assign({}, nom.empleados[idx]);
+  CAMPOS_EDITABLES_NOMINA.forEach(function(campo) {
+    var el = document.getElementById('edn-' + idx + '-' + campo);
+    if(el) emp[campo] = parseFloat(el.value) || 0;
+  });
+  var r = calcularNetoEmpleadoEditado(emp);
+  document.getElementById('edn-neto-' + idx).textContent = 'Neto: $' + fmtNumero(r.neto) + ' · Efectivo: $' + fmtNumero(r.efectivo);
+}
+
+function guardarEdicionNomina() {
+  if(!puedeEditarNomina()) { showToast('⚠️ Sin permisos'); return; }
+  var modal = document.getElementById('modal-editar-nomina');
+  var docId = modal.dataset.docId;
+  var original = JSON.parse(modal.dataset.original);
+  var nom = historialNominaCache.find(function(x){ return x._docId === docId; });
+  if(!nom || !db) return;
+
+  var editor = currentUser ? currentUser.name : 'Desconocido';
+  var ahora = Date.now();
+  var auditoria = [];
+  var totalNomina = 0, totalIMSS = 0, totalEfectivo = 0, totalTransferencia = 0;
+
+  var empleadosNuevos = nom.empleados.map(function(emp, idx) {
+    var actualizado = Object.assign({}, emp);
+    CAMPOS_EDITABLES_NOMINA.forEach(function(campo) {
+      var el = document.getElementById('edn-' + idx + '-' + campo);
+      var valorNuevo = el ? (parseFloat(el.value) || 0) : (emp[campo] || 0);
+      var valorAnterior = original[idx][campo] || 0;
+      if(valorNuevo !== valorAnterior) {
+        auditoria.push({
+          empleado: emp.nombre, campo: campo, valorAnterior: valorAnterior, valorNuevo: valorNuevo,
+          editadoPor: editor, fecha: fechaISOLocal(), timestamp: ahora
+        });
+      }
+      actualizado[campo] = valorNuevo;
+    });
+    var r = calcularNetoEmpleadoEditado(actualizado);
+    actualizado.totalDescuentos = r.totalDesc;
+    actualizado.netoAPagar = r.neto;
+    actualizado.efectivoViri = r.efectivo;
+    totalNomina += r.neto;
+    totalIMSS += actualizado.montoIMSS || 0;
+    totalEfectivo += r.efectivo;
+    totalTransferencia += r.transferencia;
+    return actualizado;
+  });
+
+  if(!auditoria.length) { showToast('Sin cambios que guardar'); modal.remove(); return; }
+
+  var docRef = db.collection('nomina_semanas').doc(docId);
+  docRef.update({
+    empleados: empleadosNuevos,
+    totalNomina: totalNomina, totalIMSS: totalIMSS, totalEfectivo: totalEfectivo, totalTransferencia: totalTransferencia
+  }).then(function(){
+    var batch = db.batch();
+    auditoria.forEach(function(a){
+      batch.set(docRef.collection('historial_ediciones').doc(), a);
+    });
+    return batch.commit();
+  }).then(function(){
+    Object.assign(nom, { empleados: empleadosNuevos, totalNomina: totalNomina, totalIMSS: totalIMSS, totalEfectivo: totalEfectivo, totalTransferencia: totalTransferencia });
+    showToast('✅ Nómina actualizada (' + auditoria.length + ' cambio' + (auditoria.length>1?'s':'') + ')');
+    modal.remove();
+    renderHistorialNomina();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar cambios'); });
 }
 
 function fmtNumero(n) {
