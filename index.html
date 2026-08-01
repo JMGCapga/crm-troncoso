@@ -1462,17 +1462,25 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         </div>
 
         <div class="card">
-          <div class="card-title">🔧 Registrar trabajo realizado</div>
+          <div class="card-title">🔧 Registrar gasto</div>
           <div class="field">
+            <label>
+              <input type="checkbox" id="flota-gasto-general" onchange="flotaToggleGastoGeneral()">
+              ¿Aplica a todas las unidades?
+            </label>
+          </div>
+          <div class="field" id="flota-gasto-unidad-field">
             <label>Unidad</label>
             <select class="flota-unidad-select" id="flota-mec-unidad"></select>
           </div>
           <div class="field">
-            <label>Tipo</label>
+            <label>Categoría</label>
             <select id="flota-mec-tipo">
-              <option value="preventivo">Preventivo</option>
-              <option value="correctivo">Correctivo</option>
-              <option value="llantas">Llantas</option>
+              <option value="talacha">Talacha</option>
+              <option value="refaccion">Refacción</option>
+              <option value="llanta">Llanta</option>
+              <option value="servicio">Servicio</option>
+              <option value="insumo_operativo">Insumo operativo</option>
               <option value="otro">Otro</option>
             </select>
           </div>
@@ -1488,7 +1496,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <label>Fecha</label>
             <input type="date" id="flota-mec-fecha">
           </div>
-          <button class="btn btn-naranja" onclick="guardarTrabajoMecanico()">💾 Registrar trabajo</button>
+          <button class="btn btn-naranja" onclick="guardarTrabajoMecanico()">💾 Registrar gasto</button>
         </div>
 
         <div class="card">
@@ -1535,6 +1543,11 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         </div>
 
         <div id="flota-admin-unidades" style="display:grid;grid-template-columns:1fr;gap:12px;"></div>
+
+        <div class="card">
+          <div class="card-title">🔧 Gastos generales de flota</div>
+          <div id="flota-admin-gastos-generales" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;overflow-x:auto;"></div>
+        </div>
       </div>
 
     </div>
@@ -9488,19 +9501,36 @@ function resolverDanioFlota(docId){
   }).catch(function(e){ console.log(e); showToast('⚠️ Error'); });
 }
 
+function flotaToggleGastoGeneral(){
+  var esGeneral = document.getElementById('flota-gasto-general').checked;
+  document.getElementById('flota-gasto-unidad-field').style.display = esGeneral ? 'none' : 'block';
+}
+
 function guardarTrabajoMecanico(){
-  var unidad = document.getElementById('flota-mec-unidad').value;
+  if(!currentUser || (currentUser.role !== 'Director' && currentUser.role !== 'Gerencia')){ showToast('⚠️ No tienes permiso para registrar gastos'); return; }
   var tipo = document.getElementById('flota-mec-tipo').value;
   var descripcion = document.getElementById('flota-mec-desc').value.trim();
   var costo = parseFloat(document.getElementById('flota-mec-costo').value||0);
   var fecha = document.getElementById('flota-mec-fecha').value || fechaISOLocal();
-  if(!unidad || !descripcion){ showToast('⚠️ Selecciona unidad y describe el trabajo'); return; }
-  var trabajo = { unidad: unidad, tipo: tipo, descripcion: descripcion, costo: costo, fecha: fecha, timestamp: Date.now(), registradoPor: currentUser ? currentUser.name : '' };
+  var esGeneral = document.getElementById('flota-gasto-general').checked;
+  var unidad = document.getElementById('flota-mec-unidad').value;
+  if(!descripcion || !costo){ showToast('⚠️ Describe el gasto e ingresa el monto'); return; }
+  if(!esGeneral && !unidad){ showToast('⚠️ Selecciona unidad o marca "Aplica a todas las unidades"'); return; }
+  var trabajo = { tipo: tipo, descripcion: descripcion, costo: costo, fecha: fecha, timestamp: Date.now(), registradoPor: currentUser ? currentUser.name : '' };
+  if(esGeneral){
+    trabajo.unidadId = 'general';
+    trabajo.unidadNombre = 'Flota general';
+  } else {
+    trabajo.unidad = unidad;
+    trabajo.unidadId = unidad;
+  }
   db.collection('mantenimiento').add(trabajo).then(function(){
-    showToast('✅ Trabajo registrado');
+    showToast('✅ Gasto registrado');
     document.getElementById('flota-mec-desc').value = '';
     document.getElementById('flota-mec-costo').value = '';
-  }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar trabajo'); });
+    document.getElementById('flota-gasto-general').checked = false;
+    flotaToggleGastoGeneral();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar gasto'); });
 }
 
 function guardarProximoServicioFlota(){
@@ -9537,6 +9567,9 @@ function renderFlotaAdmin(){
     gasolinasAll.forEach(function(g){ var f = g.fecha||''; if(f>=lunes && f<=hoyStr) gastoGas += g.monto||0; });
     mantAll.forEach(function(m){ var f = m.fecha||''; if(f>=lunes && f<=hoyStr) gastoMant += m.costo||0; });
 
+    var gastoGeneralMes = 0;
+    mantAll.forEach(function(m){ if(m.unidadId==='general'){ var f=m.fecha||''; var mesActual=fechaISOLocal().substring(0,7); if(f.substring(0,7)===mesActual) gastoGeneralMes += m.costo||0; } });
+
     document.getElementById('flota-admin-resumen').innerHTML =
       '<div style="background:#F5F2EE;border-radius:10px;padding:14px;"><div style="font-size:11px;color:var(--suave);font-weight:700;text-transform:uppercase;">Unidades</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;">'+unidadesCache.length+'</div></div>'
       + '<div style="background:#F5F2EE;border-radius:10px;padding:14px;"><div style="font-size:11px;color:var(--suave);font-weight:700;text-transform:uppercase;">En ruta hoy</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;">'+enRuta+'</div></div>'
@@ -9545,6 +9578,7 @@ function renderFlotaAdmin(){
 
     renderAlertasFlotaAdmin(daniosPend);
     renderUnidadesAdminCards(daniosPend);
+    renderGastosGeneralesFlota(mantAll);
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al cargar Flota'); });
 }
 
@@ -9570,6 +9604,20 @@ function renderAlertasFlotaAdmin(daniosPend){
   var cont = document.getElementById('flota-admin-alertas');
   if(!alertas.length){ cont.innerHTML = ''; return; }
   cont.innerHTML = '<div style="margin-top:10px;">' + alertas.map(function(a){ return '<div style="background:#FEF3C7;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:6px;">'+a+'</div>'; }).join('') + '</div>';
+}
+
+function renderGastosGeneralesFlota(mantAll){
+  var gastosGen = mantAll.filter(function(m){ return m.unidadId === 'general'; });
+  var cont = document.getElementById('flota-admin-gastos-generales');
+  if(!gastosGen.length){ cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:12px;">Sin gastos generales registrados</div>'; return; }
+  var mesActual = fechaISOLocal().substring(0,7);
+  var totaMes = 0;
+  gastosGen.forEach(function(g){ if((g.fecha||'').substring(0,7) === mesActual) totaMes += g.costo||0; });
+  var rows = gastosGen.map(function(g){
+    var tipo = g.tipo||''; var cat = tipo==='talacha'?'Talacha':tipo==='refaccion'?'Refacción':tipo==='llanta'?'Llanta':tipo==='servicio'?'Servicio':tipo==='insumo_operativo'?'Insumo operativo':'Otro';
+    return '<tr><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);">'+g.fecha+'</td><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);">'+cat+'</td><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);">'+g.descripcion+'</td><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);text-align:right;">'+fmtMoney(g.costo||0)+'</td></tr>';
+  }).join('');
+  cont.innerHTML = '<table style="width:100%;border-collapse:collapse;"><thead><tr><th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Fecha</th><th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Categoría</th><th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Descripción</th><th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Monto</th></tr></thead><tbody>'+rows+'</tbody></table><div style="padding:12px;background:#F5F2EE;border-radius:0 0 10px 10px;text-align:right;font-size:13px;font-weight:700;">Total mes '+mesActual+': '+fmtMoney(totaMes)+'</div>';
 }
 
 function calcBadgeUnidadFlota(u, daniosUnidad){
