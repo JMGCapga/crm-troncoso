@@ -6868,8 +6868,11 @@ function guardarNominaBorrador() {
   }
 }
 
+var procesandoNomina = false;
 function procesarNomina() {
   if(!nominaActual || !db) { showToast('⚠️ Sin conexión'); return; }
+  if(procesandoNomina) return;
+  procesandoNomina = true;
 
   db.collection('nomina_semanas').where('semana', '==', nominaActual.semana).get().then(function(snap) {
     var yaProcesada = snap.docs.find(function(doc) {
@@ -6879,14 +6882,15 @@ function procesarNomina() {
       var d = yaProcesada.data();
       var fecha = new Date(d.timestamp || 0).toLocaleDateString('es-MX');
       alert('⚠️ La nómina de la semana ' + (d.semanaNum || nominaActual.semanaNum || nominaActual.semana) + ' ya fue procesada el ' + fecha + '.\nSi necesitas corregirla, usa el botón Editar en el historial.');
+      procesandoNomina = false;
       return;
     }
     continuarProcesarNomina();
-  }).catch(function(e) { console.log(e); showToast('⚠️ Error al verificar nómina'); });
+  }).catch(function(e) { console.log(e); showToast('⚠️ Error al verificar nómina'); procesandoNomina = false; });
 }
 
 function continuarProcesarNomina() {
-  if(!confirm('¿Procesar y cerrar la nómina de la semana '+nominaActual.semana+'? Esta acción registra el pago y descuenta los préstamos activos.')) return;
+  if(!confirm('¿Procesar y cerrar la nómina de la semana '+nominaActual.semana+'? Esta acción registra el pago y descuenta los préstamos activos.')) { procesandoNomina = false; return; }
 
   nominaActual.status = 'procesada';
   nominaActual.timestamp = Date.now();
@@ -6932,10 +6936,11 @@ function continuarProcesarNomina() {
         });
 
         showToast('✅ Nómina procesada');
+        procesandoNomina = false;
         setTimeout(function() { cargarNominaDeEstaSemana(); }, 800);
-      }).catch(function(e) { console.log(e); showToast('⚠️ Error al crear salida'); });
+      }).catch(function(e) { console.log(e); showToast('⚠️ Error al crear salida'); procesandoNomina = false; });
     })
-    .catch(function(e) { console.log(e); showToast('⚠️ Error al procesar'); });
+    .catch(function(e) { console.log(e); showToast('⚠️ Error al procesar'); procesandoNomina = false; });
 }
 
 function cargarPrestamos() {
