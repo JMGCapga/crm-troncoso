@@ -1557,8 +1557,9 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-bottom:16px;">
             <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;">👥 Configuración de Empleados</div>
             <div style="font-size:12px;color:var(--suave);margin-bottom:12px;">Define los sueldos semanales y datos de IMSS de cada empleado</div>
+            <button class="btn btn-naranja" onclick="abrirNuevoEmpleado()" style="width:100%;margin-bottom:12px;font-size:12px;">+ Nuevo Empleado</button>
             <table class="prod-tabla" style="font-size:11px;">
-              <thead><tr><th>Nombre</th><th>¿IMSS?</th><th>Sueldo</th><th>IMSS</th><th>Caja Ahorro</th><th>Prest. Fijo</th><th>Días/Sem</th><th></th></tr></thead>
+              <thead><tr><th>Nombre</th><th>¿IMSS?</th><th>Sueldo</th><th>IMSS</th><th>Caja Ahorro</th><th>Desc. Fijo</th><th>Días/Sem</th><th></th></tr></thead>
               <tbody id="nom-empleados-table"></tbody>
             </table>
             <button class="btn btn-naranja" onclick="guardarConfigEmpleados()" style="width:100%;margin-top:12px;font-size:13px;padding:12px;">💾 Guardar Configuración</button>
@@ -1595,10 +1596,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
               </div>
             </div>
             <div id="nom-edicion-hint" style="display:none;background:#FFF6E5;border:1px solid #FFB84D;border-radius:6px;padding:8px 10px;font-size:11px;color:#8A5300;margin-bottom:10px;">
-              🔓 Modo edición activo: puedes ajustar manualmente <b>Desc. Faltas, Préstamo Semanal, Préstamo Fijo y Caja Ahorro</b> para reflejar negociaciones (cuando no se descuenta todo). Usa el ícono <b>↺</b> para regresar un valor a su cálculo/configuración automática.
+              🔓 Modo edición activo: puedes ajustar manualmente <b>Desc. Faltas, Préstamo Semanal, Descuento Fijo y Caja Ahorro</b> para reflejar negociaciones (cuando no se descuenta todo). Usa el ícono <b>↺</b> para regresar un valor a su cálculo/configuración automática.
             </div>
             <table class="prod-tabla" style="font-size:10px;">
-              <thead><tr><th>Empleado</th><th>Sueldo</th><th>Faltas</th><th>Desc. Faltas</th><th>Prest. Sem.</th><th>Prest. Fijo</th><th>Caja Ahorro</th><th>Otros Desc.</th><th>Bonos</th><th>Total Desc.</th><th>Neto</th><th>IMSS</th><th>Efectivo</th><th>Transferencia</th><th>Observ.</th></tr></thead>
+              <thead><tr><th>Empleado</th><th>Sueldo</th><th>Faltas</th><th>Desc. Faltas</th><th>Adelanto/Préstamo</th><th>Desc. Fijo</th><th>Caja Ahorro</th><th>Otros Desc.</th><th>Bonos</th><th>Total Desc.</th><th>Neto</th><th>IMSS</th><th>Efectivo</th><th>Transferencia</th><th>Observ.</th></tr></thead>
               <tbody id="nom-tabla-empleados"></tbody>
             </table>
 
@@ -1636,18 +1637,25 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <div id="nom-form-prestamo" style="display:none;background:#F5F2EE;border:1px solid #D8D0C8;border-radius:10px;padding:16px;margin-bottom:16px;">
             <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;margin-bottom:12px;">➕ Nuevo Préstamo</div>
             <div class="form-grid">
+              <div class="field" style="grid-column:1/-1;">
+                <label>Tipo</label>
+                <select id="nom-prestamo-tipo" onchange="cambiarTipoPrestamo()">
+                  <option value="adelanto">Adelanto de nómina (se descuenta completo esta semana)</option>
+                  <option value="fijo">Préstamo fijo (cuotas semanales hasta liquidar)</option>
+                </select>
+              </div>
               <div class="field">
                 <label>Empleado</label>
                 <select id="nom-prestamo-empleado">
                   <option value="">Selecciona empleado...</option>
                 </select>
               </div>
-              <div class="field">
-                <label>Monto Total</label>
-                <input type="number" id="nom-prestamo-monto" placeholder="1000" min="100" step="100">
+              <div class="field" id="nom-prestamo-monto-wrap">
+                <label id="nom-prestamo-monto-label">Monto</label>
+                <input type="number" id="nom-prestamo-monto" placeholder="1000" min="100" step="100" oninput="sincronizarAdelanto()">
               </div>
-              <div class="field">
-                <label>Monto Semanal</label>
+              <div class="field" id="nom-prestamo-semanal-wrap">
+                <label>Cuota Semanal</label>
                 <input type="number" id="nom-prestamo-semanal" placeholder="200" min="50" step="50">
               </div>
               <div class="field" style="grid-column:1/-1;">
@@ -6327,7 +6335,7 @@ function renderEmpleadosTable() {
       '<td><input type="number" id="emp-sueldo-'+emp.id+'" value="'+(emp.sueldoSemanal||0)+'" min="0" step="100" style="width:80px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'sueldo\',this.value)"></td>'+
       '<td><input type="number" id="emp-imss-monto-'+emp.id+'" value="'+(emp.montoIMSS||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'montoIMSS\',this.value)" '+(emp.imss?'':'disabled')+'"></td>'+
       '<td><input type="number" id="emp-caja-'+emp.id+'" value="'+(emp.cajaAhorro||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'cajaAhorro\',this.value)" title="Descuento semanal caja de ahorro"></td>'+
-      '<td><input type="number" id="emp-prestfijo-'+emp.id+'" value="'+(emp.prestamoFijo||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'prestamoFijo\',this.value)" title="Préstamo fijo semanal"></td>'+
+      '<td><input type="number" id="emp-prestfijo-'+emp.id+'" value="'+(emp.prestamoFijo||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'prestamoFijo\',this.value)" title="Descuento fijo semanal"></td>'+
       '<td><input type="number" id="emp-dias-'+emp.id+'" value="'+(emp.diasSemana||7)+'" min="1" max="7" style="width:50px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'diasSemana\',this.value)"></td>'+
       '<td><button class="btn btn-gris" onclick="eliminaEmpleado(\''+emp.id+'\')" style="padding:3px 6px;font-size:9px;">🗑</button></td>';
     tbody.appendChild(tr);
@@ -6361,6 +6369,73 @@ function eliminaEmpleado(empId) {
     showToast('✓ Empleado eliminado');
     cargarEmpleados();
   }).catch(function(e) { console.log(e); });
+}
+
+// ════ Alta de empleado (solo Director/Gerencia) ════
+function abrirNuevoEmpleado() {
+  if(!puedeEditarNomina()) { showToast('⚠️ Sin permisos'); return; }
+  var existente = document.getElementById('modal-nuevo-empleado');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-nuevo-empleado';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:1px;margin-bottom:14px;">👤 NUEVO EMPLEADO</div>' +
+      '<div class="field" style="margin-bottom:10px;"><label>Nombre completo</label><input type="text" id="ne-nombre"></div>' +
+      '<div class="field" style="margin-bottom:10px;"><label>Rol</label><select id="ne-rol">' +
+        '<option value="Ventas">Ventas</option><option value="Compras">Compras</option><option value="Operador">Operador</option><option value="Gerencia">Gerencia</option>' +
+      '</select></div>' +
+      '<div class="field" style="margin-bottom:10px;"><label>Teléfono</label><input type="text" id="ne-telefono" placeholder="55XXXXXXXX"></div>' +
+      '<div class="field" style="margin-bottom:10px;"><label>Sueldo base semanal</label><input type="number" id="ne-sueldo" value="0" min="0" step="50"></div>' +
+      '<div class="field" style="margin-bottom:10px;"><label>IMSS (monto semanal)</label><input type="number" id="ne-imss" value="0" min="0" step="10"></div>' +
+      '<div class="field" style="margin-bottom:10px;"><label>Caja de ahorro semanal</label><input type="number" id="ne-caja" value="0" min="0" step="10"></div>' +
+      '<div class="field" style="margin-bottom:14px;"><label>PIN de acceso al CRM (4 dígitos — de referencia, aún no habilita el login)</label><input type="text" id="ne-pin" maxlength="4" placeholder="0000"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button class="btn btn-naranja" style="flex:1;" onclick="guardarNuevoEmpleado()">Guardar empleado</button>' +
+        '<button class="btn btn-gris" style="flex:1;" onclick="document.getElementById(\'modal-nuevo-empleado\').remove()">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+}
+
+function guardarNuevoEmpleado() {
+  if(!puedeEditarNomina()) { showToast('⚠️ Sin permisos'); return; }
+  var nombre = document.getElementById('ne-nombre').value.trim();
+  var rol = document.getElementById('ne-rol').value;
+  var telefono = document.getElementById('ne-telefono').value.trim();
+  var sueldo = parseInt(document.getElementById('ne-sueldo').value) || 0;
+  var montoIMSS = parseInt(document.getElementById('ne-imss').value) || 0;
+  var caja = parseInt(document.getElementById('ne-caja').value) || 0;
+  var pin = document.getElementById('ne-pin').value.trim();
+
+  if(!nombre) { showToast('⚠️ Ingresa el nombre'); return; }
+  if(pin && !/^\d{4}$/.test(pin)) { showToast('⚠️ El PIN debe ser de 4 dígitos'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+
+  function crear() {
+    db.collection('empleados').add({
+      nombre: nombre, rol: rol, telefono: telefono,
+      sueldoSemanal: sueldo, imss: montoIMSS > 0, montoIMSS: montoIMSS,
+      cajaAhorro: caja, prestamoFijo: 0, diasSemana: 7,
+      pin: pin || null, activo: true, timestamp: Date.now()
+    }).then(function(){
+      showToast('✅ Empleado ' + nombre + ' agregado');
+      var modal = document.getElementById('modal-nuevo-empleado');
+      if(modal) modal.remove();
+      cargarEmpleados();
+    }).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar'); });
+  }
+
+  if(pin) {
+    if(Object.prototype.hasOwnProperty.call(USERS, pin)) { showToast('⚠️ Ese PIN ya está en uso'); return; }
+    db.collection('empleados').where('pin', '==', pin).get().then(function(snap){
+      if(!snap.empty) { showToast('⚠️ Ese PIN ya está asignado a otro empleado'); return; }
+      crear();
+    }).catch(function(e){ console.log(e); showToast('⚠️ Error al validar PIN'); });
+  } else {
+    crear();
+  }
 }
 
 function guardarConfigEmpleados() {
@@ -6493,10 +6568,18 @@ function resincronizarEmpleadosNomina() {
   });
 }
 
+function parsearSemanaISO(semana) {
+  var partes = (semana || '').split('-W');
+  return { anio: parseInt(partes[0]) || 0, semanaNum: parseInt(partes[1]) || 0 };
+}
+
 function crearNominaNueva() {
   var semana = semanaISO();
+  var partesSemana = parsearSemanaISO(semana);
   nominaActual = {
     semana: semana,
+    anio: partesSemana.anio,
+    semanaNum: partesSemana.semanaNum,
     fechaInicio: lunesDeEstaSemana(),
     fechaSabado: sabadoDeEstaSemana(),
     timestamp: Date.now(),
@@ -6741,7 +6824,7 @@ function imprimirNomina() {
     '<h1>Materiales Troncoso — Nómina Semanal</h1>'+
     '<div class="sub">Semana '+nominaActual.semana+' &nbsp;|&nbsp; Del '+nominaActual.fechaInicio+' al '+nominaActual.fechaSabado+' &nbsp;|&nbsp; Generado: '+new Date().toLocaleDateString('es-MX')+'</div>'+
     '<table><thead><tr>'+
-    '<th>Empleado</th><th>Sueldo</th><th>Faltas</th><th>Desc.Faltas</th><th>Prést.Sem.</th><th>Prést.Fijo</th><th>Caja Ahorro</th><th>Otros Desc.</th><th>Bonos</th><th>Total Desc.</th><th>Neto</th><th>IMSS</th><th>Efectivo</th><th>Transferencia</th><th>Observaciones</th><th>Firma</th>'+
+    '<th>Empleado</th><th>Sueldo</th><th>Faltas</th><th>Desc.Faltas</th><th>Adelanto/Préstamo</th><th>Desc.Fijo</th><th>Caja Ahorro</th><th>Otros Desc.</th><th>Bonos</th><th>Total Desc.</th><th>Neto</th><th>IMSS</th><th>Efectivo</th><th>Transferencia</th><th>Observaciones</th><th>Firma</th>'+
     '</tr></thead><tbody>'+filas+'</tbody></table>'+
     '<div class="totales">'+
       '<div>Total Nómina: $'+fmtNumero(nominaActual.totalNomina||0)+'</div>'+
@@ -6787,6 +6870,22 @@ function guardarNominaBorrador() {
 
 function procesarNomina() {
   if(!nominaActual || !db) { showToast('⚠️ Sin conexión'); return; }
+
+  db.collection('nomina_semanas').where('semana', '==', nominaActual.semana).get().then(function(snap) {
+    var yaProcesada = snap.docs.find(function(doc) {
+      return doc.id !== nominaActual.id && doc.data().status === 'procesada';
+    });
+    if(yaProcesada) {
+      var d = yaProcesada.data();
+      var fecha = new Date(d.timestamp || 0).toLocaleDateString('es-MX');
+      alert('⚠️ La nómina de la semana ' + (d.semanaNum || nominaActual.semanaNum || nominaActual.semana) + ' ya fue procesada el ' + fecha + '.\nSi necesitas corregirla, usa el botón Editar en el historial.');
+      return;
+    }
+    continuarProcesarNomina();
+  }).catch(function(e) { console.log(e); showToast('⚠️ Error al verificar nómina'); });
+}
+
+function continuarProcesarNomina() {
   if(!confirm('¿Procesar y cerrar la nómina de la semana '+nominaActual.semana+'? Esta acción registra el pago y descuenta los préstamos activos.')) return;
 
   nominaActual.status = 'procesada';
@@ -6860,6 +6959,8 @@ function cargarPrestamos() {
   }).catch(function(e) { console.log(e); });
 }
 
+var LABEL_TIPO_PRESTAMO = { adelanto: '⚡ Adelanto de nómina', fijo: '📅 Préstamo fijo' };
+
 function renderPrestamosLista() {
   var div = document.getElementById('nom-prestamos-lista');
   if(prestamosActivos.length === 0) {
@@ -6869,21 +6970,27 @@ function renderPrestamosLista() {
 
   div.innerHTML = '';
   prestamosActivos.forEach(function(prest) {
+    var tipo = prest.tipo || 'fijo';
     var item = document.createElement('div');
     item.style.cssText = 'padding:12px;border-bottom:1px solid #f0f0f0;';
     var porcentaje = (100 - (prest.saldoPendiente / prest.montoTotal * 100)).toFixed(0);
+    var adelantarBtn = tipo === 'fijo'
+      ? '<button class="btn btn-gris" onclick="abrirAdelantarPrestamo(\''+prest.id+'\')" style="margin-top:8px;padding:5px 10px;font-size:10px;">⏩ Adelantar pagos</button>' : '';
     item.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:baseline;"><div style="font-weight:700;">'+prest.empleado+'</div><div style="font-size:12px;color:var(--suave);">'+porcentaje+'% pagado</div></div>'+
+      '<div style="font-size:10px;color:var(--naranja);font-weight:700;margin-top:2px;">'+(LABEL_TIPO_PRESTAMO[tipo]||tipo)+'</div>'+
       '<div style="font-size:12px;color:#666;margin:6px 0;">Saldo: $'+fmtNumero(prest.saldoPendiente)+' de $'+fmtNumero(prest.montoTotal)+'</div>'+
       '<div style="background:#F0F0F0;height:6px;border-radius:3px;overflow:hidden;margin:6px 0;"><div style="background:var(--naranja);height:100%;width:'+porcentaje+'%;"></div></div>'+
       '<div style="font-size:11px;color:var(--suave);">Descuento semanal: $'+fmtNumero(prest.montoSemanal)+'</div>'+
-      '<button class="btn btn-gris" onclick="liquidarPrestamo(\''+prest.id+'\')" style="margin-top:8px;padding:5px 10px;font-size:10px;">✓ Liquidar</button>';
+      '<button class="btn btn-gris" onclick="liquidarPrestamo(\''+prest.id+'\')" style="margin-top:8px;padding:5px 10px;font-size:10px;">✓ Liquidar</button>' + adelantarBtn;
     div.appendChild(item);
   });
 }
 
 function abrirFormularioPrestamo() {
   document.getElementById('nom-form-prestamo').style.display = 'block';
+  document.getElementById('nom-prestamo-tipo').value = 'adelanto';
+  cambiarTipoPrestamo();
 }
 
 function cerrarFormularioPrestamo() {
@@ -6891,6 +6998,26 @@ function cerrarFormularioPrestamo() {
   ['nom-prestamo-empleado','nom-prestamo-monto','nom-prestamo-semanal','nom-prestamo-notas'].forEach(function(id) {
     var el = document.getElementById(id); if(el) el.value = '';
   });
+}
+
+function cambiarTipoPrestamo() {
+  var tipo = document.getElementById('nom-prestamo-tipo').value;
+  var semanalWrap = document.getElementById('nom-prestamo-semanal-wrap');
+  var montoLabel = document.getElementById('nom-prestamo-monto-label');
+  if(tipo === 'adelanto') {
+    semanalWrap.style.display = 'none';
+    montoLabel.textContent = 'Monto (se descuenta completo esta semana)';
+    sincronizarAdelanto();
+  } else {
+    semanalWrap.style.display = 'block';
+    montoLabel.textContent = 'Monto Total';
+  }
+}
+
+function sincronizarAdelanto() {
+  if(document.getElementById('nom-prestamo-tipo').value === 'adelanto') {
+    document.getElementById('nom-prestamo-semanal').value = document.getElementById('nom-prestamo-monto').value;
+  }
 }
 
 function rellenarSelectPrestamo() {
@@ -6905,9 +7032,10 @@ function rellenarSelectPrestamo() {
 }
 
 function guardarPrestamo() {
+  var tipo = document.getElementById('nom-prestamo-tipo').value;
   var empleado = document.getElementById('nom-prestamo-empleado').value;
   var monto = parseInt(document.getElementById('nom-prestamo-monto').value) || 0;
-  var semanal = parseInt(document.getElementById('nom-prestamo-semanal').value) || 0;
+  var semanal = tipo === 'adelanto' ? monto : (parseInt(document.getElementById('nom-prestamo-semanal').value) || 0);
   var notas = document.getElementById('nom-prestamo-notas').value;
 
   if(!empleado || !monto || !semanal) { showToast('⚠️ Completa los campos'); return; }
@@ -6915,6 +7043,7 @@ function guardarPrestamo() {
 
   var prest = {
     empleado: empleado,
+    tipo: tipo,
     montoTotal: monto,
     montoSemanal: semanal,
     saldoPendiente: monto,
@@ -6940,6 +7069,81 @@ function liquidarPrestamo(prestamoId) {
   db.collection('prestamos').doc(prestamoId).update({ activo: false })
     .then(function() { showToast('✓ Préstamo liquidado'); cargarPrestamos(); })
     .catch(function(e) { console.log(e); });
+}
+
+// ════ Adelantar pagos de un préstamo fijo ════
+function abrirAdelantarPrestamo(prestamoId) {
+  var prest = prestamosActivos.find(function(p){ return p.id === prestamoId; });
+  if(!prest) return;
+  var existente = document.getElementById('modal-adelantar-prestamo');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-adelantar-prestamo';
+  modal.dataset.prestamoId = prestamoId;
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:380px;width:100%;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:1px;">⏩ ADELANTAR PAGOS</div>' +
+      '<div style="font-size:12px;color:var(--suave);margin-bottom:14px;">' + prest.empleado + ' · Saldo actual: $' + fmtNumero(prest.saldoPendiente) + ' · Cuota: $' + fmtNumero(prest.montoSemanal) + '/semana</div>' +
+      '<div class="field" style="margin-bottom:10px;"><label>¿Cuántas semanas quieres adelantar?</label>' +
+        '<input type="number" id="adp-semanas" min="1" step="1" value="1" oninput="calcularAdelantoPrestamo()" style="width:100%;border:1.5px solid var(--borde);border-radius:8px;padding:10px 12px;"></div>' +
+      '<div id="adp-preview" style="font-size:12px;color:var(--suave);margin-bottom:14px;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button class="btn btn-naranja" style="flex:1;" onclick="guardarAdelantoPrestamo()">Adelantar</button>' +
+        '<button class="btn btn-gris" style="flex:1;" onclick="document.getElementById(\'modal-adelantar-prestamo\').remove()">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  calcularAdelantoPrestamo();
+}
+
+function calcularMontoAdelanto(prest, semanas) {
+  var semanasRestantes = Math.ceil(prest.saldoPendiente / prest.montoSemanal);
+  var semanasReales = Math.min(semanas, semanasRestantes);
+  var monto = Math.min(semanasReales * prest.montoSemanal, prest.saldoPendiente);
+  return { semanasReales: semanasReales, semanasRestantes: semanasRestantes, monto: monto, nuevoSaldo: prest.saldoPendiente - monto, excedio: semanas > semanasRestantes };
+}
+
+function calcularAdelantoPrestamo() {
+  var modal = document.getElementById('modal-adelantar-prestamo');
+  var prest = prestamosActivos.find(function(p){ return p.id === modal.dataset.prestamoId; });
+  var semanas = parseInt(document.getElementById('adp-semanas').value) || 0;
+  var preview = document.getElementById('adp-preview');
+  if(!prest || semanas <= 0) { preview.textContent = ''; return; }
+  var r = calcularMontoAdelanto(prest, semanas);
+  var txt = '';
+  if(r.excedio) txt += '⚠️ Solo quedan ' + r.semanasRestantes + ' semanas pendientes, se adelantarán $' + fmtNumero(r.monto) + '. ';
+  txt += 'Nuevo saldo: $' + fmtNumero(r.nuevoSaldo);
+  preview.innerHTML = txt;
+}
+
+function guardarAdelantoPrestamo() {
+  if(!puedeEditarNomina()) { showToast('⚠️ Sin permisos'); return; }
+  var modal = document.getElementById('modal-adelantar-prestamo');
+  var prestamoId = modal.dataset.prestamoId;
+  var prest = prestamosActivos.find(function(p){ return p.id === prestamoId; });
+  if(!prest || !db) return;
+  var semanas = parseInt(document.getElementById('adp-semanas').value) || 0;
+  if(semanas <= 0) { showToast('⚠️ Ingresa un número de semanas válido'); return; }
+  var r = calcularMontoAdelanto(prest, semanas);
+
+  if(!confirm('¿Adelantar ' + r.semanasReales + ' semana' + (r.semanasReales>1?'s':'') + ' ($' + fmtNumero(r.monto) + ')? Nuevo saldo: $' + fmtNumero(r.nuevoSaldo))) return;
+
+  var movimiento = {
+    tipo: 'adelanto_manual', monto: r.monto, semanas: r.semanasReales,
+    usuario: currentUser ? currentUser.name : 'Desconocido', fecha: fechaISOLocal(), timestamp: Date.now()
+  };
+  var update = { saldoPendiente: r.nuevoSaldo };
+  if(r.nuevoSaldo <= 0) update.activo = false;
+
+  var docRef = db.collection('prestamos').doc(prestamoId);
+  docRef.update(update).then(function(){
+    return docRef.collection('historial').add(movimiento);
+  }).then(function(){
+    showToast('✅ Adelanto registrado — nuevo saldo $' + fmtNumero(r.nuevoSaldo));
+    modal.remove();
+    cargarPrestamos();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar adelanto'); });
 }
 
 // ════ HISTORIAL DE NÓMINA ════
@@ -7055,7 +7259,7 @@ function borrarNomina(docId) {
 // ════ Edición de nómina cerrada (Gerencia/Director) — recalcula y audita ════
 var CAMPOS_EDITABLES_NOMINA = ['descuentoFaltas', 'prestamoSemanal', 'prestamoFijo', 'cajaAhorro', 'otrosDescuentos', 'bonos', 'pagoTransferencia'];
 var LABEL_CAMPO_NOMINA = {
-  descuentoFaltas: 'Desc. faltas', prestamoSemanal: 'Préstamo sem.', prestamoFijo: 'Préstamo fijo',
+  descuentoFaltas: 'Desc. faltas', prestamoSemanal: 'Adelanto/Préstamo', prestamoFijo: 'Descuento fijo',
   cajaAhorro: 'Caja ahorro', otrosDescuentos: 'Otros desc.', bonos: 'Bonos', pagoTransferencia: 'Transferencia'
 };
 
