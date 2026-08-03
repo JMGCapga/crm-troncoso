@@ -225,7 +225,19 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <div class="cli-info">
             <div class="cli-info-item"><label>Teléfono</label><span id="det-tel"></span></div>
             <div class="cli-info-item"><label>ID Cliente</label><span id="det-id"></span></div>
-            <div class="cli-info-item" style="grid-column:1/-1"><label>Dirección</label><span id="det-dom"></span></div>
+          </div>
+          <div style="margin-top:10px;">
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--suave);margin-bottom:6px;">Direcciones de entrega</label>
+            <div id="det-direcciones"></div>
+            <button class="btn btn-gris" id="det-btn-agregar-dir" onclick="agregarDireccionCliente()" style="font-size:11px;padding:6px 12px;margin-top:6px;">+ Agregar dirección</button>
+          </div>
+          <div id="det-canal-wrap" style="margin-top:10px;display:none;">
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--suave);margin-bottom:6px;">Canal de precio</label>
+            <select id="det-canal" onchange="guardarCanalCliente()" style="width:100%;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-size:12px;">
+              <option value="publico">Público General</option>
+              <option value="obra">Obra</option>
+              <option value="reventa">Reventa</option>
+            </select>
           </div>
           <div class="cli-acciones">
             <button class="btn btn-naranja" onclick="nuevaCotizacionDesdeCliente()">+ Nueva Cotización</button>
@@ -255,6 +267,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
                 <button type="button" class="btn btn-naranja" onclick="guardarNuevoClienteCot()" style="flex:1;font-size:11px;padding:7px;">Guardar cliente</button>
                 <button type="button" class="btn btn-gris" onclick="toggleNuevoClienteCot()" style="flex:1;font-size:11px;padding:7px;">Cancelar</button>
               </div>
+            </div>
+            <div id="cot-direccion-wrap" style="display:none;margin-top:8px;">
+              <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--suave);margin-bottom:4px;">¿A cuál dirección se entrega?</label>
+              <select id="cot-direccion-select" onchange="seleccionarDireccionCot()" style="width:100%;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-size:12px;"></select>
             </div>
           </div>
           <div class="field">
@@ -1272,6 +1288,12 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         <div id="inv-permisos-tabla" style="overflow-x:auto;"></div>
         <button type="button" class="btn btn-naranja" style="width:100%;margin-top:10px;" onclick="guardarPanelPermisos()">Guardar permisos</button>
       </div>
+      <div class="card" id="inv-precios-volumen-panel" style="display:none;">
+        <div class="card-title">💰 Precios por volumen</div>
+        <div style="font-size:11px;color:var(--suave);margin-bottom:10px;">Agregados en costal — precio por costal según cantidad comprada. El descuento de canal reventa se aplica aparte, sobre estos precios.</div>
+        <div id="inv-precios-volumen-tabla" style="overflow-x:auto;"></div>
+        <button type="button" class="btn btn-naranja" style="width:100%;margin-top:10px;" onclick="guardarPreciosVolumenPanel()">Guardar precios</button>
+      </div>
     </div>
 
     <!-- ===== CUENTAS (POR COBRAR / POR PAGAR) ===== -->
@@ -1991,6 +2013,57 @@ const TERMINALES_SEED = [
 ];
 terminalesCache = TERMINALES_SEED.slice();
 
+// ════ PRECIOS POR VOLUMEN — 7 agregados en costal ════
+const PRECIOS_VOLUMEN_SEED = [
+  { clave:'200202', descripcion:'ARENA COSTAL',              escalas:[{desde:1,hasta:19,precio:50},{desde:20,hasta:9999,precio:35}] },
+  { clave:'200204', descripcion:'GRAVA BLANCA COSTAL',        escalas:[{desde:1,hasta:19,precio:70},{desde:20,hasta:9999,precio:47}] },
+  { clave:'200206', descripcion:'GRAVA LIGERA NEGRA COSTAL',  escalas:[{desde:1,hasta:19,precio:65},{desde:20,hasta:9999,precio:45}] },
+  { clave:'200208', descripcion:'GRANZÓN COSTAL',             escalas:[{desde:1,hasta:19,precio:70},{desde:20,hasta:9999,precio:50}] },
+  { clave:'200210', descripcion:'TEPETATE COSTAL',            escalas:[{desde:1,hasta:19,precio:35},{desde:20,hasta:9999,precio:33}] },
+  { clave:'200216', descripcion:'TEPOJAL COSTAL',             escalas:[{desde:1,hasta:19,precio:90},{desde:20,hasta:9999,precio:63}] },
+  { clave:'200218', descripcion:'TEZONTLE COSTAL',            escalas:[{desde:1,hasta:19,precio:70},{desde:20,hasta:9999,precio:55}] }
+];
+var precioVolumenCache = {};
+var precioVolumenCargado = false;
+var DESCUENTO_CANAL_REVENTA = 0.10;
+
+function cargarPreciosVolumen(cb) {
+  if(!db) { PRECIOS_VOLUMEN_SEED.forEach(function(p){ precioVolumenCache[p.clave] = p; }); precioVolumenCargado = true; if(cb) cb(); return; }
+  db.collection('precios_volumen').limit(1).get().then(function(snap){
+    if(snap.empty) {
+      var batch = db.batch();
+      PRECIOS_VOLUMEN_SEED.forEach(function(p){ batch.set(db.collection('precios_volumen').doc(p.clave), p); });
+      batch.commit().then(function(){
+        PRECIOS_VOLUMEN_SEED.forEach(function(p){ precioVolumenCache[p.clave] = p; });
+        precioVolumenCargado = true;
+        if(cb) cb();
+      });
+    } else {
+      db.collection('precios_volumen').get().then(function(snap2){
+        precioVolumenCache = {};
+        snap2.forEach(function(doc){ precioVolumenCache[doc.id] = doc.data(); });
+        precioVolumenCargado = true;
+        if(cb) cb();
+      });
+    }
+  }).catch(function(e){ console.log('Error cargando precios_volumen:', e); PRECIOS_VOLUMEN_SEED.forEach(function(p){ precioVolumenCache[p.clave] = p; }); precioVolumenCargado = true; if(cb) cb(); });
+}
+
+// Retorna null si el producto no tiene escalas configuradas (no se inventan precios)
+function getPrecioProducto(clave, cantidad, canal) {
+  var producto = precioVolumenCache[clave];
+  if(!producto || !producto.escalas || !producto.escalas.length) return null;
+  var cant = parseFloat(cantidad) || 0;
+  var escala = producto.escalas.find(function(e){ return cant >= e.desde && cant <= e.hasta; }) || producto.escalas[0];
+  var precioUnitario = escala.precio;
+  var descuentoCanal = 0;
+  if(canal === 'reventa') {
+    descuentoCanal = precioUnitario * DESCUENTO_CANAL_REVENTA;
+    precioUnitario = precioUnitario - descuentoCanal;
+  }
+  return { precioUnitario: precioUnitario, escalaAplicada: escala, descuentoCanal: descuentoCanal };
+}
+
 // ════ PEDIDOS — status badges ════
 const STATUS_PEDIDO = {
   confirmado: { label: '✅ Confirmado', color: '22C55E', bg: 'DCFCE7' },
@@ -2260,6 +2333,7 @@ function initApp(){
     cargarFondeos();
     cargarProductos();
     cargarPermisosRoles();
+  cargarPreciosVolumen();
     mostrarDashboardParaUsuario();
     mostrarFiscalParaUsuario();
     aplicarCandadoOperador();
@@ -2272,6 +2346,7 @@ function initApp(){
   cargarFondeos();
   cargarProductos();
   cargarPermisosRoles();
+  cargarPreciosVolumen();
   mostrarDashboardParaUsuario();
   mostrarFiscalParaUsuario();
   aplicarCandadoOperador();
@@ -2563,6 +2638,11 @@ function iniciarInventario() {
   if(panelPermisos) {
     if(puedeVerPanelPermisos()) { panelPermisos.style.display = ''; renderPanelPermisos(); }
     else panelPermisos.style.display = 'none';
+  }
+  var panelPreciosVol = document.getElementById('inv-precios-volumen-panel');
+  if(panelPreciosVol) {
+    if(puedeVerPanelPermisos()) { panelPreciosVol.style.display = ''; renderPreciosVolumenPanel(); }
+    else panelPreciosVol.style.display = 'none';
   }
 }
 
@@ -2950,6 +3030,56 @@ function guardarPanelPermisos() {
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar permisos'); });
 }
 
+// ════ Panel admin de precios por volumen (Director/Gerencia) ════
+function renderPreciosVolumenPanel() {
+  var cont = document.getElementById('inv-precios-volumen-tabla');
+  if(!cont) return;
+  var claves = Object.keys(precioVolumenCache).sort();
+  if(!claves.length) { cont.innerHTML = '<div style="padding:10px;color:var(--suave);font-size:12px;">Cargando...</div>'; return; }
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+  html += '<tr><th style="text-align:left;padding:6px;">Clave</th><th style="text-align:left;padding:6px;">Descripción</th><th style="padding:6px;">Precio 1-19</th><th style="padding:6px;">Desde (mayoreo)</th><th style="padding:6px;">Precio mayoreo</th></tr>';
+  claves.forEach(function(clave){
+    var p = precioVolumenCache[clave];
+    var e1 = (p.escalas && p.escalas[0]) || {desde:1,hasta:19,precio:0};
+    var e2 = (p.escalas && p.escalas[1]) || {desde:20,hasta:9999,precio:0};
+    html += '<tr>' +
+      '<td style="padding:6px;font-weight:700;">' + clave + '</td>' +
+      '<td style="padding:6px;">' + p.descripcion + '</td>' +
+      '<td style="padding:6px;text-align:center;"><input type="number" id="pv-' + clave + '-p1" value="' + e1.precio + '" step="1" style="width:70px;border:1px solid var(--borde);border-radius:6px;padding:4px;"></td>' +
+      '<td style="padding:6px;text-align:center;"><input type="number" id="pv-' + clave + '-desde2" value="' + e2.desde + '" step="1" style="width:60px;border:1px solid var(--borde);border-radius:6px;padding:4px;"></td>' +
+      '<td style="padding:6px;text-align:center;"><input type="number" id="pv-' + clave + '-p2" value="' + e2.precio + '" step="1" style="width:70px;border:1px solid var(--borde);border-radius:6px;padding:4px;"></td>' +
+    '</tr>';
+  });
+  html += '</table>';
+  cont.innerHTML = html;
+}
+
+function guardarPreciosVolumenPanel() {
+  if(!puedeVerPanelPermisos()) { showToast('⚠️ Sin permisos'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+  var claves = Object.keys(precioVolumenCache);
+  var batch = db.batch();
+  claves.forEach(function(clave){
+    var p1 = parseFloat(document.getElementById('pv-' + clave + '-p1').value) || 0;
+    var desde2 = parseFloat(document.getElementById('pv-' + clave + '-desde2').value) || 20;
+    var p2 = parseFloat(document.getElementById('pv-' + clave + '-p2').value) || 0;
+    var actualizado = {
+      clave: clave,
+      descripcion: precioVolumenCache[clave].descripcion,
+      escalas: [
+        { desde: 1, hasta: desde2 - 1, precio: p1 },
+        { desde: desde2, hasta: 9999, precio: p2 }
+      ]
+    };
+    precioVolumenCache[clave] = actualizado;
+    batch.set(db.collection('precios_volumen').doc(clave), actualizado);
+  });
+  batch.commit().then(function(){
+    showToast('✅ Precios por volumen actualizados');
+    renderPreciosVolumenPanel();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar precios'); });
+}
+
 function cargarCotizaciones(){
   db.collection('cotizaciones').orderBy('folio','desc').limit(200).get().then(function(snap){
     cotizaciones = [];
@@ -3069,12 +3199,15 @@ function guardarNuevoCliente() {
   if(!nombre || !telefono) { showToast('⚠️ Nombre y teléfono son obligatorios'); return; }
 
   var nuevoId = 'CRM-' + Date.now();
+  var domicilioNuevo = document.getElementById('nc-domicilio').value.trim();
   var cliente = {
     id: nuevoId,
     nombre: nombre.toUpperCase(),
     telefono: telefono,
     celular: document.getElementById('nc-celular').value.trim(),
-    domicilio: document.getElementById('nc-domicilio').value.trim(),
+    domicilio: domicilioNuevo,
+    direcciones: domicilioNuevo ? [{ id:'dir1', alias:'Principal', direccion: domicilioNuevo, principal: true }] : [],
+    canal: 'publico',
     representante: document.getElementById('nc-representante').value.trim(),
     rfc: document.getElementById('nc-rfc').value.trim(),
     origen: 'crm',
@@ -3132,9 +3265,109 @@ function seleccionarCliente(id) {
   document.getElementById('det-nombre').textContent = c.nombre;
   document.getElementById('det-tel').textContent = c.telefono || 'No registrado';
   document.getElementById('det-id').textContent = '#' + c.id;
-  document.getElementById('det-dom').textContent = c.domicilio || 'Sin dirección';
+  renderDireccionesCliente(c);
+  var canalWrap = document.getElementById('det-canal-wrap');
+  if(puedeVerCanalCliente()) {
+    canalWrap.style.display = 'block';
+    document.getElementById('det-canal').value = c.canal || 'publico';
+  } else {
+    canalWrap.style.display = 'none';
+  }
   document.getElementById('cli-detalle').classList.add('visible');
   document.getElementById('cli-fiscal').innerHTML = renderClienteFiscal(c);
+}
+
+// ════ Direcciones de entrega (hasta 3 por cliente) ════
+function direccionesDeCliente(c) {
+  if(Array.isArray(c.direcciones) && c.direcciones.length) return c.direcciones;
+  if(c.domicilio) return [{ id: 'dir1', alias: 'Principal', direccion: c.domicilio, principal: true }];
+  return [];
+}
+
+function direccionPrincipal(c) {
+  var dirs = direccionesDeCliente(c);
+  var principal = dirs.find(function(d){ return d.principal; });
+  return principal ? principal.direccion : (dirs[0] ? dirs[0].direccion : '');
+}
+
+function renderDireccionesCliente(c) {
+  var dirs = direccionesDeCliente(c);
+  var cont = document.getElementById('det-direcciones');
+  var btnAgregar = document.getElementById('det-btn-agregar-dir');
+  if(!cont) return;
+  if(!dirs.length) {
+    cont.innerHTML = '<div style="font-size:12px;color:var(--suave);">Sin direcciones registradas</div>';
+  } else {
+    cont.innerHTML = dirs.map(function(d){
+      return '<div style="border:1px solid var(--borde);border-radius:8px;padding:8px 10px;margin-bottom:6px;">' +
+        '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">' +
+          '<input type="text" value="' + (d.alias||'').replace(/"/g,'&quot;') + '" placeholder="Alias (ej. Casa, Obra)" style="flex:1;border:1px solid var(--borde);border-radius:6px;padding:5px 7px;font-size:11px;font-weight:700;" onchange="actualizarDireccionCliente(\'' + c.id + '\',\'' + d.id + '\',\'alias\',this.value)">' +
+          '<label style="font-size:10px;display:flex;align-items:center;gap:3px;white-space:nowrap;"><input type="checkbox" ' + (d.principal?'checked':'') + ' onchange="marcarDireccionPrincipal(\'' + c.id + '\',\'' + d.id + '\')"> Principal</label>' +
+          '<button type="button" onclick="eliminarDireccionCliente(\'' + c.id + '\',\'' + d.id + '\')" style="border:none;background:none;color:#C0392B;font-size:14px;cursor:pointer;">✕</button>' +
+        '</div>' +
+        '<textarea style="width:100%;border:1px solid var(--borde);border-radius:6px;padding:6px 7px;font-size:11px;min-height:36px;" onchange="actualizarDireccionCliente(\'' + c.id + '\',\'' + d.id + '\',\'direccion\',this.value)">' + (d.direccion||'') + '</textarea>' +
+      '</div>';
+    }).join('');
+  }
+  if(btnAgregar) btnAgregar.style.display = dirs.length >= 3 ? 'none' : 'block';
+}
+
+function guardarDireccionesCliente(clienteId, direcciones) {
+  if(!db) return;
+  db.collection('clientes').doc(clienteId).update({ direcciones: direcciones }).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar dirección'); });
+}
+
+function agregarDireccionCliente() {
+  if(!clienteSeleccionado) return;
+  var dirs = direccionesDeCliente(clienteSeleccionado).slice();
+  if(dirs.length >= 3) { showToast('⚠️ Máximo 3 direcciones por cliente'); return; }
+  var nuevoId = 'dir' + (Date.now());
+  dirs.push({ id: nuevoId, alias: dirs.length === 0 ? 'Principal' : '', direccion: '', principal: dirs.length === 0 });
+  clienteSeleccionado.direcciones = dirs;
+  guardarDireccionesCliente(clienteSeleccionado.id, dirs);
+  renderDireccionesCliente(clienteSeleccionado);
+}
+
+function actualizarDireccionCliente(clienteId, dirId, campo, valor) {
+  if(!clienteSeleccionado || clienteSeleccionado.id !== clienteId) return;
+  var dirs = direccionesDeCliente(clienteSeleccionado).slice();
+  var dir = dirs.find(function(d){ return d.id === dirId; });
+  if(!dir) return;
+  dir[campo] = valor;
+  clienteSeleccionado.direcciones = dirs;
+  guardarDireccionesCliente(clienteId, dirs);
+}
+
+function marcarDireccionPrincipal(clienteId, dirId) {
+  if(!clienteSeleccionado || clienteSeleccionado.id !== clienteId) return;
+  var dirs = direccionesDeCliente(clienteSeleccionado).slice();
+  dirs.forEach(function(d){ d.principal = (d.id === dirId); });
+  clienteSeleccionado.direcciones = dirs;
+  guardarDireccionesCliente(clienteId, dirs);
+  renderDireccionesCliente(clienteSeleccionado);
+}
+
+function eliminarDireccionCliente(clienteId, dirId) {
+  if(!clienteSeleccionado || clienteSeleccionado.id !== clienteId) return;
+  if(!confirm('¿Eliminar esta dirección?')) return;
+  var dirs = direccionesDeCliente(clienteSeleccionado).filter(function(d){ return d.id !== dirId; });
+  if(dirs.length && !dirs.some(function(d){ return d.principal; })) dirs[0].principal = true;
+  clienteSeleccionado.direcciones = dirs;
+  guardarDireccionesCliente(clienteId, dirs);
+  renderDireccionesCliente(clienteSeleccionado);
+}
+
+// ════ Canal de precio (Director/Gerencia) ════
+function puedeVerCanalCliente() {
+  return currentUser && (currentUser.role === 'Director' || currentUser.role === 'Gerencia');
+}
+function guardarCanalCliente() {
+  if(!clienteSeleccionado || !puedeVerCanalCliente()) return;
+  var canal = document.getElementById('det-canal').value;
+  clienteSeleccionado.canal = canal;
+  if(db) db.collection('clientes').doc(clienteSeleccionado.id).update({ canal: canal }).then(function(){
+    showToast('✅ Canal actualizado');
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar canal'); });
 }
 function whatsappCliente() {
   if(!clienteSeleccionado) return;
@@ -3280,6 +3513,35 @@ function elegirClienteCot(id) {
   clienteCotizacion = c;
   document.getElementById('cot-cliente-input').value = c.nombre;
   document.getElementById('cot-cliente-lista').style.display = 'none';
+  poblarSelectorDireccionCot(c);
+  actualizarTodasLasFilasProducto();
+}
+
+// ════ Selector de dirección de entrega (cuando el cliente tiene más de una) ════
+function poblarSelectorDireccionCot(cliente) {
+  var wrap = document.getElementById('cot-direccion-wrap');
+  var sel = document.getElementById('cot-direccion-select');
+  var dirs = direccionesDeCliente(cliente);
+  if(dirs.length <= 1) {
+    wrap.style.display = 'none';
+    if(clienteCotizacion) clienteCotizacion.domicilio = dirs[0] ? dirs[0].direccion : (cliente.domicilio || '');
+    return;
+  }
+  wrap.style.display = 'block';
+  sel.innerHTML = dirs.map(function(d){
+    return '<option value="' + d.id + '">' + (d.alias || 'Sin alias') + ' — ' + (d.direccion||'').slice(0,40) + '</option>';
+  }).join('');
+  var principal = dirs.find(function(d){ return d.principal; }) || dirs[0];
+  sel.value = principal.id;
+  seleccionarDireccionCot();
+}
+
+function seleccionarDireccionCot() {
+  if(!clienteCotizacion) return;
+  var sel = document.getElementById('cot-direccion-select');
+  var dirs = direccionesDeCliente(clienteCotizacion);
+  var elegida = dirs.find(function(d){ return d.id === sel.value; });
+  if(elegida) clienteCotizacion.domicilio = elegida.direccion;
 }
 
 function toggleNuevoClienteCot() {
@@ -3305,6 +3567,8 @@ function guardarNuevoClienteCot() {
     telefono: telefono,
     celular: '',
     domicilio: domicilio,
+    direcciones: domicilio ? [{ id:'dir1', alias:'Principal', direccion: domicilio, principal: true }] : [],
+    canal: 'publico',
     representante: '',
     rfc: '',
     origen: 'crm',
@@ -3322,8 +3586,10 @@ function guardarNuevoClienteCot() {
   }
 
   clienteCotizacion = cliente;
+  poblarSelectorDireccionCot(cliente);
   document.getElementById('cot-cliente-input').value = cliente.nombre;
   toggleNuevoClienteCot();
+  actualizarTodasLasFilasProducto();
 }
 function agregarProducto() {
   const idx = prodIdx++;
@@ -3335,14 +3601,125 @@ function agregarProducto() {
     '<div style="display:flex;gap:4px;align-items:center;">' +
     '<input type="text" placeholder="Descripción..." style="min-width:120px;" id="p-desc-' + idx + '" oninput="document.getElementById(\'p-clave-' + idx + '\').value=\'\'">' +
     '<button type="button" class="btn btn-gris" style="padding:6px 8px;font-size:11px;" onclick="abrirBuscadorProducto(' + idx + ',\'p\')" title="Buscar en catálogo">🔍</button>' +
-    '</div></td>' +
-    '<td><input type="number" value="1" min="0" step="0.01" style="width:65px;" id="p-cant-' + idx + '" oninput="recalcular()"></td>' +
+    '</div><div id="p-sugerencia-' + idx + '" style="font-size:10px;margin-top:3px;"></div></td>' +
+    '<td><input type="number" value="1" min="0" step="0.01" style="width:65px;" id="p-cant-' + idx + '" oninput="recalcular();actualizarPrecioSugerido(' + idx + ')"></td>' +
     '<td><input type="number" value="0" min="0" step="0.01" style="width:85px;" id="p-precio-' + idx + '" oninput="recalcular()"></td>' +
     '<td style="font-weight:700;font-size:12px;" id="p-imp-' + idx + '">$0.00</td>' +
     '<td><button class="btn-del" onclick="eliminarProd(' + idx + ')">✕</button></td>';
   tbody.appendChild(tr);
 }
 function eliminarProd(idx) { const el = document.getElementById('prod-' + idx); if(el) el.remove(); recalcular(); }
+
+// ════ Tarea D: último precio negociado por cliente + producto ════
+function guardarPreciosClienteDesdeVenta(clienteId, productos, canal, fecha, pedidoId) {
+  if(!db || !clienteId) return;
+  var batch = db.batch();
+  var huboAlguno = false;
+  (productos || []).forEach(function(item){
+    if(!item.clave || !item.precio) return;
+    huboAlguno = true;
+    var docId = clienteId + '_' + item.clave;
+    batch.set(db.collection('precios_cliente').doc(docId), {
+      clienteId: clienteId,
+      clave: item.clave,
+      ultimoPrecio: parseFloat(item.precio) || 0,
+      ultimaCantidad: parseFloat(item.cant) || 0,
+      canal: canal || 'publico',
+      fecha: fecha,
+      pedidoId: pedidoId,
+      timestamp: Date.now()
+    });
+  });
+  if(huboAlguno) batch.commit().catch(function(e){ console.log('Error guardando precios_cliente:', e); });
+}
+
+// ════ Precio sugerido por fila: volumen (Tarea C) + canal (Tarea B) + histórico por cliente (Tarea D) ════
+function puedeEditarPrecioLibre() {
+  return currentUser && (currentUser.role === 'Director' || currentUser.role === 'Gerencia');
+}
+
+function actualizarTodasLasFilasProducto() {
+  var rows = document.getElementById('prod-body').children;
+  Array.from(rows).forEach(function(tr){
+    actualizarPrecioSugerido(tr.id.replace('prod-',''));
+  });
+}
+
+function actualizarPrecioSugerido(idx) {
+  var claveInput = document.getElementById('p-clave-' + idx);
+  var cantInput = document.getElementById('p-cant-' + idx);
+  var sugerenciaDiv = document.getElementById('p-sugerencia-' + idx);
+  var precioInput = document.getElementById('p-precio-' + idx);
+  if(!claveInput || !cantInput || !sugerenciaDiv || !precioInput) return;
+  var clave = claveInput.value;
+  var cantidad = parseFloat(cantInput.value) || 0;
+  var canal = (clienteCotizacion && clienteCotizacion.canal) || 'publico';
+  var puedeEditar = puedeEditarPrecioLibre();
+
+  if(!clave) { sugerenciaDiv.innerHTML = ''; precioInput.readOnly = false; return; }
+
+  var resultadoVolumen = getPrecioProducto(clave, cantidad, canal);
+
+  if(clienteCotizacion && clienteCotizacion.id && db) {
+    db.collection('precios_cliente').doc(clienteCotizacion.id + '_' + clave).get().then(function(doc){
+      var precioNormal = resultadoVolumen ? resultadoVolumen.precioUnitario : null;
+      if(doc.exists) {
+        var h = doc.data();
+        if(precioNormal === null || Math.abs(h.ultimoPrecio - precioNormal) > 0.01) {
+          mostrarSugerenciaHistorica(idx, h, precioNormal, puedeEditar);
+          return;
+        }
+      }
+      aplicarSugerenciaVolumen(idx, resultadoVolumen, canal, puedeEditar);
+    }).catch(function(e){ console.log(e); aplicarSugerenciaVolumen(idx, resultadoVolumen, canal, puedeEditar); });
+  } else {
+    aplicarSugerenciaVolumen(idx, resultadoVolumen, canal, puedeEditar);
+  }
+}
+
+function aplicarSugerenciaVolumen(idx, resultado, canal, puedeEditar) {
+  var sugerenciaDiv = document.getElementById('p-sugerencia-' + idx);
+  var precioInput = document.getElementById('p-precio-' + idx);
+  if(!sugerenciaDiv || !precioInput) return;
+  if(!resultado) { sugerenciaDiv.innerHTML = ''; precioInput.readOnly = false; return; }
+  precioInput.value = resultado.precioUnitario.toFixed(2);
+  precioInput.readOnly = !puedeEditar;
+  var txt = '';
+  if(resultado.escalaAplicada.desde >= 20) txt += '✅ Precio mayoreo aplicado: $' + resultado.escalaAplicada.precio.toFixed(2) + ' por costal. ';
+  if(canal === 'reventa') txt += '🏷️ Canal reventa: -10%.';
+  sugerenciaDiv.innerHTML = txt ? '<span style="color:var(--naranja);font-weight:700;">' + txt + '</span>' : '';
+  recalcular();
+}
+
+function mostrarSugerenciaHistorica(idx, historico, precioNormal, puedeEditar) {
+  var sugerenciaDiv = document.getElementById('p-sugerencia-' + idx);
+  var precioInput = document.getElementById('p-precio-' + idx);
+  if(!sugerenciaDiv || !precioInput) return;
+  var precioMostrar = precioNormal !== null ? precioNormal : historico.ultimoPrecio;
+  sugerenciaDiv.innerHTML =
+    '<div style="color:#1D7A4F;font-weight:700;">💡 Última vez: $' + historico.ultimoPrecio.toFixed(2) + ' (' + (historico.pedidoId||'') + ', ' + (historico.fecha||'') + ')</div>' +
+    '<button type="button" class="btn btn-gris" style="font-size:9px;padding:3px 7px;margin-top:2px;" onclick="aplicarPrecioSugeridoHistorico(\'' + idx + '\',' + historico.ultimoPrecio + ')">Aplicar</button> ' +
+    '<button type="button" class="btn btn-gris" style="font-size:9px;padding:3px 7px;margin-top:2px;" onclick="usarPrecioNormalRow(\'' + idx + '\',' + precioMostrar + ')">Usar precio normal</button>';
+  precioInput.value = precioMostrar.toFixed(2);
+  precioInput.readOnly = !puedeEditar;
+  recalcular();
+}
+
+function aplicarPrecioSugeridoHistorico(idx, precio) {
+  var precioInput = document.getElementById('p-precio-' + idx);
+  precioInput.readOnly = false;
+  precioInput.value = parseFloat(precio).toFixed(2);
+  if(!puedeEditarPrecioLibre()) precioInput.readOnly = true;
+  recalcular();
+}
+
+function usarPrecioNormalRow(idx, precio) {
+  var precioInput = document.getElementById('p-precio-' + idx);
+  precioInput.readOnly = false;
+  precioInput.value = parseFloat(precio).toFixed(2);
+  if(!puedeEditarPrecioLibre()) precioInput.readOnly = true;
+  recalcular();
+}
 function fmtMoney(n){ return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 // Búsqueda sin acentos ni mayúsculas — "garcia" encuentra "García", "plomeria" encuentra "Plomería"
 function normalizar(str) {
@@ -3752,6 +4129,8 @@ function confirmarCierrePedido(docId) {
           actualizarCacheLocalInventario(inventarioDeltas, -1);
           showToast('🎯 Nota de venta '+folioBase+' creada en Sistema Operativo');
           if(operador !== 'Sin asignar') notificarOperadorPedido(pedido, operador);
+          var clienteDeLaVenta = clientesCache.find(function(x){ return x.id === cot.clienteId; });
+          guardarPreciosClienteDesdeVenta(cot.clienteId, pedido.productos, clienteDeLaVenta ? clienteDeLaVenta.canal : 'publico', pedido.fecha, folioBase);
           if(totalApartado > 0) {
             db.collection('caja_apartada').add({
               fecha: pedido.fecha,
@@ -4759,7 +5138,7 @@ function seleccionarProductoModal(clave, idx, prefijo) {
   var claveInput = document.getElementById(prefijo + '-clave-' + idx);
   if(descInput) descInput.value = p.descripcion;
   if(claveInput) claveInput.value = p.clave;
-  if(prefijo === 'p') recalcular(); else recalcularNC();
+  if(prefijo === 'p') { recalcular(); actualizarPrecioSugerido(idx); } else recalcularNC();
 }
 
 // ════ NC — guardar ════
@@ -8081,6 +8460,10 @@ function abrirNuevoTicket() {
         '<input type="text" id="tk-nuevo-cliente" placeholder="Público general o buscar cliente..." oninput="buscarClienteTicket()" autocomplete="off">' +
         '<div id="tk-nuevo-cliente-lista" style="border:1px solid var(--borde);border-radius:8px;max-height:130px;overflow-y:auto;display:none;position:absolute;background:#fff;z-index:100;width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>' +
       '</div>' +
+      '<div class="field" id="tk-direccion-wrap" style="display:none;margin-bottom:10px;">' +
+        '<label>¿A cuál dirección se entrega?</label>' +
+        '<select id="tk-direccion-select"></select>' +
+      '</div>' +
       '<div style="margin-bottom:10px;">' +
         '<label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--suave);margin-bottom:5px;">Productos</label>' +
         '<div id="tk-nuevo-prod-lista"></div>' +
@@ -8130,6 +8513,16 @@ function elegirClienteTicket(id) {
   ticketClienteSel = c;
   document.getElementById('tk-nuevo-cliente').value = c.nombre;
   document.getElementById('tk-nuevo-cliente-lista').style.display = 'none';
+  var wrap = document.getElementById('tk-direccion-wrap');
+  var dirs = direccionesDeCliente(c);
+  if(dirs.length > 1) {
+    wrap.style.display = 'block';
+    document.getElementById('tk-direccion-select').innerHTML = dirs.map(function(d){
+      return '<option value="' + d.id + '">' + (d.alias||'Sin alias') + ' — ' + (d.direccion||'').slice(0,40) + '</option>';
+    }).join('');
+  } else {
+    wrap.style.display = 'none';
+  }
 }
 
 function agregarProductoTicket() {
@@ -8195,6 +8588,16 @@ function guardarTicket() {
   if(!db) { showToast('⚠️ Sin conexión'); return; }
   var metodo = document.getElementById('tk-nuevo-metodo').value;
   var cliente = ticketClienteSel ? ticketClienteSel.nombre : (document.getElementById('tk-nuevo-cliente').value.trim() || 'Público General');
+  var direccionEntrega = '';
+  if(ticketClienteSel) {
+    var dirsTk = direccionesDeCliente(ticketClienteSel);
+    if(dirsTk.length > 1) {
+      var dirSelTk = dirsTk.find(function(d){ return d.id === document.getElementById('tk-direccion-select').value; });
+      direccionEntrega = dirSelTk ? dirSelTk.direccion : '';
+    } else if(dirsTk.length === 1) {
+      direccionEntrega = dirsTk[0].direccion;
+    }
+  }
 
   var terminal = null, comision = 0, neto = total;
   if(metodo === 'debito' || metodo === 'credito') {
@@ -8212,6 +8615,7 @@ function guardarTicket() {
       folio: folio,
       cliente: cliente,
       clienteId: ticketClienteSel ? ticketClienteSel.id : null,
+      direccionEntrega: direccionEntrega,
       productos: productosValidos,
       subtotal: total,
       total: total,
@@ -8251,6 +8655,7 @@ function guardarTicket() {
           ticketId: ticketRef.id, timestamp: Date.now()
         }).catch(function(e){ console.log('Error registrando caja_apartada:', e); });
       }
+      guardarPreciosClienteDesdeVenta(ticket.clienteId, productosValidos, ticketClienteSel ? ticketClienteSel.canal : 'publico', ticket.fecha, folio);
       showToast('✅ Ticket ' + folio + ' creado');
       var modal = document.getElementById('modal-nuevo-ticket');
       if(modal) modal.remove();
