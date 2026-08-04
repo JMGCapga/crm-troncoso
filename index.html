@@ -1315,7 +1315,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <div id="cuentas-cobrar-lista" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;max-height:520px;overflow-y:auto;"></div>
         </div>
 
-        <div class="card">
+        <div class="card" id="card-cuentas-pagar">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;">
             <div class="card-title" style="margin-bottom:0;">📤 Por Pagar</div>
             <div id="cuentas-pagar-total" style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--naranja);">$0.00</div>
@@ -1801,6 +1801,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
               <div id="dash-por-pagar" style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--naranja);margin-top:4px;">$0.00</div>
             </div>
           </div>
+          <div id="dash-cartera-status" style="margin-top:10px;font-size:12px;font-weight:700;cursor:pointer;" onclick="document.getElementById('tab-cuentas-btn') && document.getElementById('tab-cuentas-btn').click();"></div>
         </div>
 
         <!-- SEMANA ACTUAL -->
@@ -2290,7 +2291,7 @@ function checkPin(){
     var tabsMecanico = ['tab-flota-btn'];
     var tabsVentas = ['tab-clientes-btn','tab-ventas-btn','tab-consultas-btn',
       'tab-corte-btn','tab-salidas-btn','tab-nc-btn',
-      'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-inventario-btn'];
+      'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-inventario-btn','tab-cuentas-btn'];
     var tabsCompras = ['tab-clientes-btn','tab-ventas-btn','tab-consultas-btn',
       'tab-corte-btn','tab-salidas-btn','tab-nc-btn',
       'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-inventario-btn'];
@@ -2387,6 +2388,7 @@ function initApp(){
   mostrarFiscalParaUsuario();
   aplicarCandadoOperador();
   verificarAlertasEntregasIncompletas();
+  verificarAlertasCuentasCobrarVencidas();
 }
 
 // ════ CANDADO OPERADORES — solo ven/tocan Pedidos, no cotizaciones ════
@@ -4019,8 +4021,13 @@ function mostrarModalPedido(cot, docId) {
             <option value="tpv">TPV / Tarjeta</option>
           </select>
         </div>
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Anticipo recibido ($) — vacío o igual al total = pago completo</label>
+          <input type="number" id="mp-anticipo" value="${cot.total||0}" oninput="actualizarSaldoPedidoModal(${cot.total||0})" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
+          <div id="mp-saldo-info" style="font-size:11px;color:#6B6560;margin-top:4px;"></div>
+        </div>
       </div>
-      
+
       <div style="display:flex;gap:10px;">
         <button onclick="document.getElementById('modal-pedido').remove()" style="flex:1;padding:12px;border:1.5px solid #D8D0C8;border-radius:8px;background:#fff;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Cancelar</button>
         <button onclick="confirmarCierrePedido('${docId}')" style="flex:2;padding:12px;border:none;border-radius:8px;background:#E8500A;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;cursor:pointer;">✅ CREAR NOTA DE VENTA</button>
@@ -4028,11 +4035,22 @@ function mostrarModalPedido(cot, docId) {
     </div>
   `;
   document.body.appendChild(modal);
+  actualizarSaldoPedidoModal(cot.total || 0);
+}
+
+function actualizarSaldoPedidoModal(total) {
+  var anticipoEl = document.getElementById('mp-anticipo');
+  var info = document.getElementById('mp-saldo-info');
+  if(!anticipoEl || !info) return;
+  var anticipo = parseFloat(anticipoEl.value) || 0;
+  var saldo = Math.max(0, total - anticipo);
+  info.textContent = saldo > 0 ? '⚠️ Queda pendiente: ' + fmtMoney(saldo) : '✅ Pago completo';
+  info.style.color = saldo > 0 ? '#DC2626' : '#22C55E';
 }
 
 var creandoPedido = false;
 
-function registrarPagoCliente(docId, monto) {
+function registrarPagoCliente(docId, monto, metodoPago, quienTrajo) {
   if(!db || !docId || !(monto > 0)) return;
   var ref = db.collection('cuentas_cobrar').doc(docId);
   return db.runTransaction(function(tx){
@@ -4044,6 +4062,9 @@ function registrarPagoCliente(docId, monto) {
         saldo: nuevoSaldo,
         estado: nuevoSaldo === 0 ? 'pagado' : 'pendiente',
         ultimoPago: monto,
+        ultimoPagoMetodo: metodoPago || '',
+        ultimoPagoQuienTrajo: quienTrajo || '',
+        ultimoPagoRegistradoPor: currentUser ? currentUser.name : '',
         ultimoPagoFecha: fechaISOLocal(),
         ultimoPagoTimestamp: Date.now()
       });
@@ -4099,6 +4120,8 @@ function confirmarCierrePedido(docId) {
   const operador = document.getElementById('mp-operador').value;
   const tipo = document.getElementById('mp-tipo').value;
   const pago = document.getElementById('mp-pago').value;
+  const anticipo = Math.min(parseFloat(document.getElementById('mp-anticipo').value) || 0, cot.total || 0);
+  const saldoPendiente = Math.max(0, (cot.total || 0) - anticipo);
 
   Promise.resolve('NV-' + String(cot.folio).padStart(3,'0')).then(function(folioBase){
     const pedido = {
@@ -4106,6 +4129,8 @@ function confirmarCierrePedido(docId) {
       c: cot.cliente,
       p: cot.productos ? cot.productos.map(function(p){return p.cant+' '+p.desc;}).join(', ') : '',
       m: cot.total || 0,
+      anticipo: anticipo,
+      saldoPendiente: saldoPendiente,
       s: 'confirmado',
       h: new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
       cn: 'CRM',
@@ -4176,13 +4201,20 @@ function confirmarCierrePedido(docId) {
               timestamp: Date.now()
             }).catch(function(e){ console.log('Error registrando caja_apartada:', e); });
           }
-          if(pago === 'Crédito' || pago === 'Contra entrega'){
+          if(saldoPendiente > 0){
             db.collection('cuentas_cobrar').add({
               pedidoId: pedidoRef.id,
+              folio: folioBase,
+              origen: 'nv',
+              clienteId: cot.clienteId || null,
               cliente: cot.cliente,
+              telefono: cot.clienteTel || '',
               total: cot.total || 0,
-              saldo: cot.total || 0,
+              anticipo: anticipo,
+              metodoPagoAnticipo: pago,
+              saldo: saldoPendiente,
               estado: 'pendiente',
+              alertaSent: false,
               fecha: fechaISOLocal(),
               timestamp: Date.now()
             }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear cuenta por cobrar'); });
@@ -6530,14 +6562,20 @@ function cargarComprasJM() {
 //  MÓDULO CUENTAS (POR COBRAR / POR PAGAR)
 // ════════════════════════════════════════════════════════════
 
+function puedeRegistrarCobro() {
+  return currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
+}
+
 function iniciarCuentas() {
   var role = currentUser ? currentUser.role : '';
-  if(role !== 'Compras' && role !== 'Gerencia' && role !== 'Director') {
+  if(role !== 'Compras' && role !== 'Gerencia' && role !== 'Director' && role !== 'Ventas') {
     document.getElementById('panel-cuentas').innerHTML = '<div class="card"><div style="text-align:center;padding:40px;color:var(--suave);">⚠️ No tienes permisos para acceder a este módulo</div></div>';
     return;
   }
+  var cardPagar = document.getElementById('card-cuentas-pagar');
+  if(cardPagar) cardPagar.style.display = (role === 'Ventas') ? 'none' : 'block';
   cargarCuentasCobrar();
-  cargarCuentasPagar();
+  if(role !== 'Ventas') cargarCuentasPagar();
 }
 
 function cargarCuentasCobrar() {
@@ -6573,31 +6611,62 @@ function renderCuentasCobrar() {
   var totalEl = document.getElementById('cuentas-cobrar-total');
   if(!cont) return;
   if(!cuentasCobrar.length) {
-    cont.innerHTML = '<div style="padding:16px;text-align:center;color:var(--suave);font-size:13px;">✅ Sin cuentas por cobrar pendientes</div>';
+    cont.innerHTML = '<div style="padding:16px;text-align:center;color:var(--suave);font-size:13px;">✅ Cartera en cero</div>';
     if(totalEl) totalEl.textContent = fmtMoney(0);
     return;
   }
   var hoyStr = fechaISOLocal();
+  var puedeCobrar = puedeRegistrarCobro();
   var total = 0;
   cont.innerHTML = cuentasCobrar.map(function(c) {
     total += c.saldo || 0;
-    var venc = c.vencimiento || c.fecha || '';
-    var vencido = !!venc && venc < hoyStr;
+    var dias = Math.max(0, Math.round((new Date(hoyStr) - new Date(c.fecha || hoyStr)) / 86400000));
+    var vencido = dias >= 1;
+    var acciones = '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">';
+    if(puedeCobrar) {
+      acciones += '<input type="number" id="cc-abono-' + c._docId + '" placeholder="Monto a abonar" min="0" step="0.01" style="flex:1;min-width:100px;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-family:\'Barlow\',sans-serif;font-size:12px;">'
+        + '<select id="cc-metodo-' + c._docId + '" style="border:1.5px solid var(--borde);border-radius:8px;padding:8px 6px;font-family:\'Barlow\',sans-serif;font-size:12px;">'
+        +   '<option value="efectivo">💵 Efectivo</option>'
+        +   '<option value="transferencia">🏦 Transferencia</option>'
+        +   '<option value="tarjeta_nu">💜 Tarjeta Nu</option>'
+        +   '<option value="tarjeta_afirme">🟠 Tarjeta Afirme</option>'
+        + '</select>'
+        + '<input type="text" id="cc-trajo-' + c._docId + '" placeholder="¿Quién lo trajo? (opcional)" style="flex:1;min-width:130px;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-family:\'Barlow\',sans-serif;font-size:12px;">'
+        + '<button class="btn btn-naranja" onclick="abonarCuentaCobrar(\'' + c._docId + '\')" style="font-size:11px;padding:8px 14px;">💰 Registrar pago</button>';
+    }
+    if(c.telefono) {
+      acciones += '<button class="btn btn-gris" onclick="enviarRecordatorioCobro(\'' + c._docId + '\')" style="font-size:11px;padding:8px 14px;">📲 WhatsApp</button>';
+    }
+    acciones += '</div>';
     return '<div style="padding:14px;border-bottom:1px solid #F0EDE8;">'
       + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">'
-      +   '<div style="font-weight:700;font-size:13px;">' + (c.cliente || 'Sin nombre') + '</div>'
+      +   '<div style="font-weight:700;font-size:13px;">' + (c.folio || '') + ' — ' + (c.cliente || 'Sin nombre') + '</div>'
       +   '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--naranja);white-space:nowrap;">' + fmtMoney(c.saldo || 0) + '</div>'
       + '</div>'
       + '<div style="font-size:11px;color:' + (vencido ? '#EF4444' : 'var(--suave)') + ';margin-top:2px;">'
-      +   (vencido ? '⚠️ Vencido: ' : 'Vence: ') + (venc || '—') + ' · Total: ' + fmtMoney(c.total || 0)
+      +   'Total: ' + fmtMoney(c.total || 0) + ' · Anticipo: ' + fmtMoney(c.anticipo || 0)
+      +   ' · ' + (dias > 0 ? '⚠️ ' + dias + ' día' + (dias === 1 ? '' : 's') + ' pendiente' : 'Hoy')
       + '</div>'
-      + '<div style="display:flex;gap:8px;margin-top:8px;">'
-      +   '<input type="number" id="cc-abono-' + c._docId + '" placeholder="Monto a abonar" min="0" step="0.01" style="flex:1;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-family:\'Barlow\',sans-serif;font-size:12px;">'
-      +   '<button class="btn btn-naranja" onclick="abonarCuentaCobrar(\'' + c._docId + '\')" style="font-size:11px;padding:8px 14px;">💰 Registrar pago</button>'
-      + '</div>'
+      + acciones
       + '</div>';
   }).join('');
   if(totalEl) totalEl.textContent = fmtMoney(total);
+}
+
+function mensajeRecordatorioCobroWA(c) {
+  return '📦 *MATERIALES TRONCOSO*\n' +
+    'Hola ' + (c.cliente || '') + ', le recordamos que tiene un saldo\n' +
+    'pendiente de ' + fmtMoney(c.saldo || 0) + ' correspondiente al pedido ' + (c.folio || '') + '.\n\n' +
+    'Por favor comuníquese al 5555906802. ¡Gracias!';
+}
+
+function enviarRecordatorioCobro(docId) {
+  var c = cuentasCobrar.find(function(x){ return x._docId === docId; });
+  if(!c) return;
+  var tel = (c.telefono || '').replace(/[^0-9]/g,'');
+  if(!tel) { showToast('⚠️ Este cliente no tiene teléfono registrado'); return; }
+  var num = tel.indexOf('52') === 0 ? tel : '52' + tel;
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(mensajeRecordatorioCobroWA(c)), '_blank');
 }
 
 function renderCuentasPagar() {
@@ -6633,10 +6702,13 @@ function renderCuentasPagar() {
 }
 
 function abonarCuentaCobrar(docId) {
+  if(!puedeRegistrarCobro()) { showToast('⚠️ Sin permiso para registrar cobros'); return; }
   var input = document.getElementById('cc-abono-' + docId);
   var monto = parseFloat(input ? input.value : '');
   if(!(monto > 0)) { showToast('⚠️ Ingresa un monto válido'); return; }
-  registrarPagoCliente(docId, monto).then(function() { cargarCuentasCobrar(); });
+  var metodoPago = document.getElementById('cc-metodo-' + docId).value;
+  var quienTrajo = document.getElementById('cc-trajo-' + docId).value.trim();
+  registrarPagoCliente(docId, monto, metodoPago, quienTrajo).then(function() { cargarCuentasCobrar(); verificarAlertasCuentasCobrarVencidas(); });
 }
 
 function abonarCuentaPagar(docId) {
@@ -6682,6 +6754,16 @@ function renderDashboardDirector() {
     snap.forEach(function(doc) { total += doc.data().saldo || 0; });
     var el = document.getElementById('dash-por-cobrar');
     if(el) el.textContent = fmtMoney(total);
+    var statusEl = document.getElementById('dash-cartera-status');
+    if(statusEl) {
+      if(snap.size === 0) {
+        statusEl.textContent = '✅ Cartera en cero';
+        statusEl.style.color = '#22C55E';
+      } else {
+        statusEl.textContent = '💰 Cartera activa: ' + fmtMoney(total) + ' — ' + snap.size + ' cliente' + (snap.size === 1 ? '' : 's') + ' con saldo pendiente';
+        statusEl.style.color = 'var(--naranja)';
+      }
+    }
   }).catch(function(e) { console.log(e); });
 
   db.collection('cuentas_pagar').where('estado','==','pendiente').get().then(function(snap) {
@@ -8252,6 +8334,32 @@ function quitarBadgeAlertasPedidos() {
   var badge = document.getElementById('badge-alertas-pedidos');
   if(badge) badge.remove();
 }
+function mostrarBadgeCuentasCobrar() {
+  var btn = document.getElementById('tab-cuentas-btn');
+  if(!btn || document.getElementById('badge-cuentas-cobrar')) return;
+  var badge = document.createElement('span');
+  badge.id = 'badge-cuentas-cobrar';
+  badge.style.cssText = 'background:#EF4444;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;';
+  badge.textContent = '!';
+  btn.appendChild(badge);
+}
+function quitarBadgeCuentasCobrar() {
+  var badge = document.getElementById('badge-cuentas-cobrar');
+  if(badge) badge.remove();
+}
+function verificarAlertasCuentasCobrarVencidas() {
+  if(!db) return;
+  var hoyStr = fechaISOLocal();
+  db.collection('cuentas_cobrar').where('estado','==','pendiente').get().then(function(snap){
+    var hayVencidas = false;
+    snap.forEach(function(doc){
+      var f = doc.data().fecha || hoyStr;
+      var dias = Math.round((new Date(hoyStr) - new Date(f)) / 86400000);
+      if(dias >= 1) hayVencidas = true;
+    });
+    if(hayVencidas) mostrarBadgeCuentasCobrar(); else quitarBadgeCuentasCobrar();
+  }).catch(function(e){ console.log('Error verificando alertas de cuentas por cobrar:', e); });
+}
 function verificarAlertasEntregasIncompletas() {
   if(!db) return;
   db.collection('alertas').where('tipo','==','entrega_incompleta').where('resuelta','==',false).limit(1).get().then(function(snap){
@@ -8525,6 +8633,11 @@ function abrirNuevoTicket() {
         '<div class="ct-unit" id="tk-nuevo-comision"></div>' +
       '</div>' +
       '<div style="text-align:right;font-family:\'Bebas Neue\',sans-serif;font-size:22px;margin-bottom:14px;" id="tk-nuevo-total">TOTAL: $0.00</div>' +
+      '<div class="field" style="margin-bottom:14px;">' +
+        '<label>Anticipo recibido ($) — vacío o igual al total = pago completo</label>' +
+        '<input type="number" id="tk-nuevo-anticipo" oninput="actualizarSaldoTicketModal()">' +
+        '<div id="tk-saldo-info" style="font-size:11px;color:var(--suave);margin-top:4px;"></div>' +
+      '</div>' +
       '<div style="display:flex;gap:8px;">' +
         '<button class="btn btn-naranja" style="flex:1;" onclick="guardarTicket()">Cobrar y crear ticket</button>' +
         '<button class="btn btn-gris" style="flex:1;" onclick="document.getElementById(\'modal-nuevo-ticket\').remove()">Cancelar</button>' +
@@ -8599,6 +8712,19 @@ function actualizarTotalTicket() {
   var el = document.getElementById('tk-nuevo-total');
   if(el) el.textContent = 'TOTAL: ' + fmtMoney(totalTicket());
   actualizarComisionTicket();
+  actualizarSaldoTicketModal();
+}
+
+function actualizarSaldoTicketModal() {
+  var anticipoEl = document.getElementById('tk-nuevo-anticipo');
+  var info = document.getElementById('tk-saldo-info');
+  if(!anticipoEl || !info) return;
+  var total = totalTicket();
+  var anticipoVal = anticipoEl.value;
+  var anticipo = anticipoVal === '' ? total : (parseFloat(anticipoVal) || 0);
+  var saldo = Math.max(0, total - anticipo);
+  info.textContent = saldo > 0 ? '⚠️ Queda pendiente: ' + fmtMoney(saldo) : '✅ Pago completo';
+  info.style.color = saldo > 0 ? '#DC2626' : '#22C55E';
 }
 
 function actualizarComisionTicket() {
@@ -8636,6 +8762,10 @@ function guardarTicket() {
     }
   }
 
+  var anticipoVal = document.getElementById('tk-nuevo-anticipo').value;
+  var anticipo = anticipoVal === '' ? total : Math.min(parseFloat(anticipoVal) || 0, total);
+  var saldoPendiente = Math.max(0, total - anticipo);
+
   var terminal = null, comision = 0, neto = total;
   if(metodo === 'debito' || metodo === 'credito') {
     var t = document.getElementById('tk-nuevo-terminal').value.split('-');
@@ -8656,6 +8786,8 @@ function guardarTicket() {
       productos: productosValidos,
       subtotal: total,
       total: total,
+      anticipo: anticipo,
+      saldoPendiente: saldoPendiente,
       metodoPago: metodo,
       razonSocial: terminal,
       comision: comision,
@@ -8693,6 +8825,24 @@ function guardarTicket() {
         }).catch(function(e){ console.log('Error registrando caja_apartada:', e); });
       }
       guardarPreciosClienteDesdeVenta(ticket.clienteId, productosValidos, ticketClienteSel ? ticketClienteSel.canal : 'publico', ticket.fecha, folio);
+      if(saldoPendiente > 0){
+        db.collection('cuentas_cobrar').add({
+          pedidoId: ticketRef.id,
+          folio: folio,
+          origen: 'ticket',
+          clienteId: ticket.clienteId,
+          cliente: cliente,
+          telefono: ticketClienteSel ? (ticketClienteSel.telefono || '') : '',
+          total: total,
+          anticipo: anticipo,
+          metodoPagoAnticipo: metodo,
+          saldo: saldoPendiente,
+          estado: 'pendiente',
+          alertaSent: false,
+          fecha: ticket.fecha,
+          timestamp: Date.now()
+        }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear cuenta por cobrar'); });
+      }
       showToast('✅ Ticket ' + folio + ' creado');
       var modal = document.getElementById('modal-nuevo-ticket');
       if(modal) modal.remove();
@@ -9277,6 +9427,7 @@ function marcarEntregado(docId) {
     <div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:460px;margin:auto;">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;color:#1A1A1A;margin-bottom:4px;">📦 CONFIRMAR ENTREGA</div>
       <div style="font-size:13px;color:#6B6560;margin-bottom:16px;">${p.cliente||p.c||''} · ${p.id||''}</div>
+      ${p.saldoPendiente > 0 ? '<div style="background:#FEF3C7;border-radius:8px;padding:10px 12px;font-size:12px;font-weight:700;color:#92400E;margin-bottom:14px;">⚠️ Este pedido tiene saldo pendiente de ' + fmtMoney(p.saldoPendiente) + '</div>' : ''}
 
       <!-- COMPLETA -->
       <div style="margin-bottom:14px;">
