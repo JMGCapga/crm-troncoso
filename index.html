@@ -1432,6 +1432,16 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <input type="text" id="flota-gas-estacion" placeholder="Ej. OXXO Gas Iztacalco">
           </div>
           <div class="field">
+            <label>Forma de pago</label>
+            <select id="flota-gas-pago">
+              <option value="efectivo">💵 Efectivo</option>
+              <option value="transferencia">🏦 Transferencia</option>
+              <option value="tarjeta_nu">💜 Tarjeta Nu (Morada)</option>
+              <option value="tarjeta_afirme">🟠 Tarjeta Afirme (Naranja)</option>
+              <option value="mixto">🔀 Mixto (efectivo + transferencia)</option>
+            </select>
+          </div>
+          <div class="field">
             <label>Foto del ticket (opcional)</label>
             <input type="file" accept="image/*" capture="environment" onchange="previsualizarFotoFlota(this,'ticket')">
             <img id="flota-foto-preview-ticket" style="display:none;max-width:100%;border-radius:8px;margin-top:8px;">
@@ -1558,6 +1568,16 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <div class="field">
             <label>Costo</label>
             <input type="number" id="flota-mec-costo" placeholder="Ej. 1200">
+          </div>
+          <div class="field">
+            <label>Forma de pago</label>
+            <select id="flota-mec-pago">
+              <option value="efectivo">💵 Efectivo</option>
+              <option value="transferencia">🏦 Transferencia</option>
+              <option value="tarjeta_nu">💜 Tarjeta Nu (Morada)</option>
+              <option value="tarjeta_afirme">🟠 Tarjeta Afirme (Naranja)</option>
+              <option value="mixto">🔀 Mixto (efectivo + transferencia)</option>
+            </select>
           </div>
           <div class="field">
             <label>Fecha</label>
@@ -4701,12 +4721,13 @@ function cargarResumenDirector() {
 // ════ SALIDAS DEL DÍA ════
 
 var TIPOS_SALIDA = {
-  compra:    { label: '🛒 Compra en efectivo', color: 'FA5252' },
-  operativo: { label: '⚙️ Gasto operativo',    color: 'FD7E14' },
-  gasolina:  { label: '⛽ Gasolina / aceite',   color: '1098AD' },
-  fondo:     { label: '💵 Fondo a operador',    color: '9C36B5' },
-  nomina:    { label: '👷 Pago nómina',         color: '1D7A4F' },
-  otro:      { label: '📝 Otro',                color: '868E96' },
+  compra:        { label: '🛒 Compra en efectivo',      color: 'FA5252' },
+  operativo:     { label: '⚙️ Gasto operativo',         color: 'FD7E14' },
+  gasolina:      { label: '⛽ Gasolina / aceite',        color: '1098AD' },
+  mantenimiento: { label: '🔧 Mantenimiento de flota',  color: 'E8590C' },
+  fondo:         { label: '💵 Fondo a operador',        color: '9C36B5' },
+  nomina:        { label: '👷 Pago nómina',              color: '1D7A4F' },
+  otro:          { label: '📝 Otro',                     color: '868E96' },
 };
 
 var filtroSalidasActual = 'hoy';
@@ -9819,12 +9840,13 @@ function guardarGasolinaFlota(){
   var litros = parseFloat(document.getElementById('flota-gas-litros').value||0);
   var monto = parseFloat(document.getElementById('flota-gas-monto').value||0);
   var estacion = document.getElementById('flota-gas-estacion').value.trim();
+  var formaPago = document.getElementById('flota-gas-pago').value;
   if(!unidad || !litros || !monto){ showToast('⚠️ Completa unidad, litros y monto'); return; }
   var operador = currentUser ? currentUser.name : '';
   var fecha = fechaISOLocal();
   var gasolina = {
     unidad: unidad, operador: operador, fecha: fecha, timestamp: Date.now(),
-    litros: litros, monto: monto, estacion: estacion,
+    litros: litros, monto: monto, estacion: estacion, formaPago: formaPago,
     fotoTicketBase64: window._flotaFototicket || null,
     registradoPor: operador
   };
@@ -9833,7 +9855,7 @@ function guardarGasolinaFlota(){
       fecha: fecha, timestamp: Date.now(), tipo: 'gasolina',
       tipoLabel: TIPOS_SALIDA.gasolina.label + ' — ' + unidad,
       monto: monto, concepto: litros + 'L · ' + (estacion || 'Sin estación'),
-      operador: operador, rs: 'JMG', rsNombre: RAZONES.JMG.nombre,
+      operador: operador, rs: 'JMG', rsNombre: RAZONES.JMG.nombre, formaPago: formaPago,
       factura: 'pendiente', registradoPor: operador, status: 'aprobado',
       gasolinaId: ref.id
     };
@@ -9935,12 +9957,13 @@ function guardarTrabajoMecanico(){
   var tipo = document.getElementById('flota-mec-tipo').value;
   var descripcion = document.getElementById('flota-mec-desc').value.trim();
   var costo = parseFloat(document.getElementById('flota-mec-costo').value||0);
+  var formaPago = document.getElementById('flota-mec-pago').value;
   var fecha = document.getElementById('flota-mec-fecha').value || fechaISOLocal();
   var esGeneral = document.getElementById('flota-gasto-general').checked;
   var unidad = document.getElementById('flota-mec-unidad').value;
   if(!descripcion || !costo){ showToast('⚠️ Describe el gasto e ingresa el monto'); return; }
   if(!esGeneral && !unidad){ showToast('⚠️ Selecciona unidad o marca "Aplica a todas las unidades"'); return; }
-  var trabajo = { tipo: tipo, descripcion: descripcion, costo: costo, fecha: fecha, timestamp: Date.now(), registradoPor: currentUser ? currentUser.name : '' };
+  var trabajo = { tipo: tipo, descripcion: descripcion, costo: costo, formaPago: formaPago, fecha: fecha, timestamp: Date.now(), registradoPor: currentUser ? currentUser.name : '' };
   if(esGeneral){
     trabajo.unidadId = 'general';
     trabajo.unidadNombre = 'Flota general';
@@ -9948,7 +9971,17 @@ function guardarTrabajoMecanico(){
     trabajo.unidad = unidad;
     trabajo.unidadId = unidad;
   }
-  db.collection('mantenimiento').add(trabajo).then(function(){
+  db.collection('mantenimiento').add(trabajo).then(function(ref){
+    var salida = {
+      fecha: fecha, timestamp: Date.now(), tipo: 'mantenimiento',
+      tipoLabel: TIPOS_SALIDA.mantenimiento.label + ' — ' + (trabajo.unidadNombre || trabajo.unidad),
+      monto: costo, concepto: descripcion,
+      rs: 'JMG', rsNombre: RAZONES.JMG.nombre, formaPago: formaPago,
+      factura: 'no', registradoPor: trabajo.registradoPor, status: 'aprobado',
+      mantenimientoId: ref.id
+    };
+    return db.collection('salidas').add(salida);
+  }).then(function(){
     showToast('✅ Gasto registrado');
     document.getElementById('flota-mec-desc').value = '';
     document.getElementById('flota-mec-costo').value = '';
