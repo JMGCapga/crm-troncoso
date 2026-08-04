@@ -341,7 +341,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       <div id="ventas-subnav-seg"></div>
       <div class="card">
         <div class="card-title">Seguimiento de Cotizaciones</div>
-        <button class="btn btn-naranja" onclick="switchTab('cotizacion', document.getElementById('tab-ventas-btn'))" style="width:100%;margin-bottom:14px;">📋 Nueva Cotización</button>
+        <button class="btn btn-naranja" onclick="abrirNuevaCotizacion()" style="width:100%;margin-bottom:14px;">📋 Nueva Cotización</button>
         <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
           <button class="btn btn-naranja" onclick="filtrarSeg('todas')" id="seg-f-todas" style="font-size:11px;padding:7px 14px;">Todas</button>
           <button class="btn btn-gris" onclick="filtrarSeg('alta')" id="seg-f-alta" style="font-size:11px;padding:7px 14px;">🟢 Alta</button>
@@ -3424,11 +3424,42 @@ function whatsappCliente() {
   const num = tel.startsWith('52') ? tel : '52' + tel;
   window.open('https://wa.me/' + num + '?text=Hola%20' + encodeURIComponent(clienteSeleccionado.nombre) + '%2C%20somos%20Materiales%20Troncoso.%20%C2%BFComo%20podemos%20ayudarle%3F', '_blank');
 }
+function resetFormularioCotizacion() {
+  clienteCotizacion = null;
+  document.getElementById('cot-cliente-input').value = '';
+  var listaCli = document.getElementById('cot-cliente-lista');
+  listaCli.innerHTML = '';
+  listaCli.style.display = 'none';
+  document.getElementById('cot-nuevo-cliente-form').style.display = 'none';
+  ['cot-nc-nombre','cot-nc-telefono','cot-nc-domicilio'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  var dirWrap = document.getElementById('cot-direccion-wrap');
+  dirWrap.style.display = 'none';
+  document.getElementById('cot-direccion-select').innerHTML = '';
+  document.getElementById('cot-rs').value = 'JMG';
+  document.getElementById('cot-pago').value = 'efectivo';
+  document.getElementById('cot-prob').value = 'alta';
+  document.getElementById('cot-notas').value = '';
+  document.getElementById('cot-desc').value = '0';
+  document.getElementById('prod-body').innerHTML = '';
+  prodIdx = 0;
+  agregarProducto();
+  actualizarComisionCot();
+  recalcular();
+}
+
+function abrirNuevaCotizacion() {
+  resetFormularioCotizacion();
+  switchTab('cotizacion', document.getElementById('tab-ventas-btn'));
+}
+
 function nuevaCotizacionDesdeCliente() {
+  resetFormularioCotizacion();
   clienteCotizacion = clienteSeleccionado;
   document.getElementById('cot-cliente-input').value = clienteSeleccionado.nombre;
   switchTab('cotizacion', document.getElementById('tab-ventas-btn'));
-  if(document.getElementById('prod-body').children.length === 0) agregarProducto();
 }
 function nuevaNotaDesdeCliente() { clienteCotizacion = clienteSeleccionado; generarNota(); }
 
@@ -8431,11 +8462,13 @@ function renderFiscalTerminales() {
 // ════ PEDIDOS ════
 function siguienteFolioPedido() {
   if(!db) return Promise.resolve('NV-' + String(Date.now()).slice(-4));
-  return db.collection('pedidos').orderBy('timestamp','desc').limit(1).get().then(function(snap){
-    if(snap.empty) return 'NV-001';
-    var last = snap.docs[0].data().id || 'NV-000';
-    var num = parseInt(last.replace('NV-','')) || 0;
-    return 'NV-' + String(num + 1).padStart(3,'0');
+  return db.collection('pedidos').get().then(function(snap){
+    var max = 0;
+    snap.forEach(function(doc){
+      var num = parseInt((doc.data().id || '').replace('NV-','')) || 0;
+      if(num > max) max = num;
+    });
+    return 'NV-' + String(max + 1).padStart(3,'0');
   }).catch(function(){ return 'NV-' + String(Date.now()).slice(-4); });
 }
 
@@ -9777,7 +9810,7 @@ function renderPedidosJM() {
 var pmProductos = [];
 
 function agregarProductoPedidoManual() {
-  pmProductos.push({ desc: '', clave: '', cantidad: 1 });
+  pmProductos.push({ desc: '', clave: '', cantidad: 1, precio: 0 });
   renderProductosPedidoManual();
 }
 
@@ -9785,6 +9818,7 @@ function abrirBuscadorProductoPedidoManual(idx) {
   abrirSelectorProducto(function(p) {
     pmProductos[idx].clave = p.clave;
     pmProductos[idx].desc = p.descripcion;
+    actualizarPrecioPedidoManual(idx);
     renderProductosPedidoManual();
   });
 }
@@ -9794,10 +9828,39 @@ function quitarClavePedidoManual(idx) {
   renderProductosPedidoManual();
 }
 
+function actualizarPrecioPedidoManual(idx) {
+  var item = pmProductos[idx];
+  if(!item || !item.clave) return;
+  var resultado = getPrecioProducto(item.clave, item.cantidad, 'publico');
+  if(resultado) item.precio = resultado.precioUnitario;
+}
+
+function cambiarCantidadPedidoManual(idx, valor) {
+  pmProductos[idx].cantidad = parseFloat(valor) || 0;
+  actualizarPrecioPedidoManual(idx);
+  renderProductosPedidoManual();
+}
+
+function cambiarPrecioPedidoManual(idx, valor) {
+  pmProductos[idx].precio = parseFloat(valor) || 0;
+  renderProductosPedidoManual();
+}
+
+function recalcularTotalPedidoManual() {
+  var total = pmProductos.reduce(function(a,p){ return a + (p.cantidad||0) * (p.precio||0); }, 0);
+  var montoEl = document.getElementById('pm-monto');
+  if(montoEl) montoEl.value = total.toFixed(2);
+  return total;
+}
+
 function renderProductosPedidoManual() {
   var cont = document.getElementById('pm-prod-lista');
   if(!cont) return;
   cont.innerHTML = pmProductos.map(function(p, idx) {
+    var resultadoVolumen = p.clave ? getPrecioProducto(p.clave, p.cantidad, 'publico') : null;
+    var aviso = (resultadoVolumen && resultadoVolumen.escalaAplicada.desde >= 20)
+      ? '<div style="font-size:10px;color:#22C55E;font-weight:700;margin-top:2px;">✅ Precio mayoreo aplicado: $' + resultadoVolumen.escalaAplicada.precio.toFixed(2) + '</div>' : '';
+    var importe = (p.cantidad||0) * (p.precio||0);
     return '<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:6px;">' +
         '<div style="flex:1;">' +
           '<div style="display:flex;gap:4px;align-items:center;">' +
@@ -9806,11 +9869,15 @@ function renderProductosPedidoManual() {
           '</div>' +
           (p.clave ? '<div style="font-size:10px;color:#999;margin-top:2px;">Clave '+p.clave+' · <a href="javascript:void(0)" onclick="quitarClavePedidoManual('+idx+')" style="color:#E8500A;">✏️ producto no catalogado</a></div>' :
             '<div style="font-size:10px;color:#999;margin-top:2px;">Sin catalogar</div>') +
+          aviso +
         '</div>' +
-        '<input type="number" value="'+p.cantidad+'" min="0" step="0.01" style="width:60px;border:1.5px solid #D8D0C8;border-radius:8px;padding:8px 6px;font-family:\'Barlow\',sans-serif;font-size:13px;" onchange="pmProductos['+idx+'].cantidad=parseFloat(this.value)||0;">' +
+        '<input type="number" value="'+p.cantidad+'" min="0" step="0.01" placeholder="Cant." style="width:55px;border:1.5px solid #D8D0C8;border-radius:8px;padding:8px 6px;font-family:\'Barlow\',sans-serif;font-size:13px;" onchange="cambiarCantidadPedidoManual('+idx+',this.value)">' +
+        '<input type="number" value="'+p.precio+'" min="0" step="0.01" placeholder="Precio U." style="width:70px;border:1.5px solid #D8D0C8;border-radius:8px;padding:8px 6px;font-family:\'Barlow\',sans-serif;font-size:13px;" onchange="cambiarPrecioPedidoManual('+idx+',this.value)">' +
+        '<div style="width:70px;text-align:right;font-weight:700;font-size:12px;padding-top:9px;">'+fmtMoney(importe)+'</div>' +
         '<button type="button" onclick="pmProductos.splice('+idx+',1);renderProductosPedidoManual();" style="border:none;background:none;color:#C0392B;font-size:18px;cursor:pointer;padding:4px;">✕</button>' +
       '</div>';
   }).join('') || '<div style="font-size:11px;color:#999;">Sin productos agregados</div>';
+  recalcularTotalPedidoManual();
 }
 
 function abrirNuevoPedidoManual() {
@@ -9843,7 +9910,7 @@ function abrirNuevoPedidoManual() {
         </div>
         <div>
           <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Monto total</label>
-          <input type="number" id="pm-monto" placeholder="0.00" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
+          <input type="number" id="pm-monto" readonly value="0" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;background:#F5F2EE;font-weight:700;">
         </div>
         <div>
           <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Operador asignado</label>
@@ -9873,7 +9940,7 @@ function guardarPedidoManual() {
   var direccion = document.getElementById('pm-direccion').value.trim();
   var productosValidos = pmProductos.filter(function(x){ return x.desc && x.desc.trim() && x.cantidad > 0; });
   var productosTexto = productosValidos.map(function(x){ return x.cantidad + ' ' + x.desc; }).join(', ');
-  var monto = parseFloat(document.getElementById('pm-monto').value || 0);
+  var monto = productosValidos.reduce(function(a,x){ return a + (x.cantidad||0) * (x.precio||0); }, 0);
   var operador = document.getElementById('pm-operador').value;
   if(!cliente) { showToast('Ingresa el nombre del cliente'); return; }
   creandoPedidoManual = true;
