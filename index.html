@@ -1484,44 +1484,6 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         </div>
 
         <div class="card">
-          <div class="card-title">🔧 Registrar gasto</div>
-          <div class="field">
-            <label>
-              <input type="checkbox" id="flota-gasto-general" onchange="flotaToggleGastoGeneral()">
-              ¿Aplica a todas las unidades?
-            </label>
-          </div>
-          <div class="field" id="flota-gasto-unidad-field">
-            <label>Unidad</label>
-            <select class="flota-unidad-select" id="flota-mec-unidad"></select>
-          </div>
-          <div class="field">
-            <label>Categoría</label>
-            <select id="flota-mec-tipo">
-              <option value="talacha">Talacha</option>
-              <option value="refaccion">Refacción</option>
-              <option value="llanta">Llanta</option>
-              <option value="servicio">Servicio</option>
-              <option value="insumo_operativo">Insumo operativo</option>
-              <option value="otro">Otro</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Descripción</label>
-            <textarea id="flota-mec-desc" placeholder="Detalle del trabajo realizado"></textarea>
-          </div>
-          <div class="field">
-            <label>Costo</label>
-            <input type="number" id="flota-mec-costo" placeholder="Ej. 1200">
-          </div>
-          <div class="field">
-            <label>Fecha</label>
-            <input type="date" id="flota-mec-fecha">
-          </div>
-          <button class="btn btn-naranja" onclick="guardarTrabajoMecanico()">💾 Registrar gasto</button>
-        </div>
-
-        <div class="card">
           <div class="card-title">⚠️ Daños pendientes</div>
           <div id="flota-mec-danios-pendientes" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;"></div>
         </div>
@@ -1565,6 +1527,44 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         </div>
 
         <div id="flota-admin-unidades" style="display:grid;grid-template-columns:1fr;gap:12px;"></div>
+
+        <div class="card" id="flota-admin-registrar-gasto-card">
+          <div class="card-title">🔧 Registrar gasto</div>
+          <div class="field">
+            <label>
+              <input type="checkbox" id="flota-gasto-general" onchange="flotaToggleGastoGeneral()">
+              ¿Aplica a todas las unidades?
+            </label>
+          </div>
+          <div class="field" id="flota-gasto-unidad-field">
+            <label>Unidad</label>
+            <select class="flota-unidad-select" id="flota-mec-unidad"></select>
+          </div>
+          <div class="field">
+            <label>Categoría</label>
+            <select id="flota-mec-tipo">
+              <option value="talacha">Talacha</option>
+              <option value="refaccion">Refacción</option>
+              <option value="llanta">Llanta</option>
+              <option value="servicio">Servicio</option>
+              <option value="insumo_operativo">Insumo operativo</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Descripción</label>
+            <textarea id="flota-mec-desc" placeholder="Detalle del trabajo realizado"></textarea>
+          </div>
+          <div class="field">
+            <label>Costo</label>
+            <input type="number" id="flota-mec-costo" placeholder="Ej. 1200">
+          </div>
+          <div class="field">
+            <label>Fecha</label>
+            <input type="date" id="flota-mec-fecha">
+          </div>
+          <button class="btn btn-naranja" onclick="guardarTrabajoMecanico()">💾 Registrar gasto</button>
+        </div>
 
         <div class="card">
           <div class="card-title">🔧 Gastos generales de flota</div>
@@ -9685,19 +9685,22 @@ function iniciarFlota(){
     } else if(role === 'Mecanico'){
       document.getElementById('flota-mecanico').style.display = 'block';
       poblarSelectsUnidadesFlota();
-      var fechaEl = document.getElementById('flota-mec-fecha');
-      if(fechaEl && !fechaEl.value) fechaEl.value = fechaISOLocal();
       renderListaUnidadesMecanico();
       cargarDaniosPendientesMecanico();
     } else if(role === 'Gerencia' || role === 'Director'){
       document.getElementById('flota-admin').style.display = 'block';
       document.getElementById('flota-admin-nueva-unidad-card').style.display = role === 'Director' ? 'block' : 'none';
+      document.getElementById('flota-admin-registrar-gasto-card').style.display = 'block';
+      poblarSelectsUnidadesFlota();
       poblarSelectOperadoresFlota();
+      var fechaEl = document.getElementById('flota-mec-fecha');
+      if(fechaEl && !fechaEl.value) fechaEl.value = fechaISOLocal();
       renderFlotaAdmin();
     } else if(role === 'Ventas'){
       // Vista de solo lectura: estatus de la flota, sin acciones de edición/servicio/taller
       document.getElementById('flota-admin').style.display = 'block';
       document.getElementById('flota-admin-nueva-unidad-card').style.display = 'none';
+      document.getElementById('flota-admin-registrar-gasto-card').style.display = 'none';
       renderFlotaAdmin();
     }
   });
