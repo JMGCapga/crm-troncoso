@@ -1255,13 +1255,23 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         </div>
         <div class="cli-count" id="prov-dir-count">Ingresa un nombre para buscar</div>
         <div class="cli-list" id="prov-dir-list"></div>
+        <button type="button" class="btn btn-naranja" id="prov-dir-btn-nuevo" style="width:100%;margin:10px 0;" onclick="abrirNuevoProveedorDir()">➕ Agregar proveedor</button>
         <div class="cli-detalle" id="prov-dir-detalle">
           <h3 id="prov-dir-nombre"></h3>
           <div class="cli-info">
             <div class="cli-info-item"><label>Teléfono</label><span id="prov-dir-tel"></span></div>
+            <div class="cli-info-item"><label>Celular</label><span id="prov-dir-cel"></span></div>
+            <div class="cli-info-item"><label>Representante</label><span id="prov-dir-rep"></span></div>
+            <div class="cli-info-item"><label>Domicilio</label><span id="prov-dir-dom"></span></div>
+            <div class="cli-info-item"><label>Ciudad</label><span id="prov-dir-ciu"></span></div>
+            <div class="cli-info-item"><label>Email</label><span id="prov-dir-email"></span></div>
             <div class="cli-info-item"><label>Categoría</label><span id="prov-dir-cat"></span></div>
             <div class="cli-info-item"><label>Condiciones</label><span id="prov-dir-cond"></span></div>
             <div class="cli-info-item"><label>Última compra</label><span id="prov-dir-ult"></span></div>
+          </div>
+          <div id="prov-dir-btns-editar" style="display:flex;gap:8px;margin-top:10px;">
+            <button type="button" class="btn btn-naranja" id="prov-dir-btn-editar" style="flex:1;" onclick="abrirEditarProveedorDir()">✏️ Editar</button>
+            <button type="button" class="btn btn-gris" id="prov-dir-btn-borrar" style="flex:1;" onclick="borrarProveedorDir()">🗑️ Borrar</button>
           </div>
           <div id="prov-dir-fiscal"></div>
         </div>
@@ -6070,6 +6080,8 @@ function guardarNuevoProveedor() {
 
 // ════ EXPEDIENTE FISCAL — Parte 3: Directorio de Proveedores ════
 function iniciarProveedoresDir() {
+  var btnNuevo = document.getElementById('prov-dir-btn-nuevo');
+  if(btnNuevo) btnNuevo.style.display = puedeEditarProveedoresDir() ? 'block' : 'none';
   if(!proveedoresDirCargados) cargarProveedoresDir();
 }
 
@@ -6094,9 +6106,10 @@ function buscarProveedorDir() {
   var list = document.getElementById('prov-dir-list');
   var count = document.getElementById('prov-dir-count');
   if(q.length < 2) { list.innerHTML = ''; count.textContent = 'Ingresa al menos 2 caracteres'; document.getElementById('prov-dir-detalle').classList.remove('visible'); return; }
+  var qDigitos = q.replace(/[^0-9]/g,'');
   var res = proveedoresDirCache.filter(function(p){
-    return (p.nombre || '').toLowerCase().indexOf(q) !== -1 ||
-      (p.telefono || '').replace(/[^0-9]/g,'').indexOf(q.replace(/[^0-9]/g,'')) !== -1;
+    return normalizar(p.nombre || '').indexOf(normalizar(q)) !== -1 ||
+      (qDigitos.length > 0 && (p.telefono || '').replace(/[^0-9]/g,'').indexOf(qDigitos) !== -1);
   }).slice(0, 30);
   count.textContent = res.length === 0 ? 'Sin resultados' : res.length + ' proveedores encontrados';
   list.innerHTML = res.map(function(p){
@@ -6107,16 +6120,135 @@ function buscarProveedorDir() {
   }).join('');
 }
 
+var proveedorDirSelId = null;
+
 function seleccionarProveedorDir(id) {
   var p = proveedoresDirCache.find(function(x){ return x.id === id; });
   if(!p) return;
+  proveedorDirSelId = id;
   document.getElementById('prov-dir-nombre').textContent = p.nombre;
   document.getElementById('prov-dir-tel').textContent = p.telefono || 'No registrado';
+  document.getElementById('prov-dir-cel').textContent = p.celular || '—';
+  document.getElementById('prov-dir-rep').textContent = p.representante || '—';
+  document.getElementById('prov-dir-dom').textContent = p.domicilio || '—';
+  document.getElementById('prov-dir-ciu').textContent = p.ciudad || '—';
+  document.getElementById('prov-dir-email').textContent = p.email || '—';
   document.getElementById('prov-dir-cat').textContent = p.categoria || '—';
   document.getElementById('prov-dir-cond').textContent = p.condicionesPago || '—';
   document.getElementById('prov-dir-ult').textContent = p.ultimaCompra || 'Nunca';
   document.getElementById('prov-dir-detalle').classList.add('visible');
   document.getElementById('prov-dir-fiscal').innerHTML = renderProveedorFiscal(p);
+  var btnsEditar = document.getElementById('prov-dir-btns-editar');
+  if(btnsEditar) btnsEditar.style.display = puedeEditarProveedoresDir() ? 'flex' : 'none';
+}
+
+function puedeEditarProveedoresDir() {
+  return currentUser && (currentUser.role === 'Compras' || currentUser.role === 'Gerencia' || currentUser.role === 'Director');
+}
+
+function modalProveedorDirHTML(titulo, p) {
+  p = p || {};
+  return '<div style="background:#fff;border-radius:14px;padding:24px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:1px;margin-bottom:14px;">' + titulo + '</div>' +
+      '<div class="field"><label>Nombre</label><input type="text" id="npd-nombre" value="' + (p.nombre||'').replace(/"/g,'&quot;') + '"></div>' +
+      '<div class="field"><label>Teléfono</label><input type="text" id="npd-telefono" value="' + (p.telefono||'').replace(/"/g,'&quot;') + '"></div>' +
+      '<div class="field"><label>Celular</label><input type="text" id="npd-celular" value="' + (p.celular||'').replace(/"/g,'&quot;') + '"></div>' +
+      '<div class="field"><label>Representante</label><input type="text" id="npd-representante" value="' + (p.representante||'').replace(/"/g,'&quot;') + '"></div>' +
+      '<div class="field"><label>Domicilio</label><input type="text" id="npd-domicilio" value="' + (p.domicilio||'').replace(/"/g,'&quot;') + '"></div>' +
+      '<div class="field"><label>Ciudad</label><input type="text" id="npd-ciudad" value="' + (p.ciudad||'').replace(/"/g,'&quot;') + '"></div>' +
+      '<div class="field"><label>Email</label><input type="text" id="npd-email" value="' + (p.email||'').replace(/"/g,'&quot;') + '"></div>' +
+      (p.id ?
+        '<button class="btn btn-naranja" style="width:100%;margin-top:10px;" onclick="guardarEdicionProveedorDir(\'' + p.id + '\')">💾 Guardar cambios</button>' :
+        '<button class="btn btn-naranja" style="width:100%;margin-top:10px;" onclick="guardarNuevoProveedorDir()">💾 Guardar proveedor</button>') +
+      '<button class="btn btn-gris" style="width:100%;margin-top:8px;" onclick="document.getElementById(\'modal-nuevo-prov-dir\').remove()">Cancelar</button>' +
+    '</div>';
+}
+
+function abrirNuevoProveedorDir() {
+  if(!puedeEditarProveedoresDir()) { showToast('⚠️ Sin permisos'); return; }
+  var existente = document.getElementById('modal-nuevo-prov-dir');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-nuevo-prov-dir';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = modalProveedorDirHTML('➕ NUEVO PROVEEDOR');
+  document.body.appendChild(modal);
+}
+
+function abrirEditarProveedorDir() {
+  if(!puedeEditarProveedoresDir()) { showToast('⚠️ Sin permisos'); return; }
+  var p = proveedoresDirCache.find(function(x){ return x.id === proveedorDirSelId; });
+  if(!p) return;
+  var existente = document.getElementById('modal-nuevo-prov-dir');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-nuevo-prov-dir';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = modalProveedorDirHTML('✏️ EDITAR PROVEEDOR', p);
+  document.body.appendChild(modal);
+}
+
+function guardarEdicionProveedorDir(id) {
+  var nombre = document.getElementById('npd-nombre').value.trim();
+  if(!nombre) { showToast('⚠️ Ingresa el nombre del proveedor'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+  var cambios = {
+    nombre: nombre,
+    telefono: document.getElementById('npd-telefono').value.trim(),
+    celular: document.getElementById('npd-celular').value.trim(),
+    representante: document.getElementById('npd-representante').value.trim(),
+    domicilio: document.getElementById('npd-domicilio').value.trim(),
+    ciudad: document.getElementById('npd-ciudad').value.trim(),
+    email: document.getElementById('npd-email').value.trim()
+  };
+  db.collection('proveedores').doc(id).update(cambios).then(function(){
+    showToast('✅ Proveedor actualizado');
+    document.getElementById('modal-nuevo-prov-dir').remove();
+    proveedoresDirCargados = false;
+    cargarProveedoresDir();
+    comprasProveedoresCargados = false;
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al actualizar proveedor'); });
+}
+
+function guardarNuevoProveedorDir() {
+  var nombre = document.getElementById('npd-nombre').value.trim();
+  if(!nombre) { showToast('⚠️ Ingresa el nombre del proveedor'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+  var prov = {
+    nombre: nombre,
+    telefono: document.getElementById('npd-telefono').value.trim(),
+    celular: document.getElementById('npd-celular').value.trim(),
+    representante: document.getElementById('npd-representante').value.trim(),
+    domicilio: document.getElementById('npd-domicilio').value.trim(),
+    ciudad: document.getElementById('npd-ciudad').value.trim(),
+    email: document.getElementById('npd-email').value.trim(),
+    categoria: '',
+    condicionesPago: '',
+    diasCredito: 30,
+    ultimaCompra: null,
+    totalComprado: 0,
+    timestamp: Date.now()
+  };
+  db.collection('proveedores').add(prov).then(function(){
+    showToast('✅ Proveedor ' + nombre + ' creado');
+    document.getElementById('modal-nuevo-prov-dir').remove();
+    proveedoresDirCargados = false;
+    cargarProveedoresDir();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear proveedor'); });
+}
+
+function borrarProveedorDir() {
+  if(!puedeEditarProveedoresDir()) { showToast('⚠️ Sin permisos'); return; }
+  if(!proveedorDirSelId || !db) return;
+  var p = proveedoresDirCache.find(function(x){ return x.id === proveedorDirSelId; });
+  if(!confirm('¿Borrar el proveedor "' + (p ? p.nombre : '') + '"? Esta acción no se puede deshacer.')) return;
+  db.collection('proveedores').doc(proveedorDirSelId).delete().then(function(){
+    showToast('✅ Proveedor eliminado');
+    document.getElementById('prov-dir-detalle').classList.remove('visible');
+    proveedorDirSelId = null;
+    proveedoresDirCargados = false;
+    cargarProveedoresDir();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al eliminar proveedor'); });
 }
 
 function campoProveedorFiscal(id, campo, label, valor, mayusculas) {
