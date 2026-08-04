@@ -4592,7 +4592,9 @@ function cargarTransferenciasConfirmadas() {
     }).catch(function(e){ console.log(e); });
 }
 
+var enviandoCorte = false;
 function enviarCorte() {
+  if(enviandoCorte) return;
   var ef = parseFloat(document.getElementById('c-efectivo').value||0);
   var ret = parseFloat(document.getElementById('c-retiros').value||0);
   var tpvIzz = parseFloat(document.getElementById('c-tpv-izz').value||0);
@@ -4605,6 +4607,7 @@ function enviarCorte() {
   var granTotal = ef + ret + tpvIzz + tpvCem + mp + totalTransfers;
 
   if(granTotal === 0) { showToast('⚠️ Captura al menos un monto antes de enviar'); return; }
+  enviandoCorte = true;
 
   var tipoIzz = document.getElementById('c-tpv-izz-tipo') ? document.getElementById('c-tpv-izz-tipo').value : 'debito';
   var tipoCem = document.getElementById('c-tpv-cemcoya-tipo') ? document.getElementById('c-tpv-cemcoya-tipo').value : 'debito';
@@ -4656,12 +4659,15 @@ function enviarCorte() {
       document.getElementById('lista-transfers-corte').innerHTML = '';
       transfersCorte = [];
       calcCorte();
+      enviandoCorte = false;
     }).catch(function(e){
       console.log(e);
       showToast('⚠️ Error al enviar — guardado local');
+      enviandoCorte = false;
     });
   } else {
     showToast('✅ Corte registrado (modo local)');
+    enviandoCorte = false;
   }
 }
 
