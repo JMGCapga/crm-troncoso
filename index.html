@@ -1570,6 +1570,22 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <div class="card-title">🔧 Gastos generales de flota</div>
           <div id="flota-admin-gastos-generales" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;overflow-x:auto;"></div>
         </div>
+
+        <div class="card">
+          <div class="card-title">⛽ Historial de gasolinas</div>
+          <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+            <div class="field" style="flex:1;min-width:150px;">
+              <label style="font-size:11px;">Desde</label>
+              <input type="date" id="flota-gas-desde" style="width:100%;padding:8px;border:1px solid var(--borde);border-radius:6px;">
+            </div>
+            <div class="field" style="flex:1;min-width:150px;">
+              <label style="font-size:11px;">Hasta</label>
+              <input type="date" id="flota-gas-hasta" style="width:100%;padding:8px;border:1px solid var(--borde);border-radius:6px;">
+            </div>
+            <button class="btn btn-gris" style="align-self:flex-end;padding:8px 14px;font-size:12px;" onclick="renderHistorialGasolinasFlota()">🔄 Filtrar</button>
+          </div>
+          <div id="flota-admin-historial-gasolinas" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;overflow-x:auto;"></div>
+        </div>
       </div>
 
     </div>
@@ -9987,6 +10003,7 @@ function renderFlotaAdmin(){
     renderAlertasFlotaAdmin(daniosPend);
     renderUnidadesAdminCards(daniosPend);
     renderGastosGeneralesFlota(mantAll);
+    renderHistorialGasolinasFlota(gasolinasAll);
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al cargar Flota'); });
 }
 
@@ -10026,6 +10043,27 @@ function renderGastosGeneralesFlota(mantAll){
     return '<tr><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);">'+g.fecha+'</td><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);">'+cat+'</td><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);">'+g.descripcion+'</td><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);text-align:right;">'+fmtMoney(g.costo||0)+'</td></tr>';
   }).join('');
   cont.innerHTML = '<table style="width:100%;border-collapse:collapse;"><thead><tr><th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Fecha</th><th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Categoría</th><th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Descripción</th><th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Monto</th></tr></thead><tbody>'+rows+'</tbody></table><div style="padding:12px;background:#F5F2EE;border-radius:0 0 10px 10px;text-align:right;font-size:13px;font-weight:700;">Total mes '+mesActual+': '+fmtMoney(totaMes)+'</div>';
+}
+
+function renderHistorialGasolinasFlota(gasolinasAll){
+  var desde = document.getElementById('flota-gas-desde').value;
+  var hasta = document.getElementById('flota-gas-hasta').value;
+  var filtradas = gasolinasAll;
+  if(desde) filtradas = filtradas.filter(function(g){ return (g.fecha||'') >= desde; });
+  if(hasta) filtradas = filtradas.filter(function(g){ return (g.fecha||'') <= hasta; });
+  filtradas = filtradas.sort(function(a,b){ var fa=a.fecha||''; var fb=b.fecha||''; return fb.localeCompare(fa); });
+  var cont = document.getElementById('flota-admin-historial-gasolinas');
+  if(!filtradas.length){ cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:12px;">Sin gasolinas registradas en el rango de fechas</div>'; return; }
+  var totalGas = 0, totalMonto = 0;
+  var rows = filtradas.map(function(g){
+    totalGas += g.litros||0;
+    totalMonto += g.monto||0;
+    var unidad = g.unidad || '—';
+    var estacion = g.estacion || '—';
+    var registradoPor = g.registradoPor || '—';
+    return '<tr><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);">'+g.fecha+'</td><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);">'+unidad+'</td><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);text-align:right;">'+fmtNumero(g.litros||0)+' L</td><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);text-align:right;">'+fmtMoney(g.monto||0)+'</td><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);">'+estacion+'</td><td style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--borde);color:var(--suave);">'+registradoPor+'</td></tr>';
+  }).join('');
+  cont.innerHTML = '<table style="width:100%;border-collapse:collapse;"><thead><tr><th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Fecha</th><th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Unidad</th><th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Litros</th><th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Monto</th><th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Estación</th><th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--suave);border-bottom:2px solid var(--borde);">Registrado por</th></tr></thead><tbody>'+rows+'</tbody></table><div style="padding:12px;background:#F5F2EE;border-radius:0 0 10px 10px;display:flex;justify-content:space-between;font-size:13px;font-weight:700;"><div>'+filtradas.length+' cargas</div><div>'+fmtNumero(totalGas)+' L — '+fmtMoney(totalMonto)+'</div></div>';
 }
 
 function calcBadgeUnidadFlota(u, daniosUnidad){
