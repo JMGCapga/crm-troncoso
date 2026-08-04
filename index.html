@@ -437,6 +437,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <label>Buscar (folio, cliente, producto)</label>
             <input type="text" id="cons-texto" placeholder="ej: García, COSTAL, 007..." oninput="buscarConsultas()" autocomplete="off">
           </div>
+          <div class="field" style="grid-column:1/-1;">
+            <label>Buscar por producto (clave o nombre)</label>
+            <input type="text" id="cons-producto" placeholder="ej: 200202 o ARENA..." oninput="buscarConsultas()" autocomplete="off">
+          </div>
           <div class="field">
             <label>Desde</label>
             <input type="date" id="cons-desde" onchange="buscarConsultas()">
@@ -3680,7 +3684,7 @@ function agregarProducto() {
     '<div style="display:flex;gap:4px;align-items:center;">' +
     '<input type="text" placeholder="Descripción..." style="min-width:120px;" id="p-desc-' + idx + '" oninput="document.getElementById(\'p-clave-' + idx + '\').value=\'\'">' +
     '<button type="button" class="btn btn-gris" style="padding:6px 8px;font-size:11px;" onclick="abrirBuscadorProducto(' + idx + ',\'p\')" title="Buscar en catálogo">🔍</button>' +
-    '</div><div id="p-sugerencia-' + idx + '" style="font-size:10px;margin-top:3px;"></div></td>' +
+    '</div><div id="p-stock-' + idx + '"></div><div id="p-sugerencia-' + idx + '" style="font-size:10px;margin-top:3px;"></div></td>' +
     '<td><input type="number" value="1" min="0" step="0.01" style="width:65px;" id="p-cant-' + idx + '" oninput="recalcular();actualizarPrecioSugerido(' + idx + ')"></td>' +
     '<td><input type="number" value="0" min="0" step="0.01" style="width:85px;" id="p-precio-' + idx + '" oninput="recalcular()"></td>' +
     '<td style="font-weight:700;font-size:12px;" id="p-imp-' + idx + '">$0.00</td>' +
@@ -5254,7 +5258,18 @@ function seleccionarProductoModal(clave, idx, prefijo) {
   var claveInput = document.getElementById(prefijo + '-clave-' + idx);
   if(descInput) descInput.value = p.descripcion;
   if(claveInput) claveInput.value = p.clave;
-  if(prefijo === 'p') { recalcular(); actualizarPrecioSugerido(idx); } else recalcularNC();
+  if(prefijo === 'p') { recalcular(); actualizarPrecioSugerido(idx); actualizarStockEnVivo(p.clave, 'p-stock-' + idx); } else recalcularNC();
+}
+
+function actualizarStockEnVivo(clave, contenedorId) {
+  var el = document.getElementById(contenedorId);
+  if(!el || !clave || !db) return;
+  el.innerHTML = '<span style="font-size:10px;color:#999;">Consultando stock...</span>';
+  db.collection('productos').doc(clave).get().then(function(doc){
+    var elAhora = document.getElementById(contenedorId);
+    if(!elAhora) return;
+    elAhora.innerHTML = doc.exists ? formatearStockHTML(doc.data()) : '';
+  }).catch(function(e){ console.log(e); var elAhora = document.getElementById(contenedorId); if(elAhora) elAhora.innerHTML = ''; });
 }
 
 // ════ NC — guardar ════
@@ -8071,6 +8086,15 @@ function fmtNumero(n) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
+function formatearStockHTML(p) {
+  if(!p || p.tipo === 'servicio') return '';
+  var ex = p.existencia || 0;
+  var unidad = p.unidadVenta || 'unidades';
+  if(ex <= 0) return '<div style="font-size:10px;color:#DC2626;font-weight:700;margin-top:2px;">⚠️ Sin stock</div>';
+  if(ex <= (p.min||0)) return '<div style="font-size:10px;color:#D97706;font-weight:700;margin-top:2px;">⚠️ Stock bajo: '+fmtNumero(ex)+' '+unidad+'</div>';
+  return '<div style="font-size:10px;color:#6B6560;margin-top:2px;">Stock: '+fmtNumero(ex)+' '+unidad+'</div>';
+}
+
 // ════════════════════════════════════════════
 //  DASHBOARD FINANCIERO
 // ════════════════════════════════════════════
@@ -8098,6 +8122,15 @@ function mostrarFiscalParaUsuario() {
 
 function formatoFecha(d) {
   return d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
+}
+
+function fechaAISO(fechaStr) {
+  if(!fechaStr) return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) return fechaStr;
+  var partes = fechaStr.split('/');
+  if(partes.length !== 3) return fechaStr;
+  var dia = parseInt(partes[0]) || 0, mes = parseInt(partes[1]) || 0, anio = partes[2];
+  return anio + '-' + String(mes).padStart(2,'0') + '-' + String(dia).padStart(2,'0');
 }
 
 function normalizarFecha(fechaStr) {
@@ -8858,19 +8891,31 @@ function abrirBuscadorProductoTicket(idx) {
   abrirSelectorProducto(function(p){
     ticketProductos[idx].clave = p.clave;
     ticketProductos[idx].desc = p.descripcion;
+    ticketProductos[idx].stockHTML = '';
     renderProductosTicket();
+    actualizarStockTicket(idx, p.clave);
   });
+}
+function actualizarStockTicket(idx, clave) {
+  if(!clave || !db) return;
+  db.collection('productos').doc(clave).get().then(function(doc){
+    if(!ticketProductos[idx] || ticketProductos[idx].clave !== clave) return;
+    ticketProductos[idx].stockHTML = doc.exists ? formatearStockHTML(doc.data()) : '';
+    renderProductosTicket();
+  }).catch(function(e){ console.log(e); });
 }
 function renderProductosTicket() {
   var cont = document.getElementById('tk-nuevo-prod-lista');
   if(!cont) return;
   cont.innerHTML = ticketProductos.map(function(p, idx){
-    return '<div style="display:flex;gap:4px;align-items:center;margin-bottom:6px;">' +
+    return '<div style="margin-bottom:6px;">' +
+      '<div style="display:flex;gap:4px;align-items:center;">' +
       '<input type="text" value="'+(p.desc||'').replace(/"/g,'&quot;')+'" placeholder="Descripción" style="flex:2;border:1.5px solid var(--borde);border-radius:8px;padding:7px 9px;font-size:12px;" onchange="ticketProductos['+idx+'].desc=this.value;ticketProductos['+idx+'].clave=\'\';">' +
       '<button type="button" class="btn btn-gris" onclick="abrirBuscadorProductoTicket('+idx+')" style="padding:6px 8px;font-size:11px;" title="Buscar en catálogo">🔍</button>' +
       '<input type="number" value="'+p.cant+'" min="0" step="0.01" style="width:55px;border:1.5px solid var(--borde);border-radius:8px;padding:7px;font-size:12px;" onchange="ticketProductos['+idx+'].cant=parseFloat(this.value)||0;actualizarTotalTicket();">' +
       '<input type="number" value="'+p.precio+'" min="0" step="0.01" style="width:70px;border:1.5px solid var(--borde);border-radius:8px;padding:7px;font-size:12px;" onchange="ticketProductos['+idx+'].precio=parseFloat(this.value)||0;actualizarTotalTicket();">' +
       '<button type="button" class="btn-del" onclick="quitarProductoTicket('+idx+')">✕</button>' +
+      '</div>' + (p.stockHTML||'') +
     '</div>';
   }).join('');
   actualizarTotalTicket();
@@ -9180,8 +9225,9 @@ function iniciarConsultas() {
         estado: c.status || 'pendiente',
         estadoNorm: c.status === 'pendiente' ? 'pendiente' : (c.status || ''),
         pago: c.pago || '', pagoNorm: pagoNormDeRegistro(c.pago, c.tipoTarjeta),
-        fecha: c.fecha || '', timestamp: c.timestamp || 0,
-        texto: normalizar((c.cliente||'') + ' ' + c.folio + ' ' + (c.productos||[]).map(function(p){return p.desc;}).join(' '))
+        fecha: fechaAISO(c.fecha || ''), timestamp: c.timestamp || 0,
+        productos: c.productos || [],
+        texto: normalizar((c.cliente||'') + ' ' + c.folio + ' ' + (c.productos||[]).map(function(p){return p.desc+' '+(p.clave||'');}).join(' '))
       });
     });
 
@@ -9194,8 +9240,9 @@ function iniciarConsultas() {
         estado: (STATUS_PEDIDO[estado] ? STATUS_PEDIDO[estado].label : estado),
         estadoNorm: estado === 'entregado' ? 'entregado' : (estado === 'cancelado' ? 'cancelado' : 'pendiente'),
         pago: p.pago || '', pagoNorm: pagoNormDeRegistro(p.pago, p.tipoTarjeta),
-        fecha: p.fecha || '', timestamp: p.timestamp || 0,
-        texto: normalizar((p.cliente||p.c||'') + ' ' + (p.id||'') + ' ' + (p.p||''))
+        fecha: fechaAISO(p.fecha || ''), timestamp: p.timestamp || 0,
+        productos: p.productos || [],
+        texto: normalizar((p.cliente||p.c||'') + ' ' + (p.id||'') + ' ' + (p.p||'') + ' ' + (p.productos||[]).map(function(x){return x.clave||'';}).join(' '))
       });
     });
 
@@ -9207,8 +9254,9 @@ function iniciarConsultas() {
         estado: t.status === 'cancelado' ? 'Cancelado' : 'Activo',
         estadoNorm: t.status === 'cancelado' ? 'cancelado' : 'entregado',
         pago: t.metodoPago || '', pagoNorm: pagoNormDeRegistro(null, null, t.metodoPago),
-        fecha: t.fecha || '', timestamp: t.timestamp || 0,
-        texto: normalizar((t.cliente||'') + ' ' + (t.folio||'') + ' ' + (t.productos||[]).map(function(p){return p.desc;}).join(' '))
+        fecha: fechaAISO(t.fecha || ''), timestamp: t.timestamp || 0,
+        productos: t.productos || [],
+        texto: normalizar((t.cliente||'') + ' ' + (t.folio||'') + ' ' + (t.productos||[]).map(function(p){return p.desc+' '+(p.clave||'');}).join(' '))
       });
     });
 
@@ -9221,6 +9269,7 @@ function iniciarConsultas() {
 function buscarConsultas() {
   var cont = document.getElementById('cons-lista');
   var texto = normalizar(document.getElementById('cons-texto').value || '');
+  var producto = normalizar(document.getElementById('cons-producto').value || '');
   var desde = document.getElementById('cons-desde').value;
   var hasta = document.getElementById('cons-hasta').value;
   var estado = document.getElementById('cons-estado').value;
@@ -9232,6 +9281,15 @@ function buscarConsultas() {
     if(hasta && r.fecha && r.fecha > hasta) return false;
     if(estado !== 'todas' && r.estadoNorm !== estado) return false;
     if(pago !== 'todos' && r.pagoNorm !== pago) return false;
+    if(producto) {
+      var match = (r.productos||[]).find(function(p){
+        return normalizar(p.clave||'').indexOf(producto) !== -1 || normalizar(p.desc||'').indexOf(producto) !== -1;
+      });
+      if(!match) return false;
+      r._productoMatch = (match.cantidad||match.cant||0) + ' ' + (match.desc||'');
+    } else {
+      r._productoMatch = '';
+    }
     return true;
   }).slice(0, 200);
 
@@ -9244,13 +9302,14 @@ function buscarConsultas() {
       '<td style="padding:8px 10px;"><span style="background:#'+badgeColor[r.tipo]+'20;color:#'+badgeColor[r.tipo]+';border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">'+r.tipo+'</span></td>' +
       '<td style="padding:8px 10px;font-weight:700;">'+r.folio+'</td>' +
       '<td style="padding:8px 10px;">'+r.cliente+'</td>' +
+      '<td style="padding:8px 10px;">'+(r._productoMatch||'—')+'</td>' +
       '<td style="padding:8px 10px;text-align:right;font-weight:700;">'+fmtMoney(r.total)+'</td>' +
       '<td style="padding:8px 10px;">'+r.estado+'</td>' +
       '<td style="padding:8px 10px;">'+r.fecha+'</td>' +
     '</tr>';
   }).join('');
-  cont.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px;">' +
-    '<thead><tr style="background:#1A1A1A;color:#fff;text-align:left;"><th style="padding:8px 10px;">Tipo</th><th style="padding:8px 10px;">Folio</th><th style="padding:8px 10px;">Cliente</th><th style="padding:8px 10px;text-align:right;">Total</th><th style="padding:8px 10px;">Estado</th><th style="padding:8px 10px;">Fecha</th></tr></thead>' +
+  cont.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:680px;">' +
+    '<thead><tr style="background:#1A1A1A;color:#fff;text-align:left;"><th style="padding:8px 10px;">Tipo</th><th style="padding:8px 10px;">Folio</th><th style="padding:8px 10px;">Cliente</th><th style="padding:8px 10px;">Producto</th><th style="padding:8px 10px;text-align:right;">Total</th><th style="padding:8px 10px;">Estado</th><th style="padding:8px 10px;">Fecha</th></tr></thead>' +
     '<tbody>' + filas + '</tbody></table></div>';
 }
 
@@ -9818,9 +9877,19 @@ function abrirBuscadorProductoPedidoManual(idx) {
   abrirSelectorProducto(function(p) {
     pmProductos[idx].clave = p.clave;
     pmProductos[idx].desc = p.descripcion;
+    pmProductos[idx].stockHTML = '';
     actualizarPrecioPedidoManual(idx);
     renderProductosPedidoManual();
+    actualizarStockPedidoManual(idx, p.clave);
   });
+}
+function actualizarStockPedidoManual(idx, clave) {
+  if(!clave || !db) return;
+  db.collection('productos').doc(clave).get().then(function(doc){
+    if(!pmProductos[idx] || pmProductos[idx].clave !== clave) return;
+    pmProductos[idx].stockHTML = doc.exists ? formatearStockHTML(doc.data()) : '';
+    renderProductosPedidoManual();
+  }).catch(function(e){ console.log(e); });
 }
 
 function quitarClavePedidoManual(idx) {
@@ -9869,6 +9938,7 @@ function renderProductosPedidoManual() {
           '</div>' +
           (p.clave ? '<div style="font-size:10px;color:#999;margin-top:2px;">Clave '+p.clave+' · <a href="javascript:void(0)" onclick="quitarClavePedidoManual('+idx+')" style="color:#E8500A;">✏️ producto no catalogado</a></div>' :
             '<div style="font-size:10px;color:#999;margin-top:2px;">Sin catalogar</div>') +
+          (p.stockHTML||'') +
           aviso +
         '</div>' +
         '<input type="number" value="'+p.cantidad+'" min="0" step="0.01" placeholder="Cant." style="width:55px;border:1.5px solid #D8D0C8;border-radius:8px;padding:8px 6px;font-family:\'Barlow\',sans-serif;font-size:13px;" onchange="cambiarCantidadPedidoManual('+idx+',this.value)">' +
