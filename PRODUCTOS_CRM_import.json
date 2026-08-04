@@ -1825,8 +1825,8 @@
   "max": 500.0,
   "existencia": 0,
   "tipo": "stock",
-  "insumoClave": null,
-  "insumoCant": 0,
+  "insumoClave": "200201",
+  "insumoCant": 0.02,
   "activo": true
  },
  {
@@ -2065,8 +2065,8 @@
   "max": 0,
   "existencia": 0,
   "tipo": "stock",
-  "insumoClave": null,
-  "insumoCant": 0,
+  "insumoClave": "200205",
+  "insumoCant": 0.02,
   "activo": true
  },
  {
