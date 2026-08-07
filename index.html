@@ -218,6 +218,9 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <span class="ico">🔍</span>
           <input type="text" id="cli-search" placeholder="Buscar por nombre o teléfono..." oninput="buscarCliente()" autocomplete="off">
         </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--suave);margin:6px 0;">
+          <input type="checkbox" id="cli-mostrar-inactivos" onchange="buscarCliente()"> Mostrar inactivos
+        </label>
         <div class="cli-count" id="cli-count">Ingresa un nombre o teléfono para buscar</div>
         <div class="cli-list" id="cli-list"></div>
         <div class="cli-detalle" id="cli-detalle">
@@ -244,6 +247,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <button class="btn btn-verde" onclick="whatsappCliente()">📱 WhatsApp</button>
             <button class="btn btn-gris" onclick="nuevaNotaDesdeCliente()">🖨 Nota de Venta</button>
           </div>
+          <div id="cli-admin-acciones"></div>
           <div id="cli-fiscal"></div>
         </div>
       </div>
@@ -302,6 +306,11 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
               <option value="credito">Crédito</option>
             </select>
             <div class="ct-unit" id="cot-comision-estimada"></div>
+          </div>
+          <div class="field" id="cot-efectivo-wrap" style="display:none;">
+            <label>💵 Efectivo recibido</label>
+            <input type="number" id="cot-efectivo-recibido" oninput="actualizarCambioEfectivoCot()" placeholder="$0.00">
+            <div class="ct-unit" id="cot-cambio-info"></div>
           </div>
           <div class="field">
             <label>Probabilidad de cierre</label>
@@ -2600,6 +2609,29 @@ function toggleVisiblePorTransferencia(selectId, elId) {
   if(!sel || !el) return;
   el.style.display = (sel.value === 'transferencia' && puedeCompartirDatosPago()) ? '' : 'none';
 }
+
+// ════ CALCULADORA DE CAMBIO — solo visual, no se guarda en Firestore ════
+function toggleWrapPorMetodo(selectId, wrapId, metodo) {
+  var sel = document.getElementById(selectId);
+  var wrap = document.getElementById(wrapId);
+  if(!sel || !wrap) return;
+  wrap.style.display = (sel.value === metodo) ? '' : 'none';
+}
+function actualizarCambioEfectivo(total, inputId, infoId) {
+  var input = document.getElementById(inputId);
+  var info = document.getElementById(infoId);
+  if(!input || !info) return;
+  if(input.value === '') { info.textContent = ''; return; }
+  var recibido = parseFloat(input.value) || 0;
+  var diff = recibido - (total || 0);
+  if(diff < 0) {
+    info.innerHTML = '<span style="color:#DC2626;">⚠️ Faltan ' + fmtMoney(-diff) + ' para completar el pago</span>';
+  } else if(diff === 0) {
+    info.innerHTML = '<span style="color:#22C55E;">✅ Exacto</span>';
+  } else {
+    info.innerHTML = '<span style="color:#22C55E;">💰 Cambio a devolver: ' + fmtMoney(diff) + '</span>';
+  }
+}
 async function compartirDatosPago(rsCodigo, folio, clienteNombre, clienteTel, monto) {
   if(!puedeCompartirDatosPago()) return;
   var codigo = rsCodigo || 'JMG';
@@ -3331,15 +3363,18 @@ function buscarCliente() {
   const list = document.getElementById('cli-list');
   const count = document.getElementById('cli-count');
   if(q.length < 2) { list.innerHTML=''; count.textContent='Ingresa al menos 2 caracteres'; document.getElementById('cli-detalle').classList.remove('visible'); return; }
+  const mostrarInactivos = document.getElementById('cli-mostrar-inactivos').checked;
+  const qDigits = q.replace(/[^0-9]/g,'');
   const res = clientesCache.filter(c =>
-    normalizar(c.nombre).includes(q) ||
-    (c.telefono||'').replace(/[^0-9]/g,'').includes(q.replace(/[^0-9]/g,'')) ||
-    (c.representante && normalizar(c.representante).includes(q))
+    (mostrarInactivos || c.activo !== false) &&
+    (normalizar(c.nombre).includes(q) ||
+    (qDigits && (c.telefono||'').replace(/[^0-9]/g,'').includes(qDigits)) ||
+    (c.representante && normalizar(c.representante).includes(q)))
   ).slice(0, 30);
   count.textContent = res.length === 0 ? 'Sin resultados' : res.length + ' clientes encontrados';
   list.innerHTML = res.map(c => `
     <div class="cli-item" onclick="seleccionarCliente('${c.id}')">
-      <div class="cli-nombre">${c.nombre}</div>
+      <div class="cli-nombre">${c.nombre} ${c.activo === false ? '<span style="color:#DC2626;font-size:10px;font-weight:700;">· INACTIVO</span>' : ''}</div>
       <div class="cli-tel">${c.telefono || 'Sin teléfono'} ${c.representante && c.representante !== c.nombre ? '· ' + c.representante : ''}</div>
       <div class="cli-dom">${c.domicilio || ''}</div>
     </div>
@@ -3364,6 +3399,83 @@ function seleccionarCliente(id) {
   }
   document.getElementById('cli-detalle').classList.add('visible');
   document.getElementById('cli-fiscal').innerHTML = renderClienteFiscal(c);
+  document.getElementById('cli-admin-acciones').innerHTML = renderClienteAdminAcciones(c);
+}
+
+// ════ Eliminar / desactivar cliente — solo Director y Gerencia ════
+function puedeAdministrarClientes() {
+  return currentUser && (currentUser.role === 'Director' || currentUser.role === 'Gerencia');
+}
+function renderClienteAdminAcciones(c) {
+  if(!puedeAdministrarClientes()) return '';
+  var activo = c.activo !== false;
+  return '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
+    '<button class="btn btn-gris" onclick="toggleActivoCliente(\'' + c.id + '\')">' +
+      (activo ? '🚫 Desactivar cliente' : '✅ Reactivar cliente') +
+    '</button>' +
+    '<button class="btn btn-gris" style="background:#FEE2E2;color:#DC2626;" onclick="eliminarCliente(\'' + c.id + '\')">🗑️ Eliminar cliente</button>' +
+  '</div>';
+}
+function toggleActivoCliente(id) {
+  if(!puedeAdministrarClientes()) return;
+  var c = clientesCache.find(function(x){ return x.id === id; });
+  if(!c || !db) return;
+  var nuevoActivo = c.activo === false;
+  db.collection('clientes').doc(id).set({ activo: nuevoActivo }, { merge: true }).then(function(){
+    c.activo = nuevoActivo;
+    showToast(nuevoActivo ? '✅ Cliente reactivado' : '🚫 Cliente desactivado');
+    if(clienteSeleccionado && clienteSeleccionado.id === id) {
+      clienteSeleccionado.activo = nuevoActivo;
+      document.getElementById('cli-admin-acciones').innerHTML = renderClienteAdminAcciones(c);
+    }
+    buscarCliente();
+  }).catch(function(e){ console.log('Error actualizando activo de cliente:', e); showToast('⚠️ Error al actualizar cliente'); });
+}
+function eliminarCliente(id) {
+  if(!puedeAdministrarClientes()) return;
+  var c = clientesCache.find(function(x){ return x.id === id; });
+  if(!c || !db) return;
+  Promise.all([
+    db.collection('cotizaciones').where('clienteId','==',id).get(),
+    db.collection('pedidos').where('cliente','==',c.nombre).get(),
+    db.collection('cuentas_cobrar').where('clienteId','==',id).get(),
+    db.collection('precios_cliente').where('clienteId','==',id).get()
+  ]).then(function(results){
+    var cotSnap = results[0], pedSnap = results[1], ccSnap = results[2], preciosSnap = results[3];
+    var cotActivas = cotSnap.docs.filter(function(d){
+      var s = d.data().status;
+      return s === 'pendiente' || s === 'contactado';
+    }).length;
+    var nvPendientes = pedSnap.docs.filter(function(d){
+      var s = d.data().s;
+      return s === 'confirmado' || s === 'en-ruta';
+    }).length;
+    var saldoPendiente = ccSnap.docs.reduce(function(a,d){
+      var x = d.data();
+      return a + (x.estado === 'pendiente' ? (x.saldo || 0) : 0);
+    }, 0);
+    var motivos = [];
+    if(cotActivas > 0) motivos.push(cotActivas + ' cotizacion' + (cotActivas > 1 ? 'es' : '') + ' activa' + (cotActivas > 1 ? 's' : ''));
+    if(nvPendientes > 0) motivos.push(nvPendientes + ' NV pendiente' + (nvPendientes > 1 ? 's' : '') + '/en ruta');
+    if(saldoPendiente > 0) motivos.push('saldo por cobrar de ' + fmtMoney(saldoPendiente));
+    if(motivos.length) {
+      showToast('⚠️ No se puede eliminar — este cliente tiene ' + motivos.join(', ') + '. Ciérralas primero.');
+      return;
+    }
+    if(!confirm('¿Eliminar a ' + c.nombre + '? Esta acción no se puede deshacer.')) return;
+    var batch = db.batch();
+    batch.delete(db.collection('clientes').doc(id));
+    preciosSnap.docs.forEach(function(d){ batch.delete(d.ref); });
+    batch.commit().then(function(){
+      clientesCache = clientesCache.filter(function(x){ return x.id !== id; });
+      if(clienteSeleccionado && clienteSeleccionado.id === id) {
+        clienteSeleccionado = null;
+        document.getElementById('cli-detalle').classList.remove('visible');
+      }
+      showToast('🗑️ Cliente eliminado');
+      buscarCliente();
+    }).catch(function(e){ console.log('Error eliminando cliente:', e); showToast('⚠️ Error al eliminar cliente'); });
+  }).catch(function(e){ console.log('Error verificando pendientes del cliente:', e); showToast('⚠️ Error al verificar pendientes'); });
 }
 
 // ════ Direcciones de entrega (hasta 3 por cliente) ════
@@ -3619,7 +3731,7 @@ function buscarClienteCot() {
   const q = normalizar(document.getElementById('cot-cliente-input').value);
   const lista = document.getElementById('cot-cliente-lista');
   if(q.length < 2) { lista.style.display = 'none'; return; }
-  const res = clientesCache.filter(c => normalizar(c.nombre).includes(q) || (c.telefono||'').includes(q)).slice(0, 8);
+  const res = clientesCache.filter(c => c.activo !== false && (normalizar(c.nombre).includes(q) || (c.telefono||'').includes(q))).slice(0, 8);
   lista.style.display = res.length ? 'block' : 'none';
   lista.innerHTML = res.map(c => `
     <div style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #F0EDE8;font-size:13px;" onmousedown="elegirClienteCot('${c.id}')">
@@ -3862,12 +3974,20 @@ function recalcular() {
   document.getElementById('cot-total').textContent = fmtMoney(total);
   var comisionEl = document.getElementById('cot-comision-estimada');
   if(comisionEl && document.getElementById('cot-pago').value === 'tpv') actualizarComisionCot();
+  toggleWrapPorMetodo('cot-pago', 'cot-efectivo-wrap', 'efectivo');
+  actualizarCambioEfectivo(total, 'cot-efectivo-recibido', 'cot-cambio-info');
   return { sub, desc, total };
+}
+function actualizarCambioEfectivoCot() {
+  var total = parseFloat((document.getElementById('cot-total').textContent||'0').replace(/[^0-9.]/g,'')) || 0;
+  actualizarCambioEfectivo(total, 'cot-efectivo-recibido', 'cot-cambio-info');
 }
 function actualizarComisionCot() {
   var pago = document.getElementById('cot-pago').value;
   var wrap = document.getElementById('cot-tarjeta-wrap');
   toggleVisiblePorTransferencia('cot-pago', 'cot-btn-compartir-pago');
+  toggleWrapPorMetodo('cot-pago', 'cot-efectivo-wrap', 'efectivo');
+  actualizarCambioEfectivoCot();
   if(pago !== 'tpv') { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   var terminal = document.getElementById('cot-terminal').value.split('-');
@@ -4118,6 +4238,11 @@ function mostrarModalPedido(cot, docId) {
           <input type="number" id="mp-anticipo" value="${cot.pago === 'credito' ? 0 : (cot.total||0)}" oninput="actualizarSaldoPedidoModal(${cot.total||0})" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
           <div id="mp-saldo-info" style="font-size:11px;color:#6B6560;margin-top:4px;"></div>
         </div>
+        <div style="grid-column:1/-1;" id="mp-efectivo-wrap">
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">💵 Efectivo recibido</label>
+          <input type="number" id="mp-efectivo-recibido" oninput="actualizarCambioEfectivo(${cot.total||0},'mp-efectivo-recibido','mp-cambio-info')" placeholder="$0.00" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
+          <div id="mp-cambio-info" style="font-size:11px;margin-top:4px;"></div>
+        </div>
       </div>
 
       <button id="mp-btn-compartir-pago" onclick="compartirDatosPagoNV()" style="display:none;width:100%;margin-bottom:10px;padding:10px;border:none;border-radius:8px;background:#22C55E;color:#fff;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🏦 Compartir datos de pago</button>
@@ -4132,6 +4257,8 @@ function mostrarModalPedido(cot, docId) {
   cotModalPedidoActual = cot;
   actualizarSaldoPedidoModal(cot.total || 0);
   toggleVisiblePorTransferencia('mp-pago', 'mp-btn-compartir-pago');
+  toggleWrapPorMetodo('mp-pago', 'mp-efectivo-wrap', 'efectivo');
+  actualizarCambioEfectivo(cot.total || 0, 'mp-efectivo-recibido', 'mp-cambio-info');
 }
 
 function actualizarAnticipoPorFormaPago(total) {
@@ -4140,6 +4267,8 @@ function actualizarAnticipoPorFormaPago(total) {
   anticipoEl.value = (pago === 'credito') ? 0 : total;
   actualizarSaldoPedidoModal(total);
   toggleVisiblePorTransferencia('mp-pago', 'mp-btn-compartir-pago');
+  toggleWrapPorMetodo('mp-pago', 'mp-efectivo-wrap', 'efectivo');
+  actualizarCambioEfectivo(total, 'mp-efectivo-recibido', 'mp-cambio-info');
 }
 
 function actualizarSaldoPedidoModal(total) {
@@ -8923,6 +9052,11 @@ function abrirNuevoTicket() {
         '<input type="number" id="tk-nuevo-anticipo" oninput="actualizarSaldoTicketModal()">' +
         '<div id="tk-saldo-info" style="font-size:11px;color:var(--suave);margin-top:4px;"></div>' +
       '</div>' +
+      '<div class="field" id="tk-efectivo-wrap" style="display:none;margin-bottom:14px;">' +
+        '<label>💵 Efectivo recibido</label>' +
+        '<input type="number" id="tk-efectivo-recibido" oninput="actualizarCambioEfectivo(totalTicket(),\'tk-efectivo-recibido\',\'tk-cambio-info\')" placeholder="$0.00">' +
+        '<div id="tk-cambio-info" style="font-size:11px;margin-top:4px;"></div>' +
+      '</div>' +
       '<div style="display:flex;gap:8px;">' +
         '<button class="btn btn-naranja" style="flex:1;" onclick="guardarTicket()">Cobrar y crear ticket</button>' +
         '<button class="btn btn-gris" style="flex:1;" onclick="document.getElementById(\'modal-nuevo-ticket\').remove()">Cancelar</button>' +
@@ -8936,7 +9070,7 @@ function buscarClienteTicket() {
   var q = normalizar(document.getElementById('tk-nuevo-cliente').value);
   var lista = document.getElementById('tk-nuevo-cliente-lista');
   if(q.length < 2) { lista.style.display = 'none'; return; }
-  var res = clientesCache.filter(function(c){ return normalizar(c.nombre).indexOf(q) !== -1; }).slice(0, 8);
+  var res = clientesCache.filter(function(c){ return c.activo !== false && normalizar(c.nombre).indexOf(q) !== -1; }).slice(0, 8);
   lista.style.display = res.length ? 'block' : 'none';
   lista.innerHTML = res.map(function(c){
     return '<div style="padding:9px 11px;cursor:pointer;border-bottom:1px solid #F0EDE8;font-size:12px;" onmousedown="elegirClienteTicket(\''+c.id+'\')"><strong>'+c.nombre+'</strong><br><span style="font-size:10px;color:#888;">'+(c.telefono||'')+'</span></div>';
@@ -9030,6 +9164,8 @@ function actualizarComisionTicket() {
   if(!metodoEl || !wrap) return;
   var metodo = metodoEl.value;
   toggleVisiblePorTransferencia('tk-nuevo-metodo', 'tk-nuevo-rs-wrap');
+  toggleWrapPorMetodo('tk-nuevo-metodo', 'tk-efectivo-wrap', 'efectivo');
+  actualizarCambioEfectivo(totalTicket(), 'tk-efectivo-recibido', 'tk-cambio-info');
   if(metodo !== 'debito' && metodo !== 'credito') { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   var terminal = document.getElementById('tk-nuevo-terminal').value.split('-');
