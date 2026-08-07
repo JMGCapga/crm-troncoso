@@ -4059,16 +4059,17 @@ function mostrarModalPedido(cot, docId) {
         </div>
         <div>
           <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Forma de pago</label>
-          <select id="mp-pago" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
-            <option value="${cot.pago||'efectivo'}">${cot.pago||'efectivo'}</option>
+          <select id="mp-pago" onchange="actualizarAnticipoPorFormaPago(${cot.total||0})" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
+            <option value="${cot.pago||'efectivo'}">${cot.pago === 'credito' ? 'Crédito' : (cot.pago||'efectivo')}</option>
             <option value="efectivo">Efectivo</option>
             <option value="transferencia">Transferencia</option>
             <option value="tpv">TPV / Tarjeta</option>
+            ${cot.pago !== 'credito' ? '<option value="credito">Crédito</option>' : ''}
           </select>
         </div>
         <div style="grid-column:1/-1;">
           <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Anticipo recibido ($) — vacío o igual al total = pago completo</label>
-          <input type="number" id="mp-anticipo" value="${cot.total||0}" oninput="actualizarSaldoPedidoModal(${cot.total||0})" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
+          <input type="number" id="mp-anticipo" value="${cot.pago === 'credito' ? 0 : (cot.total||0)}" oninput="actualizarSaldoPedidoModal(${cot.total||0})" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
           <div id="mp-saldo-info" style="font-size:11px;color:#6B6560;margin-top:4px;"></div>
         </div>
       </div>
@@ -4081,6 +4082,13 @@ function mostrarModalPedido(cot, docId) {
   `;
   document.body.appendChild(modal);
   actualizarSaldoPedidoModal(cot.total || 0);
+}
+
+function actualizarAnticipoPorFormaPago(total) {
+  var pago = document.getElementById('mp-pago').value;
+  var anticipoEl = document.getElementById('mp-anticipo');
+  anticipoEl.value = (pago === 'credito') ? 0 : total;
+  actualizarSaldoPedidoModal(total);
 }
 
 function actualizarSaldoPedidoModal(total) {
@@ -6747,6 +6755,10 @@ function cargarComprasJM() {
 // ════════════════════════════════════════════════════════════
 
 function puedeRegistrarCobro() {
+  return currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director' || currentUser.role === 'Ventas');
+}
+
+function puedeRegistrarCobroEfectivo() {
   return currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
 }
 
@@ -6801,6 +6813,7 @@ function renderCuentasCobrar() {
   }
   var hoyStr = fechaISOLocal();
   var puedeCobrar = puedeRegistrarCobro();
+  var puedeEfectivo = puedeRegistrarCobroEfectivo();
   var total = 0;
   cont.innerHTML = cuentasCobrar.map(function(c) {
     total += c.saldo || 0;
@@ -6810,7 +6823,7 @@ function renderCuentasCobrar() {
     if(puedeCobrar) {
       acciones += '<input type="number" id="cc-abono-' + c._docId + '" placeholder="Monto a abonar" min="0" step="0.01" style="flex:1;min-width:100px;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-family:\'Barlow\',sans-serif;font-size:12px;">'
         + '<select id="cc-metodo-' + c._docId + '" style="border:1.5px solid var(--borde);border-radius:8px;padding:8px 6px;font-family:\'Barlow\',sans-serif;font-size:12px;">'
-        +   '<option value="efectivo">💵 Efectivo</option>'
+        +   (puedeEfectivo ? '<option value="efectivo">💵 Efectivo</option>' : '')
         +   '<option value="transferencia">🏦 Transferencia</option>'
         +   '<option value="tarjeta_nu">💜 Tarjeta Nu</option>'
         +   '<option value="tarjeta_afirme">🟠 Tarjeta Afirme</option>'
@@ -6891,6 +6904,7 @@ function abonarCuentaCobrar(docId) {
   var monto = parseFloat(input ? input.value : '');
   if(!(monto > 0)) { showToast('⚠️ Ingresa un monto válido'); return; }
   var metodoPago = document.getElementById('cc-metodo-' + docId).value;
+  if(metodoPago === 'efectivo' && !puedeRegistrarCobroEfectivo()) { showToast('⚠️ Los abonos en efectivo los registra Gerencia o Director'); return; }
   var quienTrajo = document.getElementById('cc-trajo-' + docId).value.trim();
   registrarPagoCliente(docId, monto, metodoPago, quienTrajo).then(function() { cargarCuentasCobrar(); verificarAlertasCuentasCobrarVencidas(); });
 }
