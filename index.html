@@ -333,6 +333,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <button class="btn btn-naranja" onclick="guardarCotizacion()">💾 Guardar Cotización</button>
           <button class="btn btn-gris" onclick="generarNota()">🖨 Generar Nota</button>
           <button class="btn btn-gris" onclick="generarTicket()">🧾 Generar Ticket</button>
+          <button class="btn btn-verde" id="cot-btn-compartir-pago" onclick="compartirDatosPagoCotizacion()" style="display:none;">🏦 Compartir datos de pago</button>
         </div>
       </div>
     </div>
@@ -2587,6 +2588,42 @@ function subirRazonesSocialesSeed(cb) {
   });
 }
 
+// ════ COMPARTIR DATOS DE PAGO — botón en Cotización/NV/Ticket cuando el pago es Transferencia ════
+// Solo Ventas/Compras/Gerencia/Director. La cuenta mostrada es la PRINCIPAL de la razón social
+// de esa venta, leída de razonesSocialesCache (colección Firestore razones_sociales), no hardcodeada.
+function puedeCompartirDatosPago() {
+  return currentUser && currentUser.role !== 'Operador' && currentUser.role !== 'Mecanico';
+}
+function toggleVisiblePorTransferencia(selectId, elId) {
+  var sel = document.getElementById(selectId);
+  var el = document.getElementById(elId);
+  if(!sel || !el) return;
+  el.style.display = (sel.value === 'transferencia' && puedeCompartirDatosPago()) ? '' : 'none';
+}
+async function compartirDatosPago(rsCodigo, folio, clienteNombre, clienteTel, monto) {
+  if(!puedeCompartirDatosPago()) return;
+  var codigo = rsCodigo || 'JMG';
+  if(!razonesSocialesCache[codigo]) {
+    await new Promise(function(resolve){ cargarRazonesSociales(resolve); });
+  }
+  var emisor = razonesSocialesCache[codigo] || RAZONES_SOCIALES_SEED[codigo] || {};
+  var cuentas = emisor.cuentas || [];
+  var principal = cuentas.find(function(c){ return c.principal; }) || cuentas[0];
+  if(!principal) { showToast('⚠️ Sin cuenta bancaria registrada para ' + codigo); return; }
+  var msg = '💳 *DATOS DE PAGO — MATERIALES TRONCOSO*\n\n' +
+    'Banco: ' + principal.banco + '\n' +
+    'Titular: ' + (emisor.razonSocial || '') + '\n' +
+    'Cuenta: ' + principal.cuenta + '\n' +
+    'CLABE: ' + principal.clabe + '\n\n' +
+    'Concepto: ' + (folio || '') + ' — ' + (clienteNombre || '') + '\n' +
+    'Monto: ' + fmtMoney(monto || 0) + '\n\n' +
+    '📞 5555906802';
+  var tel = (clienteTel || '').replace(/[^0-9]/g, '');
+  var num = tel ? (tel.indexOf('52') === 0 ? tel : '52' + tel) : '';
+  var url = num ? ('https://wa.me/' + num + '?text=' + encodeURIComponent(msg)) : ('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg));
+  window.open(url, '_blank');
+}
+
 function cargarTerminales(cb) {
   if(!db) { terminalesCache = TERMINALES_SEED.slice(); if(cb) cb(); return; }
   db.collection('terminales').limit(1).get().then(function(snap){
@@ -3830,6 +3867,7 @@ function recalcular() {
 function actualizarComisionCot() {
   var pago = document.getElementById('cot-pago').value;
   var wrap = document.getElementById('cot-tarjeta-wrap');
+  toggleVisiblePorTransferencia('cot-pago', 'cot-btn-compartir-pago');
   if(pago !== 'tpv') { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   var terminal = document.getElementById('cot-terminal').value.split('-');
@@ -3842,6 +3880,14 @@ function actualizarComisionCot() {
     total > 0 ? ('Comisión aprox: ' + fmtMoney(n.comision + n.ivaCom) + ' (' + pct.toFixed(2) + '%) · Neto: ' + fmtMoney(n.neto)) : '';
 }
 
+function compartirDatosPagoCotizacion() {
+  var rs = document.getElementById('cot-rs').value;
+  var total = parseFloat((document.getElementById('cot-total').textContent||'0').replace(/[^0-9.]/g,'')) || 0;
+  var clienteNombre = clienteCotizacion ? clienteCotizacion.nombre : (document.getElementById('cot-cliente-input').value || 'Público General');
+  var clienteTel = clienteCotizacion ? (clienteCotizacion.telefono||'') : '';
+  var folio = 'COT-' + String(folioActual).padStart(3,'0');
+  compartirDatosPago(rs, folio, clienteNombre, clienteTel, total);
+}
 function getProductos() {
   const rows = document.getElementById('prod-body').children;
   return Array.from(rows).map(tr => {
@@ -4074,6 +4120,8 @@ function mostrarModalPedido(cot, docId) {
         </div>
       </div>
 
+      <button id="mp-btn-compartir-pago" onclick="compartirDatosPagoNV()" style="display:none;width:100%;margin-bottom:10px;padding:10px;border:none;border-radius:8px;background:#22C55E;color:#fff;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🏦 Compartir datos de pago</button>
+
       <div style="display:flex;gap:10px;">
         <button onclick="document.getElementById('modal-pedido').remove()" style="flex:1;padding:12px;border:1.5px solid #D8D0C8;border-radius:8px;background:#fff;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Cancelar</button>
         <button onclick="confirmarCierrePedido('${docId}')" style="flex:2;padding:12px;border:none;border-radius:8px;background:#E8500A;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;cursor:pointer;">✅ CREAR NOTA DE VENTA</button>
@@ -4081,7 +4129,9 @@ function mostrarModalPedido(cot, docId) {
     </div>
   `;
   document.body.appendChild(modal);
+  cotModalPedidoActual = cot;
   actualizarSaldoPedidoModal(cot.total || 0);
+  toggleVisiblePorTransferencia('mp-pago', 'mp-btn-compartir-pago');
 }
 
 function actualizarAnticipoPorFormaPago(total) {
@@ -4089,6 +4139,7 @@ function actualizarAnticipoPorFormaPago(total) {
   var anticipoEl = document.getElementById('mp-anticipo');
   anticipoEl.value = (pago === 'credito') ? 0 : total;
   actualizarSaldoPedidoModal(total);
+  toggleVisiblePorTransferencia('mp-pago', 'mp-btn-compartir-pago');
 }
 
 function actualizarSaldoPedidoModal(total) {
@@ -4102,6 +4153,14 @@ function actualizarSaldoPedidoModal(total) {
 }
 
 var creandoPedido = false;
+var cotModalPedidoActual = null;
+
+function compartirDatosPagoNV() {
+  if(!cotModalPedidoActual) return;
+  var cot = cotModalPedidoActual;
+  var folio = 'NV-' + String(cot.folio).padStart(3,'0');
+  compartirDatosPago(cot.rs || 'JMG', folio, cot.cliente, cot.clienteTel, cot.total || 0);
+}
 
 function registrarPagoCliente(docId, monto, metodoPago, quienTrajo) {
   if(!db || !docId || !(monto > 0)) return;
@@ -8850,6 +8909,14 @@ function abrirNuevoTicket() {
         '</select>' +
         '<div class="ct-unit" id="tk-nuevo-comision"></div>' +
       '</div>' +
+      '<div class="field" id="tk-nuevo-rs-wrap" style="display:none;margin-bottom:10px;">' +
+        '<label>Razón Social receptora de la transferencia</label>' +
+        '<select id="tk-nuevo-rs">' +
+          '<option value="JMG">José Manuel Garín — GACM860923FB3</option>' +
+          '<option value="IZZ">Itzayana Illesca — IEZI860901AW2</option>' +
+          '<option value="CEM">Abastecedora Cemcoya — ACE230216MR0</option>' +
+        '</select>' +
+      '</div>' +
       '<div style="text-align:right;font-family:\'Bebas Neue\',sans-serif;font-size:22px;margin-bottom:14px;" id="tk-nuevo-total">TOTAL: $0.00</div>' +
       '<div class="field" style="margin-bottom:14px;">' +
         '<label>Anticipo recibido ($) — vacío o igual al total = pago completo</label>' +
@@ -8962,6 +9029,7 @@ function actualizarComisionTicket() {
   var wrap = document.getElementById('tk-nuevo-terminal-wrap');
   if(!metodoEl || !wrap) return;
   var metodo = metodoEl.value;
+  toggleVisiblePorTransferencia('tk-nuevo-metodo', 'tk-nuevo-rs-wrap');
   if(metodo !== 'debito' && metodo !== 'credito') { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   var terminal = document.getElementById('tk-nuevo-terminal').value.split('-');
@@ -9005,6 +9073,7 @@ function guardarTicket() {
     comision = n.comision + n.ivaCom;
     neto = n.neto;
   }
+  var rsTransferencia = metodo === 'transferencia' ? document.getElementById('tk-nuevo-rs').value : null;
 
   creandoTicket = true;
   siguienteFolioTicket().then(function(folio){
@@ -9019,7 +9088,7 @@ function guardarTicket() {
       anticipo: anticipo,
       saldoPendiente: saldoPendiente,
       metodoPago: metodo,
-      razonSocial: terminal,
+      razonSocial: metodo === 'transferencia' ? rsTransferencia : terminal,
       comision: comision,
       neto: neto,
       usuario: currentUser ? currentUser.name : 'Desconocido',
@@ -9076,11 +9145,40 @@ function guardarTicket() {
       showToast('✅ Ticket ' + folio + ' creado');
       var modal = document.getElementById('modal-nuevo-ticket');
       if(modal) modal.remove();
+      if(metodo === 'transferencia') mostrarBtnCompartirPagoTicket(ticket);
       imprimirTicketVenta(ticket);
       renderListaTickets();
       creandoTicket = false;
     }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear ticket'); creandoTicket = false; });
   });
+}
+
+function mostrarBtnCompartirPagoTicket(ticket) {
+  if(!puedeCompartirDatosPago()) return;
+  var existente = document.getElementById('btn-compartir-pago-tk-container');
+  if(existente) existente.remove();
+
+  var container = document.createElement('div');
+  container.id = 'btn-compartir-pago-tk-container';
+  container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9997;';
+
+  var btn = document.createElement('button');
+  btn.textContent = '🏦 Compartir datos de pago';
+  btn.style.cssText = 'background:#22C55E;color:white;border:none;padding:14px 20px;'+
+    'border-radius:10px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;'+
+    'cursor:pointer;box-shadow:0 8px 24px rgba(34,197,94,0.3);transition:all 0.2s;';
+
+  btn.onmouseover = function() { btn.style.transform = 'scale(1.05)'; };
+  btn.onmouseout = function() { btn.style.transform = 'scale(1)'; };
+
+  btn.onclick = function() {
+    var tel = ticket.clienteId ? (function(){ var c = clientesCache.find(function(x){ return x.id === ticket.clienteId; }); return c ? c.telefono : ''; })() : '';
+    compartirDatosPago(ticket.razonSocial, ticket.folio, ticket.cliente, tel, ticket.total);
+    container.remove();
+  };
+
+  container.appendChild(btn);
+  document.body.appendChild(container);
 }
 
 function imprimirTicketVenta(ticket) {
