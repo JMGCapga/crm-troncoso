@@ -1064,6 +1064,8 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <!-- ===== COMPRAS A PROVEEDORES ===== -->
     <div class="panel" id="panel-compras">
 
+      <button class="btn btn-gris" id="cmp-btn-historial" onclick="abrirHistorialCompras()" style="width:100%;margin-bottom:14px;display:none;">📜 Historial de compras</button>
+
       <!-- VISTA ERIKA — registra compras -->
       <div id="compras-erika">
         <div class="card">
@@ -4279,14 +4281,27 @@ function actualizarAnticipoPorFormaPago(total) {
   actualizarCambioEfectivo(total, 'mp-efectivo-recibido', 'mp-cambio-info');
 }
 
+// Deja explícito cuando una venta es cobro híbrido (parte ahora + resto a
+// crédito) o 100% a crédito, y advierte si no hay cliente registrado para
+// poder cobrar ese saldo después (confirmarCierrePedido lo bloquea de verdad).
 function actualizarSaldoPedidoModal(total) {
   var anticipoEl = document.getElementById('mp-anticipo');
   var info = document.getElementById('mp-saldo-info');
   if(!anticipoEl || !info) return;
   var anticipo = parseFloat(anticipoEl.value) || 0;
   var saldo = Math.max(0, total - anticipo);
-  info.textContent = saldo > 0 ? '⚠️ Queda pendiente: ' + fmtMoney(saldo) : '✅ Pago completo';
-  info.style.color = saldo > 0 ? '#DC2626' : '#22C55E';
+  if(saldo <= 0) {
+    info.textContent = '✅ Pago completo';
+    info.style.color = '#22C55E';
+    return;
+  }
+  var tieneCliente = !!(cotModalPedidoActual && cotModalPedidoActual.clienteId);
+  var etiqueta = anticipo > 0
+    ? '🔀 Cobro híbrido: ' + fmtMoney(anticipo) + ' ahora + ' + fmtMoney(saldo) + ' a crédito'
+    : '📅 Todo a crédito: ' + fmtMoney(saldo);
+  if(!tieneCliente) etiqueta += ' — ⚠️ selecciona un cliente registrado para poder cobrarlo después';
+  info.textContent = etiqueta;
+  info.style.color = '#DC2626';
 }
 
 var creandoPedido = false;
@@ -4394,6 +4409,16 @@ function confirmarCierrePedido(docId) {
   const pago = document.getElementById('mp-pago').value;
   const anticipo = Math.min(parseFloat(document.getElementById('mp-anticipo').value) || 0, cot.total || 0);
   const saldoPendiente = Math.max(0, (cot.total || 0) - anticipo);
+
+  // Cobro híbrido (parte ahora + resto a crédito) o 100% a crédito: en
+  // ambos casos queda un saldo por cobrar. No tiene caso fiarle a "Público
+  // General" — sin cliente registrado no hay a quién cobrarle ni número
+  // para recordarle.
+  if(saldoPendiente > 0 && !cot.clienteId) {
+    creandoPedido = false;
+    showToast('⚠️ Hay saldo a crédito pero no hay cliente registrado — búscalo o créalo primero');
+    return;
+  }
 
   Promise.resolve('NV-' + String(cot.folio).padStart(3,'0')).then(function(folioBase){
     const pedido = {
@@ -6250,6 +6275,7 @@ function iniciarCompras() {
   document.getElementById('compras-erika').style.display = 'none';
   document.getElementById('compras-viri').style.display = 'none';
   document.getElementById('compras-jm').style.display = 'none';
+  document.getElementById('cmp-btn-historial').style.display = puedeCancelarCompra() ? 'block' : 'none';
 
   var hoy = new Date();
   document.getElementById('compras-fecha-hoy').textContent =
@@ -6265,6 +6291,104 @@ function iniciarCompras() {
     document.getElementById('compras-jm').style.display = 'block';
     cargarComprasJM();
   }
+}
+
+// ════ HISTORIAL DE COMPRAS — buscador con filtros (Compras/Gerencia/Director) ════
+// Antes no existía forma de ver compras pasadas más allá de "hoy" (Erika) o
+// las últimas 20 (Director, sin filtro de fecha real). Carga las últimas 500
+// y filtra en el cliente, mismo patrón que ya usa cargarComprasJM().
+var historialComprasCache = [];
+var historialComprasCargado = false;
+
+function abrirHistorialCompras() {
+  if(!puedeCancelarCompra()) { showToast('⚠️ Sin permisos'); return; }
+  var existente = document.getElementById('modal-historial-compras');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-historial-compras';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;">📜 HISTORIAL DE COMPRAS</div>' +
+        '<button onclick="document.getElementById(\'modal-historial-compras\').remove()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#888;">✕</button>' +
+      '</div>' +
+      '<div class="form-grid" style="margin-bottom:12px;">' +
+        '<div class="field"><label>Proveedor</label><input type="text" id="hc-proveedor" placeholder="Nombre..." oninput="buscarHistorialCompras()"></div>' +
+        '<div class="field"><label>Razón Social</label><select id="hc-rs" onchange="buscarHistorialCompras()">' +
+          '<option value="">Todas</option><option value="JMG">JMG</option><option value="IZZ">IZZ</option><option value="CEM">CEM</option>' +
+        '</select></div>' +
+        '<div class="field"><label>Desde</label><input type="date" id="hc-desde" onchange="buscarHistorialCompras()"></div>' +
+        '<div class="field"><label>Hasta</label><input type="date" id="hc-hasta" onchange="buscarHistorialCompras()"></div>' +
+        '<div class="field" style="grid-column:1/-1;"><label>Forma de pago</label><select id="hc-pago" onchange="buscarHistorialCompras()">' +
+          '<option value="">Todas</option>' +
+          '<option value="efectivo">Efectivo</option>' +
+          '<option value="transferencia">Transferencia</option>' +
+          '<option value="tarjeta_credito">Tarjeta de crédito</option>' +
+          '<option value="credito_proveedor">Crédito de proveedor</option>' +
+        '</select></div>' +
+      '</div>' +
+      '<div id="hc-resumen" style="font-size:12px;color:var(--suave);margin-bottom:10px;"></div>' +
+      '<div id="hc-lista" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;"></div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  if(historialComprasCargado) { buscarHistorialCompras(); return; }
+  document.getElementById('hc-lista').innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">Cargando...</div>';
+  db.collection('compras').orderBy('timestamp','desc').limit(500).get().then(function(snap) {
+    historialComprasCache = snap.docs.map(function(d) { return Object.assign({_docId: d.id}, d.data()); });
+    historialComprasCargado = true;
+    buscarHistorialCompras();
+  }).catch(function(e) {
+    console.log('Error cargando historial de compras:', e);
+    document.getElementById('hc-lista').innerHTML = '<div style="padding:20px;text-align:center;color:#EF4444;">Error al cargar</div>';
+  });
+}
+
+function buscarHistorialCompras() {
+  var lista = document.getElementById('hc-lista');
+  var resumen = document.getElementById('hc-resumen');
+  if(!lista) return;
+  var qProv = normalizar(document.getElementById('hc-proveedor').value);
+  var rs = document.getElementById('hc-rs').value;
+  var pago = document.getElementById('hc-pago').value;
+  var desde = document.getElementById('hc-desde').value;
+  var hasta = document.getElementById('hc-hasta').value;
+
+  var filtradas = historialComprasCache.filter(function(c) {
+    if(qProv && normalizar(c.proveedor || '').indexOf(qProv) === -1) return false;
+    if(rs && c.razonSocial !== rs) return false;
+    if(pago && c.formaPago !== pago) return false;
+    if(desde && c.fecha < desde) return false;
+    if(hasta && c.fecha > hasta) return false;
+    return true;
+  });
+
+  var totalFiltrado = filtradas.reduce(function(a, c) { return a + (c.total || 0); }, 0);
+  resumen.textContent = filtradas.length + ' compra' + (filtradas.length === 1 ? '' : 's') + ' · ' + fmtMoney(totalFiltrado);
+
+  if(!filtradas.length) { lista.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">Sin resultados</div>'; return; }
+
+  var statusColor = { pendiente: '#F59E0B', validada: '#22C55E', rechazada: '#EF4444', cancelada: '#9CA3AF' };
+  var statusLabel = { pendiente: '⏳ Pendiente', validada: '✅ Validada', rechazada: '❌ Rechazada', cancelada: '🚫 Cancelada' };
+  lista.innerHTML = filtradas.slice(0, 100).map(function(c) {
+    var color = statusColor[c.status] || '#F59E0B';
+    var label = statusLabel[c.status] || c.status;
+    return '<div style="padding:12px;border-bottom:1px solid #F0EDE8;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;">' +
+        '<div style="font-weight:700;color:var(--naranja);">' + c.folio + '</div>' +
+        '<div style="font-weight:700;">' + fmtMoney(c.total) + '</div>' +
+      '</div>' +
+      '<div style="font-size:12px;color:#666;margin-top:2px;">' + (c.proveedor || 'Sin nombre') + ' (' + (c.rsNombre || c.razonSocial || '') + ')</div>' +
+      '<div style="font-size:11px;color:var(--suave);margin-top:2px;">' + c.fecha + ' · ' + labelFormaPagoCompra(c.formaPago) + ' · <span style="color:' + color + ';font-weight:700;">' + label + '</span></div>' +
+    '</div>';
+  }).join('') + (filtradas.length > 100 ? '<div style="padding:10px;text-align:center;color:var(--suave);font-size:11px;">Mostrando 100 de ' + filtradas.length + ' — afina los filtros</div>' : '');
+}
+
+function labelFormaPagoCompra(fp) {
+  return fp === 'efectivo' ? '💵 Efectivo' :
+    fp === 'transferencia' ? '🏦 Transferencia' :
+    fp === 'tarjeta_credito' ? '💳 Tarjeta de crédito' :
+    fp === 'credito_proveedor' ? '📅 Crédito de proveedor' : (fp || 'Sin especificar');
 }
 
 function buscarProveedor() {
@@ -9682,8 +9806,17 @@ function actualizarSaldoTicketModal() {
   var anticipoVal = anticipoEl.value;
   var anticipo = anticipoVal === '' ? total : (parseFloat(anticipoVal) || 0);
   var saldo = Math.max(0, total - anticipo);
-  info.textContent = saldo > 0 ? '⚠️ Queda pendiente: ' + fmtMoney(saldo) : '✅ Pago completo';
-  info.style.color = saldo > 0 ? '#DC2626' : '#22C55E';
+  if(saldo <= 0) {
+    info.textContent = '✅ Pago completo';
+    info.style.color = '#22C55E';
+    return;
+  }
+  var etiqueta = anticipo > 0
+    ? '🔀 Cobro híbrido: ' + fmtMoney(anticipo) + ' ahora + ' + fmtMoney(saldo) + ' a crédito'
+    : '📅 Todo a crédito: ' + fmtMoney(saldo);
+  if(!ticketClienteSel) etiqueta += ' — ⚠️ selecciona un cliente registrado para poder cobrarlo después';
+  info.textContent = etiqueta;
+  info.style.color = '#DC2626';
 }
 
 function actualizarComisionTicket() {
@@ -9727,6 +9860,13 @@ function guardarTicket() {
   var anticipoVal = document.getElementById('tk-nuevo-anticipo').value;
   var anticipo = anticipoVal === '' ? total : Math.min(parseFloat(anticipoVal) || 0, total);
   var saldoPendiente = Math.max(0, total - anticipo);
+
+  // Mismo resguardo que Confirmar Venta: no tiene caso fiarle a "Público
+  // General" — sin cliente registrado no hay a quién cobrarle después.
+  if(saldoPendiente > 0 && !ticketClienteSel) {
+    showToast('⚠️ Hay saldo a crédito pero no hay cliente registrado — búscalo primero');
+    return;
+  }
 
   var terminal = null, comision = 0, neto = total;
   if(metodo === 'debito' || metodo === 'credito') {
