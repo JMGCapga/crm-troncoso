@@ -1287,6 +1287,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <button type="button" class="btn btn-naranja" id="prov-dir-btn-editar" style="flex:1;" onclick="abrirEditarProveedorDir()">✏️ Editar</button>
             <button type="button" class="btn btn-gris" id="prov-dir-btn-borrar" style="flex:1;" onclick="borrarProveedorDir()">🗑️ Borrar</button>
           </div>
+          <div id="prov-dir-cuentas"></div>
           <div id="prov-dir-fiscal"></div>
         </div>
       </div>
@@ -2318,7 +2319,7 @@ function checkPin(){
       'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-inventario-btn','tab-cuentas-btn'];
     var tabsCompras = ['tab-clientes-btn','tab-ventas-btn','tab-consultas-btn',
       'tab-corte-btn','tab-salidas-btn','tab-nc-btn',
-      'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-inventario-btn'];
+      'tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-inventario-btn','tab-cuentas-btn'];
     var tabsGerencia = ['tab-clientes-btn','tab-ventas-btn','tab-consultas-btn',
       'tab-corte-btn','tab-salidas-btn',
       'tab-nc-btn','tab-fondeos-btn','tab-compras-btn','tab-proveedores-btn','tab-cuentas-btn','tab-nomina-btn',
@@ -4315,10 +4316,12 @@ function registrarPagoCliente(docId, monto, metodoPago, quienTrajo) {
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar pago'); });
 }
 
-function registrarCompraProveedor(proveedor, total, vencimiento) {
+function registrarCompraProveedor(proveedorId, proveedor, total, vencimiento, compraId) {
   if(!db || !proveedor || !(total > 0)) return;
   return db.collection('cuentas_pagar').add({
+    proveedorId: proveedorId || null,
     proveedor: proveedor,
+    compraId: compraId || null,
     total: total,
     saldo: total,
     estado: 'pendiente',
@@ -4326,7 +4329,7 @@ function registrarCompraProveedor(proveedor, total, vencimiento) {
     fecha: fechaISOLocal(),
     timestamp: Date.now()
   }).then(function(){
-    showToast('🧾 Compra a proveedor registrada');
+    showToast('🧾 Compra a crédito registrada en Cuentas por Pagar');
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar compra'); });
 }
 
@@ -6382,6 +6385,88 @@ function seleccionarProveedorDir(id) {
   document.getElementById('prov-dir-fiscal').innerHTML = renderProveedorFiscal(p);
   var btnsEditar = document.getElementById('prov-dir-btns-editar');
   if(btnsEditar) btnsEditar.style.display = puedeEditarProveedoresDir() ? 'flex' : 'none';
+  cargarCuentasPagarProveedor(id);
+}
+
+// ════ CUENTAS POR PAGAR — vive en la ficha del proveedor, no en un tab aparte ════
+// El punto es agilizar compras a crédito: aquí mismo se ve el saldo y se abona,
+// sin saltar a otro módulo ni juntar botones de todos los proveedores en una lista.
+function cargarCuentasPagarProveedor(proveedorId) {
+  var cont = document.getElementById('prov-dir-cuentas');
+  if(!cont) return;
+  if(!puedeEditarProveedoresDir()) { cont.innerHTML = ''; return; }
+  if(!db) { cont.innerHTML = ''; return; }
+  cont.innerHTML = '<div style="font-size:11px;color:var(--suave);margin-top:10px;">Cargando cuentas por pagar...</div>';
+  db.collection('cuentas_pagar').where('proveedorId','==',proveedorId).where('estado','==','pendiente').get().then(function(snap){
+    var cuentas = [];
+    snap.forEach(function(doc){ cuentas.push(Object.assign({_docId: doc.id}, doc.data())); });
+    cuentas.sort(function(a,b){ return (a.vencimiento||a.fecha||'').localeCompare(b.vencimiento||b.fecha||''); });
+    renderCuentasPagarProveedor(proveedorId, cuentas);
+  }).catch(function(e){ console.log('Error cargando cuentas por pagar de proveedor:', e); cont.innerHTML = ''; });
+}
+
+function renderCuentasPagarProveedor(proveedorId, cuentas) {
+  var cont = document.getElementById('prov-dir-cuentas');
+  if(!cont) return;
+  if(!cuentas.length) {
+    cont.innerHTML = '<div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:12px 16px;margin-top:12px;font-size:12px;color:var(--suave);">✅ Sin saldo pendiente con este proveedor</div>';
+    return;
+  }
+  var hoyStr = fechaISOLocal();
+  var esDirector = currentUser && currentUser.role === 'Director';
+  var total = cuentas.reduce(function(a,c){ return a + (c.saldo||0); }, 0);
+  var filas = cuentas.map(function(c){
+    var venc = c.vencimiento || c.fecha || '';
+    var vencido = !!venc && venc < hoyStr;
+    return '<div style="padding:10px 0;border-bottom:1px solid #F0EDE8;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">' +
+        '<div style="font-size:12px;font-weight:700;">' + (c.compraId || 'Sin folio') + '</div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--naranja);">' + fmtMoney(c.saldo||0) + '</div>' +
+      '</div>' +
+      '<div style="font-size:11px;color:' + (vencido ? '#EF4444' : 'var(--suave)') + ';margin-top:2px;">' +
+        (vencido ? '⚠️ Vencido: ' : 'Vence: ') + (venc || '—') + ' · Total: ' + fmtMoney(c.total||0) +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">' +
+        '<input type="number" id="pcp-abono-' + c._docId + '" placeholder="Monto a abonar" min="0" step="0.01" style="flex:1;min-width:100px;border:1.5px solid var(--borde);border-radius:8px;padding:7px 9px;font-family:\'Barlow\',sans-serif;font-size:12px;">' +
+        '<button class="btn btn-naranja" onclick="abonarCuentaPagarFicha(\'' + c._docId + '\',\'' + proveedorId + '\')" style="font-size:11px;padding:7px 12px;">💸 Abonar</button>' +
+        (esDirector ? '<button class="btn btn-gris" style="font-size:11px;padding:7px 12px;background:#FEE2E2;color:#DC2626;" onclick="eliminarCuentaPagar(\'' + c._docId + '\',\'' + proveedorId + '\')">🗑️ Eliminar</button>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+  cont.innerHTML = '<div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:12px 16px;margin-top:12px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;letter-spacing:1px;">💰 CUENTAS POR PAGAR</div>' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--naranja);">' + fmtMoney(total) + '</div>' +
+    '</div>' +
+    filas +
+  '</div>';
+}
+
+function abonarCuentaPagarFicha(docId, proveedorId) {
+  if(!puedeEditarProveedoresDir()) { showToast('⚠️ Sin permisos'); return; }
+  var input = document.getElementById('pcp-abono-' + docId);
+  var monto = parseFloat(input ? input.value : '');
+  if(!(monto > 0)) { showToast('⚠️ Ingresa un monto válido'); return; }
+  registrarAbonoProveedor(docId, monto).then(function(){ cargarCuentasPagarProveedor(proveedorId); });
+}
+
+function eliminarCuentaPagar(docId, proveedorId) {
+  if(!currentUser || currentUser.role !== 'Director') { showToast('⚠️ Solo Director puede eliminar cuentas'); return; }
+  if(!confirm('¿Eliminar esta cuenta por pagar? Esta acción no se puede deshacer.')) return;
+  db.collection('cuentas_pagar').doc(docId).delete().then(function(){
+    showToast('🗑️ Cuenta eliminada');
+    cargarCuentasPagarProveedor(proveedorId);
+  }).catch(function(e){ console.log('Error eliminando cuenta por pagar:', e); showToast('⚠️ Error al eliminar'); });
+}
+
+function irAProveedorDesdeCuentas(proveedorId) {
+  if(!proveedorId) { showToast('⚠️ Esta cuenta no tiene proveedor vinculado'); return; }
+  switchTab('proveedores', document.getElementById('tab-proveedores-btn'));
+  if(proveedoresDirCargados) {
+    seleccionarProveedorDir(proveedorId);
+  } else {
+    setTimeout(function(){ seleccionarProveedorDir(proveedorId); }, 900);
+  }
 }
 
 function puedeEditarProveedoresDir() {
@@ -6679,19 +6764,23 @@ function guardarCompra() {
 
     // Guardar compra
     return db.collection('compras').add(compra).then(function() {
-      // Compra a granel (productos con factorConversion, ej. costales de arena
-      // comprados por metro) — suma existencia ya convertida a unidadVenta y
-      // registra el movimiento. El costal vacío NO se descuenta aquí; se
-      // descuenta al vender (Pendiente 5).
-      var comprasConversion = comprasProductos.filter(function(p) {
-        return p.clave && productosIndex[p.clave] && productosIndex[p.clave].factorConversion && p.cantidad > 0;
+      // Sube existencia por cada producto comprado con clave de catálogo.
+      // Agregados en costal (con factorConversion, ej. Arena comprada por
+      // metro) se convierten a la unidad de venta; el resto del catálogo
+      // sube tal cual la cantidad comprada — antes esto NO pasaba para
+      // productos sin factorConversion, por eso existencia solo bajaba
+      // (con las ventas) y nunca subía con compras normales.
+      // Productos tipo 'servicio' no llevan inventario, se ignoran.
+      var comprasConExistencia = comprasProductos.filter(function(p) {
+        return p.clave && productosIndex[p.clave] && productosIndex[p.clave].tipo !== 'servicio' && p.cantidad > 0;
       });
-      if(!comprasConversion.length) return;
+      if(!comprasConExistencia.length) return;
 
       var batchInv = db.batch();
-      comprasConversion.forEach(function(p) {
+      comprasConExistencia.forEach(function(p) {
         var prod = productosIndex[p.clave];
-        var cantidadConvertida = p.cantidad * prod.factorConversion;
+        var conFactor = !!prod.factorConversion;
+        var cantidadConvertida = conFactor ? p.cantidad * prod.factorConversion : p.cantidad;
         batchInv.update(db.collection('productos').doc(p.clave), {
           existencia: firebase.firestore.FieldValue.increment(cantidadConvertida)
         });
@@ -6699,9 +6788,9 @@ function guardarCompra() {
           clave: p.clave,
           tipo: 'compra',
           cantidadOriginal: p.cantidad,
-          unidadOriginal: prod.unidadCompra,
+          unidadOriginal: prod.unidadCompra || '',
           cantidadConvertida: cantidadConvertida,
-          unidadConvertida: prod.unidadVenta,
+          unidadConvertida: prod.unidadVenta || '',
           usuario: compra.registradoPor,
           fecha: compra.fecha,
           timestamp: compra.timestamp
@@ -6729,6 +6818,13 @@ function guardarCompra() {
           compraId: compra.folio
         };
         return db.collection('salidas').add(salida);
+      }
+    }).then(function() {
+      // Si es crédito de proveedor, crear la cuenta por pagar rastreable
+      // (antes esto no pasaba nunca — la compra se guardaba con plazoCredito
+      // pero jamás aparecía en Cuentas por Pagar)
+      if(compra.formaPago === 'credito_proveedor') {
+        return registrarCompraProveedor(comprasProveedorSelec.id, comprasProveedorSelec.nombre, compra.total, compra.fechaVencimiento, compra.folio);
       }
     }).then(function() {
       // Actualizar proveedor
@@ -7054,6 +7150,9 @@ function enviarRecordatorioCobro(docId) {
   window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(mensajeRecordatorioCobroWA(c)), '_blank');
 }
 
+// Vista de solo lectura — el abono se registra en la ficha del proveedor
+// (ver cargarCuentasPagarProveedor / renderCuentasPagarProveedor), para no
+// juntar un formulario de abono por cada cuenta pendiente en esta lista.
 function renderCuentasPagar() {
   var cont = document.getElementById('cuentas-pagar-lista');
   var totalEl = document.getElementById('cuentas-pagar-total');
@@ -7069,17 +7168,16 @@ function renderCuentasPagar() {
     total += c.saldo || 0;
     var venc = c.vencimiento || c.fecha || '';
     var vencido = !!venc && venc < hoyStr;
-    return '<div style="padding:14px;border-bottom:1px solid #F0EDE8;">'
-      + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">'
+    return '<div style="padding:14px;border-bottom:1px solid #F0EDE8;display:flex;justify-content:space-between;align-items:center;gap:10px;">'
+      + '<div>'
       +   '<div style="font-weight:700;font-size:13px;">' + (c.proveedor || 'Sin nombre') + '</div>'
-      +   '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--naranja);white-space:nowrap;">' + fmtMoney(c.saldo || 0) + '</div>'
+      +   '<div style="font-size:11px;color:' + (vencido ? '#EF4444' : 'var(--suave)') + ';margin-top:2px;">'
+      +     (vencido ? '⚠️ Vencido: ' : 'Vence: ') + (venc || '—') + ' · Total: ' + fmtMoney(c.total || 0)
+      +   '</div>'
       + '</div>'
-      + '<div style="font-size:11px;color:' + (vencido ? '#EF4444' : 'var(--suave)') + ';margin-top:2px;">'
-      +   (vencido ? '⚠️ Vencido: ' : 'Vence: ') + (venc || '—') + ' · Total: ' + fmtMoney(c.total || 0)
-      + '</div>'
-      + '<div style="display:flex;gap:8px;margin-top:8px;">'
-      +   '<input type="number" id="cp-abono-' + c._docId + '" placeholder="Monto a pagar" min="0" step="0.01" style="flex:1;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-family:\'Barlow\',sans-serif;font-size:12px;">'
-      +   '<button class="btn btn-naranja" onclick="abonarCuentaPagar(\'' + c._docId + '\')" style="font-size:11px;padding:8px 14px;">💸 Registrar pago</button>'
+      + '<div style="text-align:right;flex-shrink:0;">'
+      +   '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--naranja);">' + fmtMoney(c.saldo || 0) + '</div>'
+      +   '<button class="btn btn-gris" onclick="irAProveedorDesdeCuentas(\'' + (c.proveedorId||'') + '\')" style="font-size:10px;padding:5px 10px;margin-top:4px;">→ Ver proveedor</button>'
       + '</div>'
       + '</div>';
   }).join('');
@@ -7097,12 +7195,6 @@ function abonarCuentaCobrar(docId) {
   registrarPagoCliente(docId, monto, metodoPago, quienTrajo).then(function() { cargarCuentasCobrar(); verificarAlertasCuentasCobrarVencidas(); });
 }
 
-function abonarCuentaPagar(docId) {
-  var input = document.getElementById('cp-abono-' + docId);
-  var monto = parseFloat(input ? input.value : '');
-  if(!(monto > 0)) { showToast('⚠️ Ingresa un monto válido'); return; }
-  registrarAbonoProveedor(docId, monto).then(function() { cargarCuentasPagar(); });
-}
 
 // ════ ALERTA CUENTAS POR PAGAR PRÓXIMAS A VENCER (rol Compras) ════
 function verificarAlertasCuentasPorPagar() {
