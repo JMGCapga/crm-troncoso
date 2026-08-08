@@ -10098,6 +10098,15 @@ function cancelarTicket(docId) {
   batch.commit().then(function(){
     actualizarCacheLocalInventario(t.inventarioDeltas || {}, +1);
     t.status = 'cancelado';
+    // Cancelar la cuenta por cobrar ligada, si quedó saldo pendiente —
+    // mismo criterio que cancelarPedido().
+    return db.collection('cuentas_cobrar').where('pedidoId','==',docId).get().then(function(snap){
+      if(snap.empty) return;
+      var batch2 = db.batch();
+      snap.forEach(function(d){ batch2.update(d.ref, { estado: 'cancelada' }); });
+      return batch2.commit();
+    });
+  }).then(function(){
     showToast('❌ Ticket cancelado — inventario revertido');
     renderListaTickets();
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al cancelar'); });
@@ -10421,6 +10430,15 @@ function cancelarPedido(docId) {
         actualizarCacheLocalInventario(pedido.inventarioDeltas || {}, +1);
         pedido.inventarioRevertido = true;
       }
+      // Cancelar la cuenta por cobrar ligada, si quedó saldo pendiente —
+      // antes se quedaba "pendiente" para siempre, cobrando un saldo
+      // fantasma de una venta que ya no existe.
+      return db.collection('cuentas_cobrar').where('pedidoId','==',docId).get().then(function(snap){
+        if(snap.empty) return;
+        var batch2 = db.batch();
+        snap.forEach(function(d){ batch2.update(d.ref, { estado: 'cancelada' }); });
+        return batch2.commit();
+      });
     }).catch(function(e){ console.log(e); showToast('⚠️ Error al cancelar / revertir inventario'); });
   }
   showToast('❌ Nota de venta cancelada' + (necesitaRevertir ? ' — inventario revertido' : ''));
