@@ -4804,11 +4804,11 @@ function enviarCorteWhatsApp() {
     '\n\nmaterialestroncoso.com';
   var msgEnc = encodeURIComponent(msg);
   // Enviar a Viridiana primero
-  window.open('https://wa.me/525585736084?text='+msgEnc,'_blank');
+  window.open('https://wa.me/'+VIRIDIANA_WHATSAPP+'?text='+msgEnc,'_blank');
   // Preguntar si también a José Manuel
   setTimeout(function(){
     if(confirm('¿Enviar también a José Manuel?')) {
-      window.open('https://wa.me/525585736084?text='+msgEnc,'_blank');
+      window.open('https://wa.me/'+JOSE_MANUEL_WHATSAPP+'?text='+msgEnc,'_blank');
     }
   }, 800);
   showToast('📱 Enviando por WhatsApp...');
@@ -5757,8 +5757,16 @@ function cargarResumenNCDirector() {
 var fondeos = [];
 var folioFondeoActual = 1;
 var JOSE_MANUEL_WHATSAPP = '525585736084';
-var VIRIDIANA_WHATSAPP = '525585736084'; // TODO: reemplazar con número de Viridiana cuando se confirme
+var VIRIDIANA_WHATSAPP = '525534665197';
 var CRM_BASE_URL = 'https://jmgcapga.github.io/crm-troncoso/';
+
+function labelFormaPagoFondeo(fp) {
+  return fp === 'efectivo' ? '💵 Efectivo' :
+    fp === 'transferencia' ? '🏦 Transferencia' :
+    fp === 'tarjeta_nu' ? '💜 Tarjeta Nu (Morada)' :
+    fp === 'tarjeta_afirme' ? '🟠 Tarjeta Afirme (Naranja)' :
+    fp === 'mixto' ? '🔀 Mixto' : (fp || 'Sin especificar');
+}
 
 function generarTokenFondeo() {
   var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -5858,11 +5866,7 @@ function abrirWhatsAppSolicitudFondeo(fondeo) {
     '👤 Solicitante: '+fondeo.solicitadoPor+'\n'+
     '💵 Monto: '+fmtMoney(fondeo.monto)+'\n'+
     '📝 Motivo: '+fondeo.motivo+'\n'+
-    '💳 Forma de pago: '+(fondeo.formaPago==='efectivo'?'💵 Efectivo':
-      fondeo.formaPago==='transferencia'?'🏦 Transferencia':
-      fondeo.formaPago==='tarjeta_nu'?'💜 Tarjeta Nu (Morada)':
-      fondeo.formaPago==='tarjeta_afirme'?'🟠 Tarjeta Afirme (Naranja)':
-      fondeo.formaPago==='mixto'?'🔀 Mixto':''+fondeo.formaPago)+'\n'+
+    '💳 Forma de pago: '+labelFormaPagoFondeo(fondeo.formaPago)+'\n'+
     '📅 Fecha: '+fechaTexto+
     (fondeo.urgente ? '\n🔴 URGENTE' : '')+
     '\n\nToca para responder:\n'+
@@ -5871,7 +5875,7 @@ function abrirWhatsAppSolicitudFondeo(fondeo) {
   window.open('https://wa.me/'+JOSE_MANUEL_WHATSAPP+'?text='+encodeURIComponent(msg),'_blank');
   // Enviar también a Viridiana
   setTimeout(function(){
-    window.open('https://wa.me/525534665197?text='+encodeURIComponent(msg),'_blank');
+    window.open('https://wa.me/'+VIRIDIANA_WHATSAPP+'?text='+encodeURIComponent(msg),'_blank');
   }, 1000);
   if(fondeo._docId && db) {
     db.collection('fondeos').doc(fondeo._docId).update({ whatsappEnviado: true }).catch(function(e){ console.log(e); });
@@ -5949,14 +5953,16 @@ function procesarFondeo(docId, accion, opts) {
 }
 
 function notificarViridianaFondeo(fondeo) {
+  var necesitaEfectivo = fondeo.formaPago === 'efectivo' || fondeo.formaPago === 'mixto';
   var msg =
     '✅ *FONDEO APROBADO — MATERIALES TRONCOSO*\n\n'+
     '📋 Folio: '+fondeo.folio+'\n'+
     '👤 Solicitó: '+fondeo.solicitadoPor+'\n'+
     '💵 Monto: '+fmtMoney(fondeo.monto)+'\n'+
+    '💳 Forma de pago: '+labelFormaPagoFondeo(fondeo.formaPago)+'\n'+
     '📝 Motivo: '+fondeo.motivo+'\n'+
     '✅ Aprobó: '+fondeo.aprobadoPor+'\n\n'+
-    'Por favor prepara el efectivo.';
+    (necesitaEfectivo ? 'Por favor prepara el efectivo.' : 'No requiere entrega de efectivo — es solo informativo.');
   window.open('https://wa.me/'+VIRIDIANA_WHATSAPP+'?text='+encodeURIComponent(msg),'_blank');
   if(fondeo._docId && db) {
     db.collection('fondeos').doc(fondeo._docId).update({ whatsappViriEnviado: true }).catch(function(e){ console.log(e); });
@@ -5974,7 +5980,7 @@ function renderFondeosPendientesJM() {
       '<div><strong style="font-size:14px;">'+f.folio+(f.urgente?' 🔴 URGENTE':'')+'</strong><br><span style="font-size:11px;color:var(--suave);">'+f.solicitadoPor+' · '+f.fecha+'</span></div>'+
       '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--naranja);">'+fmtMoney(f.monto)+'</div></div>'+
       '<div style="font-size:12px;color:var(--suave);margin-bottom:10px;">'+f.motivo+'</div>'+
-      '<div style="font-size:11px;color:var(--suave);margin-bottom:10px;">'+f.rsNombre+'</div>'+
+      '<div style="font-size:11px;color:var(--suave);margin-bottom:10px;">'+f.rsNombre+' · '+labelFormaPagoFondeo(f.formaPago)+'</div>'+
       '<div style="display:flex;gap:8px;">'+
       '<button class="btn btn-naranja" onclick="aprobarRechazarFondeoCRM(\''+f._docId+'\',\'aprobado\')" style="flex:1;">✅ APROBAR</button>'+
       '<button class="btn btn-gris" onclick="aprobarRechazarFondeoCRM(\''+f._docId+'\',\'rechazado\')" style="flex:1;background:#FEE2E2;color:#DC2626;">❌ RECHAZAR</button>'+
@@ -6025,23 +6031,30 @@ function renderHistorialFondeosJM() {
     var statusColor = f.status==='aprobado'?'#22C55E':'#EF4444';
     var statusLabel = f.status==='aprobado'?'✅ Aprobado':'❌ Rechazado';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #F0EDE8;">'+
-      '<div><strong style="font-size:13px;">'+f.folio+' · '+f.solicitadoPor+'</strong><br><span style="font-size:11px;color:var(--suave);">'+f.fecha+' · '+f.motivo+'</span></div>'+
+      '<div><strong style="font-size:13px;">'+f.folio+' · '+f.solicitadoPor+'</strong><br><span style="font-size:11px;color:var(--suave);">'+f.fecha+' · '+f.motivo+' · '+labelFormaPagoFondeo(f.formaPago)+'</span></div>'+
       '<div style="text-align:right;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;">'+fmtMoney(f.monto)+'</div>'+
       '<span style="font-size:10px;font-weight:700;color:'+statusColor+';">'+statusLabel+'</span></div></div>';
   }).join('') : '<div style="padding:12px;color:var(--suave);font-size:12px;">Sin historial</div>';
 }
 
 // ════ FONDEOS — vista Viridiana ════
+// Solo entra aquí lo que de verdad requiere entrega física de efectivo.
+// Antes se mostraban TODOS los fondeos aprobados sin importar su forma de
+// pago (transferencia, tarjeta...) y todos pedían "prepara el efectivo" —
+// por eso Viridiana los veía todos como si fueran en efectivo.
 function renderFondeosAprobadosViri() {
   var list = document.getElementById('fondeos-lista-viri');
-  var pendientesEntrega = fondeos.filter(function(f){ return f.status === 'aprobado' && !f.efectivoEntregado; });
+  var pendientesEntrega = fondeos.filter(function(f){
+    return f.status === 'aprobado' && !f.efectivoEntregado && (f.formaPago === 'efectivo' || f.formaPago === 'mixto');
+  });
   if(!pendientesEntrega.length) { list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--suave);font-size:13px;">✅ Sin fondeos pendientes de entrega</div>'; return; }
   list.innerHTML = pendientesEntrega.map(function(f){
     return '<div style="border:2px solid #22C55E;border-radius:10px;padding:16px;margin-bottom:12px;">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'+
       '<div><strong style="font-size:14px;">'+f.folio+'</strong><br><span style="font-size:11px;color:var(--suave);">'+f.solicitadoPor+' · '+f.fecha+' · '+f.rsNombre+'</span></div>'+
       '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--naranja);">'+fmtMoney(f.monto)+'</div></div>'+
-      '<div style="font-size:12px;color:var(--suave);margin-bottom:10px;">'+f.motivo+'</div>'+
+      '<div style="font-size:12px;color:var(--suave);margin-bottom:4px;">'+f.motivo+'</div>'+
+      '<div style="font-size:11px;color:var(--suave);margin-bottom:10px;">'+labelFormaPagoFondeo(f.formaPago)+'</div>'+
       '<button class="btn btn-naranja" onclick="marcarEfectivoEntregado(\''+f._docId+'\')" style="width:100%;">✅ Efectivo entregado</button>'+
       '</div>';
   }).join('');
@@ -6052,7 +6065,7 @@ function renderHistorialFondeosViri() {
   var entregados = fondeos.filter(function(f){ return f.efectivoEntregado; });
   hist.innerHTML = entregados.length ? entregados.slice(0,30).map(function(f){
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #F0EDE8;">'+
-      '<div><strong style="font-size:13px;">'+f.folio+' · '+f.solicitadoPor+'</strong><br><span style="font-size:11px;color:var(--suave);">'+f.fecha+' · '+f.rsNombre+'</span></div>'+
+      '<div><strong style="font-size:13px;">'+f.folio+' · '+f.solicitadoPor+'</strong><br><span style="font-size:11px;color:var(--suave);">'+f.fecha+' · '+f.rsNombre+' · '+labelFormaPagoFondeo(f.formaPago)+'</span></div>'+
       '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--naranja);">'+fmtMoney(f.monto)+'</div></div>';
   }).join('') : '<div style="padding:12px;color:var(--suave);font-size:12px;">Sin historial</div>';
 }
@@ -6097,7 +6110,7 @@ function renderFondeosStatus() {
     var statusColor = f.status==='aprobado'?'#22C55E':f.status==='rechazado'?'#EF4444':'#F59E0B';
     var statusLabel = f.status==='aprobado'?'✅ Aprobado':f.status==='rechazado'?'❌ Rechazado':'⏳ Pendiente';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #F0EDE8;">'+
-      '<div><strong style="font-size:13px;">'+f.folio+' · '+f.solicitadoPor+'</strong><br><span style="font-size:11px;color:var(--suave);">'+f.fecha+' · '+f.motivo+'</span></div>'+
+      '<div><strong style="font-size:13px;">'+f.folio+' · '+f.solicitadoPor+'</strong><br><span style="font-size:11px;color:var(--suave);">'+f.fecha+' · '+f.motivo+' · '+labelFormaPagoFondeo(f.formaPago)+'</span></div>'+
       '<div style="text-align:right;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;">'+fmtMoney(f.monto)+'</div>'+
       '<span style="font-size:10px;font-weight:700;color:'+statusColor+';">'+statusLabel+'</span></div></div>';
   }).join('');
@@ -7302,7 +7315,7 @@ function verificarAlertasCuentasPorPagar() {
       return '• ' + (c.proveedor || 'Sin nombre') + ' — ' + fmtMoney(c.saldo || c.total || 0) + ' — Vence: ' + c.vencimiento;
     }).join('\n');
     if(confirm(msg + '\n\n¿Enviar alerta por WhatsApp?')) {
-      window.open('https://wa.me/525585736084?text=' + encodeURIComponent(msg), '_blank');
+      window.open('https://wa.me/' + JOSE_MANUEL_WHATSAPP + '?text=' + encodeURIComponent(msg), '_blank');
       var batch = db.batch();
       porVencer.forEach(function(c) {
         batch.update(db.collection('cuentas_pagar').doc(c._docId), { alertaSent: true });
