@@ -6850,6 +6850,80 @@ function guardarCompra() {
   });
 }
 
+function puedeCancelarCompra() {
+  return currentUser && (currentUser.role === 'Compras' || currentUser.role === 'Gerencia' || currentUser.role === 'Director');
+}
+
+// Revierte lo que dejó la compra: existencia (mismo criterio con el que subió —
+// servicio se ignora, factorConversion convierte), total del proveedor, la
+// cuenta por pagar ligada (si fue crédito) y la salida en efectivo ligada
+// (si fue efectivo). No intenta deshacer abonos que ya se hayan aplicado a
+// esa cuenta por pagar — solo la marca cancelada.
+function cancelarCompra(compraId) {
+  if(!puedeCancelarCompra()) { showToast('⚠️ Sin permisos'); return; }
+  if(!db) return;
+  db.collection('compras').doc(compraId).get().then(function(doc) {
+    if(!doc.exists) { showToast('⚠️ Compra no encontrada'); return; }
+    var compra = doc.data();
+    if(compra.status === 'cancelada') { showToast('Esta compra ya está cancelada'); return; }
+    var motivo = prompt('Motivo de la cancelación:');
+    if(motivo === null) return;
+    if(!confirm('¿Cancelar la compra ' + compra.folio + ' de ' + compra.proveedor + ' por ' + fmtMoney(compra.total) + '? Se revierte la existencia' + (compra.formaPago === 'credito_proveedor' ? ' y la cuenta por pagar' : '') + (compra.formaPago === 'efectivo' ? ' y la salida en efectivo' : '') + '.')) return;
+
+    var batch = db.batch();
+    batch.update(doc.ref, {
+      status: 'cancelada',
+      motivoCancelacion: motivo,
+      canceladaPor: currentUser.name,
+      timestampCancelacion: Date.now()
+    });
+
+    var productosValidos = (compra.productos || []).filter(function(p) {
+      return p.clave && productosIndex[p.clave] && productosIndex[p.clave].tipo !== 'servicio';
+    });
+    productosValidos.forEach(function(p) {
+      var prod = productosIndex[p.clave];
+      var cantidadConvertida = prod.factorConversion ? p.cantidad * prod.factorConversion : p.cantidad;
+      batch.update(db.collection('productos').doc(p.clave), {
+        existencia: firebase.firestore.FieldValue.increment(-cantidadConvertida)
+      });
+    });
+
+    if(compra.proveedorId) {
+      batch.update(db.collection('proveedores').doc(compra.proveedorId), {
+        totalComprado: firebase.firestore.FieldValue.increment(-compra.total)
+      });
+    }
+
+    batch.commit().then(function() {
+      productosValidos.forEach(function(p) {
+        var prod = productosIndex[p.clave];
+        var cantidadConvertida = prod.factorConversion ? p.cantidad * prod.factorConversion : p.cantidad;
+        prod.existencia = (prod.existencia || 0) - cantidadConvertida;
+      });
+      var pendientes = [];
+      pendientes.push(db.collection('cuentas_pagar').where('compraId', '==', compra.folio).get().then(function(snap) {
+        if(snap.empty) return;
+        var batch2 = db.batch();
+        snap.forEach(function(d) { batch2.update(d.ref, { estado: 'cancelada' }); });
+        return batch2.commit();
+      }));
+      pendientes.push(db.collection('salidas').where('compraId', '==', compra.folio).get().then(function(snap) {
+        if(snap.empty) return;
+        var batch3 = db.batch();
+        snap.forEach(function(d) { batch3.update(d.ref, { status: 'rechazado' }); });
+        return batch3.commit();
+      }));
+      return Promise.all(pendientes);
+    }).then(function() {
+      showToast('❌ Compra cancelada — existencia y saldos revertidos');
+      if(currentUser.role === 'Compras') cargarComprasErika();
+      if(currentUser.role === 'Director') cargarComprasJM();
+      if(currentUser.role === 'Gerencia') filtrarComprasViri('hoy');
+    }).catch(function(e) { console.log('Error cancelando compra:', e); showToast('⚠️ Error al cancelar compra'); });
+  }).catch(function(e) { console.log(e); showToast('⚠️ Error al buscar la compra'); });
+}
+
 function cargarComprasErika() {
   var list = document.getElementById('cmp-lista-erika');
   if(!db) { list.innerHTML = '<div style="padding:12px;color:var(--suave);">Sin conexión</div>'; return; }
@@ -6868,12 +6942,14 @@ function cargarComprasErika() {
       var docs = snap.docs.slice().sort(function(a,b){ return (b.data().timestamp||0) - (a.data().timestamp||0); });
       docs.forEach(function(doc) {
         var c = doc.data();
+        var cancelada = c.status === 'cancelada';
         var div = document.createElement('div');
-        div.style.cssText = 'padding:12px;border-bottom:1px solid #f0f0f0;';
+        div.style.cssText = 'padding:12px;border-bottom:1px solid #f0f0f0;' + (cancelada ? 'opacity:0.5;' : '');
         div.innerHTML =
           '<div style="display:flex;justify-content:space-between;align-items:baseline;"><div style="font-weight:700;color:var(--naranja);">'+c.folio+'</div><div style="font-size:14px;font-weight:700;">'+fmtMoney(c.total)+'</div></div>'+
           '<div style="font-size:12px;color:#666;margin-top:2px;">'+c.proveedor+'</div>'+
-          '<div style="font-size:10px;color:var(--suave);margin-top:4px;">Status: <span style="background:#'+(c.status==='validada'?'22C55E':'f59e0b')+';color:#fff;padding:2px 6px;border-radius:3px;">'+c.status+'</span></div>';
+          '<div style="font-size:10px;color:var(--suave);margin-top:4px;">Status: <span style="background:#'+(cancelada?'DC2626':c.status==='validada'?'22C55E':'f59e0b')+';color:#fff;padding:2px 6px;border-radius:3px;">'+c.status+'</span></div>'+
+          (!cancelada && puedeCancelarCompra() ? '<button class="btn btn-gris" style="font-size:10px;padding:5px 10px;margin-top:6px;background:#FEE2E2;color:#DC2626;" onclick="cancelarCompra(\''+doc.id+'\')">❌ Cancelar compra</button>' : '');
         list.appendChild(div);
       });
     })
@@ -7005,12 +7081,14 @@ function cargarComprasJM() {
     } else {
       divLista.innerHTML = '';
       comprasFiltradas.slice(0, 20).forEach(c => {
+        var cancelada = c.status === 'cancelada';
         var item = document.createElement('div');
-        item.style.cssText = 'padding:10px;border-bottom:1px solid #f0f0f0;font-size:11px;';
+        item.style.cssText = 'padding:10px;border-bottom:1px solid #f0f0f0;font-size:11px;' + (cancelada ? 'opacity:0.5;' : '');
         item.innerHTML =
           '<div style="display:flex;justify-content:space-between;align-items:baseline;"><div style="font-weight:700;color:var(--naranja);">'+c.folio+'</div><div style="font-weight:700;">'+fmtMoney(c.total)+'</div></div>'+
           '<div style="color:#666;margin-top:2px;">'+c.proveedor+' ('+c.rsNombre+')</div>'+
-          '<div style="color:var(--suave);font-size:10px;margin-top:2px;">'+c.fecha+' — '+c.formaPago+'</div>';
+          '<div style="color:var(--suave);font-size:10px;margin-top:2px;">'+c.fecha+' — '+c.formaPago+(cancelada?' · CANCELADA':'')+'</div>'+
+          (!cancelada ? '<button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:6px;background:#FEE2E2;color:#DC2626;" onclick="cancelarCompra(\''+c.id+'\')">❌ Cancelar compra</button>' : '');
         divLista.appendChild(item);
       });
     }
