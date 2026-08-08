@@ -1471,7 +1471,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           </div>
           <div class="field">
             <label>Foto del ticket (opcional)</label>
-            <input type="file" accept="image/*" capture="environment" onchange="previsualizarFotoFlota(this,'ticket')">
+            <input type="file" accept="image/*" onchange="previsualizarFotoFlota(this,'ticket')">
             <img id="flota-foto-preview-ticket" style="display:none;max-width:100%;border-radius:8px;margin-top:8px;">
           </div>
           <button class="btn btn-naranja" onclick="guardarGasolinaFlota()">⛽ Registrar gasolina</button>
@@ -1497,7 +1497,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           </div>
           <div class="field">
             <label>Foto del daño</label>
-            <input type="file" accept="image/*" capture="environment" onchange="previsualizarFotoFlota(this,'danio')">
+            <input type="file" accept="image/*" onchange="previsualizarFotoFlota(this,'danio')">
             <img id="flota-foto-preview-danio" style="display:none;max-width:100%;border-radius:8px;margin-top:8px;">
           </div>
           <button class="btn btn-gris" onclick="guardarDanioFlota()">⚠️ Reportar daño</button>
