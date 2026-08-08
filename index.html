@@ -1358,6 +1358,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       <div id="pedidos-ventas" style="display:none;">
         <div class="card">
           <div class="card-title">📄 Gestión de Notas de Venta</div>
+          <button class="btn btn-naranja" onclick="abrirNuevaNotaVenta()" style="width:100%;margin-bottom:12px;">🎯 Nueva Nota de Venta</button>
           <div id="ped-alertas-incompletas"></div>
           <div style="font-size:12px;color:var(--suave);margin-bottom:12px;" id="pedidos-resumen-ventas"></div>
           <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
@@ -5463,7 +5464,9 @@ function seleccionarProductoModal(clave, idx, prefijo) {
   var claveInput = document.getElementById(prefijo + '-clave-' + idx);
   if(descInput) descInput.value = p.descripcion;
   if(claveInput) claveInput.value = p.clave;
-  if(prefijo === 'p') { recalcular(); actualizarPrecioSugerido(idx); actualizarStockEnVivo(p.clave, 'p-stock-' + idx); } else recalcularNC();
+  if(prefijo === 'p') { recalcular(); actualizarPrecioSugerido(idx); actualizarStockEnVivo(p.clave, 'p-stock-' + idx); }
+  else if(prefijo === 'nv') { recalcularNV(); actualizarPrecioSugeridoNV(idx); actualizarStockEnVivo(p.clave, 'nv-stock-' + idx); }
+  else recalcularNC();
 }
 
 function actualizarStockEnVivo(clave, contenedorId) {
@@ -9028,6 +9031,299 @@ function marcarBtnActivoPed(ids, activeId) {
     if(!b) return;
     b.className = (id === activeId) ? 'btn btn-naranja' : 'btn btn-gris';
     b.style.fontSize = '11px'; b.style.padding = '7px 14px';
+  });
+}
+
+// ════ NOTA DE VENTA — canal propio en el tab "Notas de Venta" ════
+// Mismo nivel de comodidad que Cotización (buscador de catálogo, precio por
+// volumen/canal/histórico, calculadora de cambio), pero self-contained: no
+// comparte los elementos del formulario de Cotización (mismo patrón que ya
+// usa Ticket con sus propias funciones). Al confirmar, guarda una cotización
+// silenciosa y abre el mismo modal "Confirmar Venta" de siempre.
+var clienteNVSel = null;
+var nvProdIdx = 0;
+
+function buscarClienteNV() {
+  var q = normalizar(document.getElementById('nv-cliente-input').value);
+  var lista = document.getElementById('nv-cliente-lista');
+  if(q.length < 2) { lista.style.display = 'none'; return; }
+  var res = clientesCache.filter(function(c){ return c.activo !== false && normalizar(c.nombre).indexOf(q) !== -1; }).slice(0, 8);
+  lista.style.display = res.length ? 'block' : 'none';
+  lista.innerHTML = res.map(function(c){
+    return '<div style="padding:9px 11px;cursor:pointer;border-bottom:1px solid #F0EDE8;font-size:12px;" onmousedown="elegirClienteNV(\''+c.id+'\')"><strong>'+c.nombre+'</strong><br><span style="font-size:10px;color:#888;">'+(c.telefono||'')+'</span></div>';
+  }).join('');
+}
+function elegirClienteNV(id) {
+  var c = clientesCache.find(function(x){ return x.id === id; });
+  if(!c) return;
+  clienteNVSel = c;
+  document.getElementById('nv-cliente-input').value = c.nombre;
+  document.getElementById('nv-cliente-lista').style.display = 'none';
+  var rows = document.getElementById('nv-prod-lista').children;
+  Array.from(rows).forEach(function(rowEl){ actualizarPrecioSugeridoNV(rowEl.id.replace('nv-row-','')); });
+}
+
+function agregarProductoNV() {
+  var idx = nvProdIdx++;
+  var cont = document.getElementById('nv-prod-lista');
+  var row = document.createElement('div');
+  row.id = 'nv-row-' + idx;
+  row.style.cssText = 'padding:8px 0;border-bottom:1px solid #F0EDE8;';
+  row.innerHTML =
+    '<input type="hidden" id="nv-clave-' + idx + '" value="">' +
+    '<div style="display:flex;gap:4px;align-items:center;">' +
+      '<input type="text" placeholder="Descripción..." style="flex:1;min-width:80px;border:1.5px solid var(--borde);border-radius:8px;padding:7px 9px;font-size:12px;" id="nv-desc-' + idx + '" oninput="document.getElementById(\'nv-clave-' + idx + '\').value=\'\';">' +
+      '<button type="button" class="btn btn-gris" style="padding:6px 8px;font-size:11px;" onclick="abrirBuscadorProducto(' + idx + ',\'nv\')" title="Buscar en catálogo">🔍</button>' +
+      '<input type="number" value="1" min="0" step="0.01" style="width:55px;border:1.5px solid var(--borde);border-radius:8px;padding:7px;font-size:12px;" id="nv-cant-' + idx + '" oninput="recalcularNV();actualizarPrecioSugeridoNV(' + idx + ')">' +
+      '<input type="number" value="0" min="0" step="0.01" style="width:75px;border:1.5px solid var(--borde);border-radius:8px;padding:7px;font-size:12px;" id="nv-precio-' + idx + '" oninput="recalcularNV()">' +
+      '<div style="width:70px;text-align:right;font-weight:700;font-size:12px;" id="nv-imp-' + idx + '">$0.00</div>' +
+      '<button type="button" class="btn-del" onclick="eliminarProdNV(' + idx + ')">✕</button>' +
+    '</div>' +
+    '<div id="nv-stock-' + idx + '"></div>' +
+    '<div id="nv-sugerencia-' + idx + '" style="font-size:10px;margin-top:3px;"></div>';
+  cont.appendChild(row);
+}
+function eliminarProdNV(idx) { var el = document.getElementById('nv-row-' + idx); if(el) el.remove(); recalcularNV(); }
+
+function getProductosNV() {
+  var rows = document.getElementById('nv-prod-lista').children;
+  return Array.from(rows).map(function(rowEl){
+    var id = rowEl.id.replace('nv-row-','');
+    return {
+      desc: document.getElementById('nv-desc-'+id)?.value || '',
+      cant: parseFloat(document.getElementById('nv-cant-'+id)?.value || 0),
+      precio: parseFloat(document.getElementById('nv-precio-'+id)?.value || 0),
+      imp: parseFloat(document.getElementById('nv-cant-'+id)?.value || 0) * parseFloat(document.getElementById('nv-precio-'+id)?.value || 0),
+      clave: document.getElementById('nv-clave-'+id)?.value || ''
+    };
+  }).filter(function(p){ return p.desc || p.precio > 0; });
+}
+
+function recalcularNV() {
+  var rows = document.getElementById('nv-prod-lista').children;
+  var sub = 0;
+  Array.from(rows).forEach(function(rowEl){
+    var id = rowEl.id.replace('nv-row-','');
+    var cant = parseFloat(document.getElementById('nv-cant-'+id)?.value || 0);
+    var precio = parseFloat(document.getElementById('nv-precio-'+id)?.value || 0);
+    var imp = cant * precio;
+    var impEl = document.getElementById('nv-imp-'+id);
+    if(impEl) impEl.textContent = fmtMoney(imp);
+    sub += imp;
+  });
+  var desc = parseFloat(document.getElementById('nv-descuento').value || 0);
+  var total = sub * (1 - desc/100);
+  document.getElementById('nv-total').textContent = fmtMoney(total);
+  var comisionEl = document.getElementById('nv-comision-estimada');
+  if(comisionEl && document.getElementById('nv-pago').value === 'tpv') actualizarComisionNV();
+  toggleWrapPorMetodo('nv-pago', 'nv-efectivo-wrap', 'efectivo');
+  actualizarCambioEfectivoNV();
+  return { sub: sub, desc: desc, total: total };
+}
+
+function actualizarCambioEfectivoNV() {
+  var total = parseFloat((document.getElementById('nv-total').textContent||'0').replace(/[^0-9.]/g,'')) || 0;
+  actualizarCambioEfectivo(total, 'nv-efectivo-recibido', 'nv-cambio-info');
+}
+
+function actualizarComisionNV() {
+  var pago = document.getElementById('nv-pago').value;
+  var wrap = document.getElementById('nv-tarjeta-wrap');
+  toggleWrapPorMetodo('nv-pago', 'nv-efectivo-wrap', 'efectivo');
+  actualizarCambioEfectivoNV();
+  if(pago !== 'tpv') { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  var terminal = document.getElementById('nv-terminal').value.split('-');
+  var rs = terminal[0], banco = terminal.slice(1).join('-');
+  var tipoTarjeta = document.getElementById('nv-tipo-tarjeta').value;
+  var total = parseFloat((document.getElementById('nv-total').textContent||'0').replace(/[^0-9.]/g,'')) || 0;
+  var n = netoTerminal(total, rs, banco, tipoTarjeta);
+  var pct = n.bruto > 0 ? ((n.comision + n.ivaCom) / n.bruto * 100) : 0;
+  document.getElementById('nv-comision-estimada').textContent =
+    total > 0 ? ('Comisión aprox: ' + fmtMoney(n.comision + n.ivaCom) + ' (' + pct.toFixed(2) + '%) · Neto: ' + fmtMoney(n.neto)) : '';
+}
+
+function actualizarPrecioSugeridoNV(idx) {
+  var claveInput = document.getElementById('nv-clave-' + idx);
+  var cantInput = document.getElementById('nv-cant-' + idx);
+  var sugerenciaDiv = document.getElementById('nv-sugerencia-' + idx);
+  var precioInput = document.getElementById('nv-precio-' + idx);
+  if(!claveInput || !cantInput || !sugerenciaDiv || !precioInput) return;
+  var clave = claveInput.value;
+  var cantidad = parseFloat(cantInput.value) || 0;
+  var canal = (clienteNVSel && clienteNVSel.canal) || 'publico';
+  var puedeEditar = puedeEditarPrecioLibre();
+
+  if(!clave) { sugerenciaDiv.innerHTML = ''; precioInput.readOnly = false; return; }
+
+  var resultadoVolumen = getPrecioProducto(clave, cantidad, canal);
+
+  if(clienteNVSel && clienteNVSel.id && db) {
+    db.collection('precios_cliente').doc(clienteNVSel.id + '_' + clave).get().then(function(doc){
+      var precioNormal = resultadoVolumen ? resultadoVolumen.precioUnitario : null;
+      if(doc.exists) {
+        var h = doc.data();
+        if(precioNormal === null || Math.abs(h.ultimoPrecio - precioNormal) > 0.01) {
+          mostrarSugerenciaHistoricaNV(idx, h, precioNormal, puedeEditar);
+          return;
+        }
+      }
+      aplicarSugerenciaVolumenNV(idx, resultadoVolumen, canal, puedeEditar);
+    }).catch(function(e){ console.log(e); aplicarSugerenciaVolumenNV(idx, resultadoVolumen, canal, puedeEditar); });
+  } else {
+    aplicarSugerenciaVolumenNV(idx, resultadoVolumen, canal, puedeEditar);
+  }
+}
+
+function aplicarSugerenciaVolumenNV(idx, resultado, canal, puedeEditar) {
+  var sugerenciaDiv = document.getElementById('nv-sugerencia-' + idx);
+  var precioInput = document.getElementById('nv-precio-' + idx);
+  if(!sugerenciaDiv || !precioInput) return;
+  if(!resultado) { sugerenciaDiv.innerHTML = ''; precioInput.readOnly = false; return; }
+  precioInput.value = resultado.precioUnitario.toFixed(2);
+  precioInput.readOnly = !puedeEditar;
+  var txt = '';
+  if(resultado.escalaAplicada.desde >= 20) txt += '✅ Precio mayoreo aplicado: $' + resultado.escalaAplicada.precio.toFixed(2) + ' por costal. ';
+  if(canal === 'reventa') txt += '🏷️ Canal reventa: -10%.';
+  sugerenciaDiv.innerHTML = txt ? '<span style="color:var(--naranja);font-weight:700;">' + txt + '</span>' : '';
+  recalcularNV();
+}
+
+function mostrarSugerenciaHistoricaNV(idx, historico, precioNormal, puedeEditar) {
+  var sugerenciaDiv = document.getElementById('nv-sugerencia-' + idx);
+  var precioInput = document.getElementById('nv-precio-' + idx);
+  if(!sugerenciaDiv || !precioInput) return;
+  var precioMostrar = precioNormal !== null ? precioNormal : historico.ultimoPrecio;
+  sugerenciaDiv.innerHTML =
+    '<div style="color:#1D7A4F;font-weight:700;">💡 Última vez: $' + historico.ultimoPrecio.toFixed(2) + ' (' + (historico.pedidoId||'') + ', ' + (historico.fecha||'') + ')</div>' +
+    '<button type="button" class="btn btn-gris" style="font-size:9px;padding:3px 7px;margin-top:2px;" onclick="aplicarPrecioSugeridoHistoricoNV(\'' + idx + '\',' + historico.ultimoPrecio + ')">Aplicar</button> ' +
+    '<button type="button" class="btn btn-gris" style="font-size:9px;padding:3px 7px;margin-top:2px;" onclick="usarPrecioNormalRowNV(\'' + idx + '\',' + precioMostrar + ')">Usar precio normal</button>';
+  precioInput.value = precioMostrar.toFixed(2);
+  precioInput.readOnly = !puedeEditar;
+  recalcularNV();
+}
+
+function aplicarPrecioSugeridoHistoricoNV(idx, precio) {
+  var precioInput = document.getElementById('nv-precio-' + idx);
+  precioInput.readOnly = false;
+  precioInput.value = parseFloat(precio).toFixed(2);
+  if(!puedeEditarPrecioLibre()) precioInput.readOnly = true;
+  recalcularNV();
+}
+
+function usarPrecioNormalRowNV(idx, precio) {
+  var precioInput = document.getElementById('nv-precio-' + idx);
+  precioInput.readOnly = false;
+  precioInput.value = parseFloat(precio).toFixed(2);
+  if(!puedeEditarPrecioLibre()) precioInput.readOnly = true;
+  recalcularNV();
+}
+
+function abrirNuevaNotaVenta() {
+  clienteNVSel = null;
+  nvProdIdx = 0;
+  var existente = document.getElementById('modal-nueva-nv');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-nueva-nv';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:14px;">🎯 NUEVA NOTA DE VENTA</div>' +
+      '<div class="field" style="margin-bottom:10px;position:relative;">' +
+        '<label>Cliente</label>' +
+        '<input type="text" id="nv-cliente-input" placeholder="Público general o buscar cliente..." oninput="buscarClienteNV()" autocomplete="off">' +
+        '<div id="nv-cliente-lista" style="border:1px solid var(--borde);border-radius:8px;max-height:150px;overflow-y:auto;display:none;position:absolute;background:#fff;z-index:100;width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>' +
+      '</div>' +
+      '<div class="field" style="margin-bottom:10px;">' +
+        '<label>Razón Social</label>' +
+        '<select id="nv-rs">' +
+          '<option value="JMG">José Manuel Garín — GACM860923FB3</option>' +
+          '<option value="IZZ">Itzayana Illesca — IEZI860901AW2</option>' +
+          '<option value="CEM">Abastecedora Cemcoya — ACE230216MR0</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="field" style="margin-bottom:10px;">' +
+        '<label>Forma de pago</label>' +
+        '<select id="nv-pago" onchange="actualizarComisionNV()">' +
+          '<option value="efectivo">Efectivo</option>' +
+          '<option value="transferencia">Transferencia</option>' +
+          '<option value="tpv">TPV / Tarjeta</option>' +
+          '<option value="credito">Crédito</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="field" id="nv-tarjeta-wrap" style="display:none;margin-bottom:10px;">' +
+        '<label>Terminal / Razón social</label>' +
+        '<select id="nv-terminal" onchange="actualizarComisionNV()">' +
+          '<option value="IZZ-BBVA">IZZ — BBVA</option>' +
+          '<option value="IZZ-MERCADO PAGO">IZZ — Mercado Pago</option>' +
+          '<option value="CEM-BBVA">CEM — BBVA</option>' +
+        '</select>' +
+        '<select id="nv-tipo-tarjeta" onchange="actualizarComisionNV()" style="margin-top:6px;">' +
+          '<option value="debito">Débito</option>' +
+          '<option value="credito">Crédito</option>' +
+        '</select>' +
+        '<div class="ct-unit" id="nv-comision-estimada"></div>' +
+      '</div>' +
+      '<div class="field" id="nv-efectivo-wrap" style="display:none;margin-bottom:10px;">' +
+        '<label>💵 Efectivo recibido</label>' +
+        '<input type="number" id="nv-efectivo-recibido" oninput="actualizarCambioEfectivoNV()" placeholder="$0.00">' +
+        '<div id="nv-cambio-info" style="font-size:11px;margin-top:4px;"></div>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 8px;">' +
+        '<div style="font-size:13px;font-weight:700;">Productos</div>' +
+        '<button type="button" class="btn btn-gris" onclick="agregarProductoNV()" style="font-size:11px;padding:6px 12px;">+ Agregar producto</button>' +
+      '</div>' +
+      '<div id="nv-prod-lista"></div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">' +
+        '<div><label style="font-size:10px;color:var(--suave);">Descuento %</label><br>' +
+        '<input type="number" id="nv-descuento" value="0" style="width:70px;border:1.5px solid var(--borde);border-radius:6px;padding:6px;font-weight:700;" oninput="recalcularNV()"></div>' +
+        '<div style="text-align:right;"><label style="font-size:10px;color:var(--suave);">Total</label><br>' +
+        '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;" id="nv-total">$0.00</span></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:10px;margin-top:16px;">' +
+        '<button class="btn btn-gris" style="flex:1;" onclick="document.getElementById(\'modal-nueva-nv\').remove()">Cancelar</button>' +
+        '<button class="btn btn-naranja" style="flex:2;" onclick="crearNotaVentaDesdeModal()">🎯 Crear Nota de Venta</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  agregarProductoNV();
+}
+
+function crearNotaVentaDesdeModal() {
+  var prods = getProductosNV();
+  if(!prods.length) { showToast('Agrega al menos un producto'); return; }
+  if(!db) { showToast('⚠️ Sin conexión — no se puede crear la Nota de Venta'); return; }
+  var totales = recalcularNV();
+  var rs = document.getElementById('nv-rs').value;
+  var cot = {
+    folio: folioActual,
+    fecha: new Date().toLocaleDateString('es-MX'),
+    timestamp: Date.now(),
+    cliente: clienteNVSel ? clienteNVSel.nombre : (document.getElementById('nv-cliente-input').value || 'Público General'),
+    clienteId: clienteNVSel ? clienteNVSel.id : null,
+    clienteTel: clienteNVSel ? (clienteNVSel.telefono || '') : '',
+    clienteDom: clienteNVSel ? (clienteNVSel.domicilio || '') : '',
+    rs: rs, rsNombre: RAZONES[rs].nombre, rsRFC: RAZONES[rs].rfc,
+    pago: document.getElementById('nv-pago').value,
+    terminal: document.getElementById('nv-pago').value === 'tpv' ? document.getElementById('nv-terminal').value : null,
+    tipoTarjeta: document.getElementById('nv-pago').value === 'tpv' ? document.getElementById('nv-tipo-tarjeta').value : null,
+    comisionEstimadaTexto: document.getElementById('nv-pago').value === 'tpv' ? document.getElementById('nv-comision-estimada').textContent : '',
+    prob: 'alta',
+    notas: '',
+    productos: prods, subtotal: totales.sub, descuento: totales.desc, total: totales.total,
+    status: 'pendiente', creadoPor: currentUser ? currentUser.name : 'Desconocido'
+  };
+  db.collection('cotizaciones').add(cot).then(function(ref){
+    cot._docId = ref.id;
+    cotizaciones.unshift(cot);
+    folioActual++;
+    var modal = document.getElementById('modal-nueva-nv');
+    if(modal) modal.remove();
+    mostrarModalPedido(cot, ref.id);
+  }).catch(function(e){
+    console.log('Error creando nota de venta:', e);
+    showToast('⚠️ Error al crear la Nota de Venta');
   });
 }
 
