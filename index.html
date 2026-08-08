@@ -7053,8 +7053,8 @@ function cargarComprasViri(filtro) {
           '<div style="display:flex;justify-content:space-between;align-items:baseline;"><div style="font-weight:700;color:var(--naranja);">'+c.folio+'</div><div style="font-size:14px;font-weight:700;">'+fmtMoney(c.total)+'</div></div>'+
           '<div style="font-size:12px;color:#666;margin-top:2px;">'+c.proveedor+' → '+c.rsNombre+'</div>'+
           '<div style="display:flex;gap:6px;margin-top:8px;">'+
-          '<button class="btn btn-verde" onclick="validarCompra(\''+c.id+'\',true)" style="padding:5px 10px;font-size:10px;flex:1;">✅ Validar</button>'+
-          '<button class="btn btn-gris" onclick="validarCompra(\''+c.id+'\',false)" style="padding:5px 10px;font-size:10px;flex:1;">❌ Rechazar</button>'+
+          '<button class="btn btn-verde" onclick="validarCompra(\''+c.id+'\',true,\''+c.folio+'\')" style="padding:5px 10px;font-size:10px;flex:1;">✅ Validar</button>'+
+          '<button class="btn btn-gris" onclick="validarCompra(\''+c.id+'\',false,\''+c.folio+'\')" style="padding:5px 10px;font-size:10px;flex:1;">❌ Rechazar</button>'+
           '</div>';
         list.appendChild(div);
       });
@@ -7062,13 +7062,26 @@ function cargarComprasViri(filtro) {
     .catch(function(e) { console.log(e); list.innerHTML = '<div style="padding:12px;color:#EF4444;">Error</div>'; });
 }
 
-function validarCompra(compraId, aprobada) {
+// Antes esta función solo cambiaba el status de la COMPRA — la SALIDA que
+// guardarCompra() ya había creado (status 'pendiente_validacion') se
+// quedaba así para siempre, sin pasar nunca a 'aprobado', así que nunca
+// contaba en el Dashboard financiero por más que Gerencia la validara.
+function validarCompra(compraId, aprobada, folio) {
   if(!db) return;
   if(!currentUser || currentUser.role !== 'Gerencia') { showToast('⚠️ No tienes permisos para validar compras'); return; }
   db.collection('compras').doc(compraId).update({
     status: aprobada ? 'validada' : 'rechazada',
     validadoPor: currentUser ? currentUser.name : 'Viridiana',
     timestampValidacion: Date.now()
+  }).then(function() {
+    if(!folio) return;
+    return db.collection('salidas').where('compraId','==',folio).get().then(function(snap) {
+      if(snap.empty) return;
+      var batch = db.batch();
+      var nuevoStatusSalida = aprobada ? 'aprobado' : 'rechazado';
+      snap.forEach(function(d) { batch.update(d.ref, { status: nuevoStatusSalida }); });
+      return batch.commit();
+    });
   }).then(function() {
     showToast(aprobada ? '✅ Compra validada' : '❌ Compra rechazada');
     cargarComprasViri('pendientes');
