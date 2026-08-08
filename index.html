@@ -1470,8 +1470,9 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             </select>
           </div>
           <div class="field">
-            <label>Foto del ticket (opcional)</label>
-            <input type="file" accept="image/*" capture="environment" onchange="previsualizarFotoFlota(this,'ticket')">
+            <label>📷 Foto del ticket (opcional)</label>
+            <input type="file" accept="image/*" capture="environment" onchange="previsualizarFotoFlota(this,'ticket')" style="cursor:pointer;">
+            <div style="font-size:11px;color:var(--suave);margin-top:6px;">Clickea para tomar una foto o seleccionar archivo</div>
             <img id="flota-foto-preview-ticket" style="display:none;max-width:100%;border-radius:8px;margin-top:8px;">
           </div>
           <button class="btn btn-naranja" onclick="guardarGasolinaFlota()">⛽ Registrar gasolina</button>
@@ -1496,8 +1497,9 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             </select>
           </div>
           <div class="field">
-            <label>Foto del daño</label>
-            <input type="file" accept="image/*" capture="environment" onchange="previsualizarFotoFlota(this,'danio')">
+            <label>📷 Foto del daño</label>
+            <input type="file" accept="image/*" capture="environment" onchange="previsualizarFotoFlota(this,'danio')" style="cursor:pointer;">
+            <div style="font-size:11px;color:var(--suave);margin-top:6px;">Clickea para tomar una foto o seleccionar archivo</div>
             <img id="flota-foto-preview-danio" style="display:none;max-width:100%;border-radius:8px;margin-top:8px;">
           </div>
           <button class="btn btn-gris" onclick="guardarDanioFlota()">⚠️ Reportar daño</button>
