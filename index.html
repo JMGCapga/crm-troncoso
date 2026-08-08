@@ -4340,21 +4340,42 @@ function registrarCompraProveedor(proveedorId, proveedor, total, vencimiento, co
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar compra'); });
 }
 
+// El dinero de una compra a crédito sale hasta que se abona — por eso la
+// salida se registra aquí y no en guardarCompra(). Cada abono (aunque sea
+// parcial) es su propia salida real.
 function registrarAbonoProveedor(docId, monto) {
   if(!db || !docId || !(monto > 0)) return;
   var ref = db.collection('cuentas_pagar').doc(docId);
-  return db.runTransaction(function(tx){
-    return tx.get(ref).then(function(doc){
-      if(!doc.exists) throw new Error('Cuenta por pagar no encontrada');
-      var data = doc.data();
-      var nuevoSaldo = Math.max(0, (data.saldo || 0) - monto);
-      tx.update(ref, {
-        saldo: nuevoSaldo,
-        estado: nuevoSaldo === 0 ? 'pagado' : 'pendiente',
-        ultimoAbono: monto,
-        ultimoAbonoFecha: fechaISOLocal(),
-        ultimoAbonoTimestamp: Date.now()
+  var cuentaData = null;
+  return ref.get().then(function(doc){
+    if(!doc.exists) throw new Error('Cuenta por pagar no encontrada');
+    cuentaData = doc.data();
+    return db.runTransaction(function(tx){
+      return tx.get(ref).then(function(doc2){
+        if(!doc2.exists) throw new Error('Cuenta por pagar no encontrada');
+        var data = doc2.data();
+        var nuevoSaldo = Math.max(0, (data.saldo || 0) - monto);
+        tx.update(ref, {
+          saldo: nuevoSaldo,
+          estado: nuevoSaldo === 0 ? 'pagado' : 'pendiente',
+          ultimoAbono: monto,
+          ultimoAbonoFecha: fechaISOLocal(),
+          ultimoAbonoTimestamp: Date.now()
+        });
       });
+    });
+  }).then(function(){
+    return db.collection('salidas').add({
+      fecha: fechaISOLocal(),
+      timestamp: Date.now(),
+      tipo: 'compra',
+      tipoLabel: '💸 Abono a proveedor (crédito)',
+      monto: monto,
+      concepto: (cuentaData.compraId || '') + ' — ' + (cuentaData.proveedor || 'Proveedor'),
+      proveedor: cuentaData.proveedor || '',
+      registradoPor: currentUser ? currentUser.name : 'Desconocido',
+      status: 'aprobado',
+      cuentaPagarId: docId
     });
   }).then(function(){
     showToast('💸 Abono a proveedor registrado');
@@ -6821,22 +6842,31 @@ function guardarCompra() {
       });
       return batchInv.commit();
     }).then(function() {
-      // Si es efectivo, crear automáticamente en salidas
-      if(compra.formaPago === 'efectivo') {
+      // Se registra la salida en cuanto el dinero realmente sale: efectivo,
+      // transferencia y tarjeta de crédito. Antes solo pasaba con efectivo —
+      // una compra por transferencia o tarjeta no dejaba ningún rastro en
+      // Salidas ni en el Dashboard financiero. Crédito de proveedor NO
+      // registra salida aquí porque el dinero no ha salido todavía — eso se
+      // registra hasta que se abona (ver registrarAbonoProveedor).
+      if(compra.formaPago === 'efectivo' || compra.formaPago === 'transferencia' || compra.formaPago === 'tarjeta_credito') {
+        var tipoLabelSalida = compra.formaPago === 'efectivo' ? '🛒 Compra en efectivo' :
+          compra.formaPago === 'transferencia' ? '🏦 Compra por transferencia' :
+          '💳 Compra con tarjeta';
         var salida = {
           fecha: compra.fecha,
           timestamp: Date.now(),
           tipo: 'compra',
-          tipoLabel: '🛒 Compra en efectivo',
+          tipoLabel: tipoLabelSalida,
           monto: compra.total,
           concepto: compra.folio + ' — ' + compra.proveedor,
           proveedor: compra.proveedor,
           ticket: compra.noRemision || compra.noFactura || '',
+          tarjeta: compra.formaPago === 'tarjeta_credito' ? compra.tarjeta : null,
           rs: compra.razonSocial,
           rsNombre: compra.rsNombre,
           factura: compra.requiereFactura ? 'pendiente' : 'no',
           registradoPor: compra.registradoPor,
-          status: 'pendiente_validacion',
+          status: compra.formaPago === 'efectivo' ? 'pendiente_validacion' : 'aprobado',
           compraId: compra.folio
         };
         return db.collection('salidas').add(salida);
