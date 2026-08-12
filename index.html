@@ -1321,6 +1321,11 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         <div id="inv-precios-volumen-tabla" style="overflow-x:auto;"></div>
         <button type="button" class="btn btn-naranja" style="width:100%;margin-top:10px;" onclick="guardarPreciosVolumenPanel()">Guardar precios</button>
       </div>
+      <div class="card" id="inv-apartado-panel" style="display:none;">
+        <div class="card-title">💰 Productos con apartado activo</div>
+        <div style="font-size:11px;color:var(--suave);margin-bottom:10px;">Al vender en efectivo, se separa este monto fijo por unidad en caja apartada. Edita el monto o desactívalo desde ⚙️ Editar en la lista de arriba.</div>
+        <div id="inv-apartado-tabla" style="overflow-x:auto;"></div>
+      </div>
     </div>
 
     <!-- ===== CUENTAS (POR COBRAR / POR PAGAR) ===== -->
@@ -2771,6 +2776,11 @@ function iniciarInventario() {
     if(puedeVerPanelPermisos()) { panelPreciosVol.style.display = ''; renderPreciosVolumenPanel(); }
     else panelPreciosVol.style.display = 'none';
   }
+  var panelApartado = document.getElementById('inv-apartado-panel');
+  if(panelApartado) {
+    if(puedeVerPanelPermisos()) { panelApartado.style.display = ''; renderPanelApartado(); }
+    else panelApartado.style.display = 'none';
+  }
 }
 
 function poblarFiltroFamiliaInventario() {
@@ -2912,7 +2922,12 @@ function abrirEditarProducto(clave) {
         '</select></div>' +
         '<div class="field"><label>Insumo clave (costal)</label><input type="text" id="ep-insumoclave" value="' + (p.insumoClave||'') + '"></div>' +
         '<div class="field"><label>Insumo cantidad</label><input type="number" id="ep-insumocant" value="' + (p.insumoCant||0) + '" step="0.01"></div>' +
-        '<div class="field" style="grid-column:1/-1;"><label><input type="checkbox" id="ep-apartable"' + (p.apartable ? ' checked' : '') + ' style="width:auto;margin-right:6px;"> 💰 Apartar efectivo de este producto al vender</label></div>' +
+        '<div class="field" style="grid-column:1/-1;border-top:1px solid var(--borde);padding-top:10px;margin-top:4px;">' +
+          '<div style="font-weight:700;font-size:13px;margin-bottom:6px;">💰 Apartado en efectivo</div>' +
+          '<label style="display:flex;align-items:center;margin-bottom:8px;"><input type="checkbox" id="ep-apartable"' + (p.apartable ? ' checked' : '') + ' style="width:auto;margin-right:6px;"> Apartar efectivo al vender en efectivo</label>' +
+          '<label>Monto a apartar por unidad</label>' +
+          '<input type="number" id="ep-montoapartar" value="' + (p.montoapartar || 0) + '" step="0.01" min="0">' +
+        '</div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:10px;">' +
         '<button class="btn btn-naranja" style="flex:1;" onclick="guardarEdicionProducto(\'' + clave + '\')">Guardar cambios</button>' +
@@ -2935,7 +2950,8 @@ function guardarEdicionProducto(clave) {
     tipo: document.getElementById('ep-tipo').value,
     insumoClave: document.getElementById('ep-insumoclave').value.trim() || null,
     insumoCant: parseFloat(document.getElementById('ep-insumocant').value) || 0,
-    apartable: document.getElementById('ep-apartable').checked
+    apartable: document.getElementById('ep-apartable').checked,
+    montoapartar: parseFloat(document.getElementById('ep-montoapartar').value) || 0
   };
   if(puedeBorrarProducto()) {
     cambios.activo = document.getElementById('ep-activo').value === 'true';
@@ -2947,6 +2963,7 @@ function guardarEdicionProducto(clave) {
     var modal = document.getElementById('modal-editar-prod');
     if(modal) modal.remove();
     renderInventarioLista();
+    if(puedeVerPanelPermisos()) renderPanelApartado();
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al actualizar producto'); });
 }
 
@@ -3205,6 +3222,26 @@ function guardarPreciosVolumenPanel() {
     showToast('✅ Precios por volumen actualizados');
     renderPreciosVolumenPanel();
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar precios'); });
+}
+
+// ════ Panel de solo lectura: productos con apartado de efectivo activo ════
+function renderPanelApartado() {
+  var cont = document.getElementById('inv-apartado-tabla');
+  if(!cont) return;
+  var lista = productos.filter(function(p){ return p.apartable && (p.montoapartar || 0) > 0; })
+    .sort(function(a,b){ return a.clave.localeCompare(b.clave); });
+  if(!lista.length) { cont.innerHTML = '<div style="padding:10px;color:var(--suave);font-size:12px;">Ningún producto tiene apartado activo</div>'; return; }
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+  html += '<tr><th style="text-align:left;padding:6px;">Clave</th><th style="text-align:left;padding:6px;">Producto</th><th style="text-align:right;padding:6px;">Monto x unidad</th></tr>';
+  lista.forEach(function(p){
+    html += '<tr>' +
+      '<td style="padding:6px;font-weight:700;">' + p.clave + '</td>' +
+      '<td style="padding:6px;">' + p.descripcion + '</td>' +
+      '<td style="padding:6px;text-align:right;">' + fmtMoney(p.montoapartar) + '</td>' +
+    '</tr>';
+  });
+  html += '</table>';
+  cont.innerHTML = html;
 }
 
 function cargarCotizaciones(){
@@ -4467,14 +4504,15 @@ function confirmarCierrePedido(docId) {
     pedido.inventarioAplicado = Object.keys(inventarioDeltas).length > 0;
     pedido.inventarioRevertido = false;
 
-    // Apartado de efectivo: solo en ventas de contado, por producto marcado apartable
+    // Apartado de efectivo: monto fijo por unidad (costo), no el precio de venta.
+    // Solo en ventas de contado, por producto marcado apartable con montoapartar > 0.
     var totalApartado = 0;
     if(pago === 'efectivo') {
       (pedido.productos || []).forEach(function(item){
         if(!item.clave) return;
         var prod = productosIndex[item.clave];
-        if(prod && prod.apartable) {
-          totalApartado += (parseFloat(item.cant) || 0) * (parseFloat(item.precio) || 0);
+        if(prod && prod.apartable && (prod.montoapartar || 0) > 0) {
+          totalApartado += (parseFloat(item.cant) || 0) * prod.montoapartar;
         }
       });
     }
@@ -9948,13 +9986,13 @@ function guardarTicket() {
     var deltas = calcularDeltasInventario(productosValidos);
     ticket.inventarioDeltas = deltas;
 
-    // Apartado de efectivo: mismo criterio que Notas de Venta (productos apartable, pago en efectivo)
+    // Apartado de efectivo: mismo criterio que Notas de Venta (monto fijo por unidad, no precio de venta)
     var totalApartado = 0;
     if(metodo === 'efectivo') {
       productosValidos.forEach(function(item){
         if(!item.clave) return;
         var prod = productosIndex[item.clave];
-        if(prod && prod.apartable) totalApartado += (item.cant||0) * (item.precio||0);
+        if(prod && prod.apartable && (prod.montoapartar || 0) > 0) totalApartado += (item.cant||0) * prod.montoapartar;
       });
     }
 
