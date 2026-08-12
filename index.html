@@ -519,6 +519,17 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             </div>
           </div>
 
+          <!-- RETIROS PARCIALES — Gerencia/Director pueden retirar efectivo en cualquier
+               momento del día, sin esperar al cierre. El botón se muestra/oculta por rol
+               desde iniciarCorte(); el resumen es visible para quien vea el corte. -->
+          <div style="background:#FFF4E5;border-radius:10px;padding:16px;margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:#8A4B00;">💰 RETIROS PARCIALES DEL DÍA</div>
+              <button class="btn btn-naranja" id="btn-retiro-parcial" onclick="abrirRetiroParcial()" style="display:none;font-size:11px;padding:8px 14px;">💰 Retiro parcial</button>
+            </div>
+            <div id="resumen-retiros-parciales" style="font-size:12px;color:var(--suave);">Sin retiros parciales hoy</div>
+          </div>
+
           <!-- TPV BBVA IZZ -->
           <div style="background:#F3F0FF;border-radius:10px;padding:16px;margin-bottom:12px;">
             <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;color:#5B21B6;">💳 TPV BBVA — ITZAYANA ILLESCA</div>
@@ -638,7 +649,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           </div>
 
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-naranja" onclick="enviarCorte()" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;padding:14px;">
+            <button class="btn btn-naranja" id="btn-enviar-corte" onclick="enviarCorte()" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;padding:14px;">
               ✅ ENVIAR CORTE A VIRIDIANA
             </button>
             <button class="btn btn-gris" onclick="imprimirCorte()" style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;padding:14px;">
@@ -703,6 +714,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
                 <option value="Talacha / Mantenimiento de flota">Talacha / Mantenimiento de flota</option>
                 <option value="Insumos de oficina">Insumos de oficina</option>
                 <option value="Apartado de material">Apartado de material</option>
+                <option value="Renta">Renta</option>
+                <option value="Ahorro">Ahorro</option>
+                <option value="Pago a proveedor en efectivo">Pago a proveedor en efectivo</option>
+                <option value="Retiro bancario">Retiro bancario</option>
                 <option value="Otro" selected>Otro</option>
               </select>
             </div>
@@ -4617,6 +4632,89 @@ function cargarApartadoCaja() {
   }).catch(function(e){ console.log('Error cargando caja apartada:', e); });
 }
 
+// ════ RETIROS PARCIALES — Gerencia/Director retiran efectivo en cualquier momento
+// del día, sin esperar al cierre. No hay límite de retiros ni requieren autorización
+// del Director. Se guardan sueltos en 'retiros_parciales' y se descuentan del
+// efectivo operativo del corte del día. ════
+var retirosParcialesHoy = 0;
+var retirosParcialesHoyDetalle = [];
+
+function cargarRetirosParciales() {
+  if(!db) return;
+  var hoy = fechaISOLocal();
+  db.collection('retiros_parciales').where('fecha','==',hoy).get().then(function(snap){
+    var total = 0;
+    var detalle = [];
+    snap.forEach(function(doc){
+      var d = doc.data();
+      total += d.monto || 0;
+      detalle.push(d);
+    });
+    detalle.sort(function(a,b){ return (a.timestamp||0) - (b.timestamp||0); });
+    retirosParcialesHoy = total;
+    retirosParcialesHoyDetalle = detalle;
+    renderRetirosParciales();
+    calcCorte();
+  }).catch(function(e){ console.log('Error cargando retiros parciales:', e); });
+}
+
+function renderRetirosParciales() {
+  var cont = document.getElementById('resumen-retiros-parciales');
+  if(!cont) return;
+  if(!retirosParcialesHoyDetalle.length) { cont.innerHTML = 'Sin retiros parciales hoy'; return; }
+  var n = retirosParcialesHoyDetalle.length;
+  var html = '<div style="font-weight:700;margin-bottom:6px;">Retiros parciales del día: '+fmtMoney(retirosParcialesHoy)+' ('+n+' retiro'+(n===1?'':'s')+')</div>';
+  retirosParcialesHoyDetalle.forEach(function(r){
+    html += '<div style="padding:4px 0;border-top:1px solid #F0E4D0;">'+(r.hora||'')+' — '+fmtMoney(r.monto)+' — '+(r.motivo||'Sin motivo')+' <span style="color:#B08040;">('+(r.usuario||'')+')</span></div>';
+  });
+  cont.innerHTML = html;
+}
+
+function abrirRetiroParcial() {
+  if(!currentUser || (currentUser.role !== 'Gerencia' && currentUser.role !== 'Director')) { showToast('⚠️ Sin permisos'); return; }
+  var existente = document.getElementById('modal-retiro-parcial');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-retiro-parcial';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:400px;width:100%;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:1px;">💰 RETIRO PARCIAL</div>' +
+      '<div class="field" style="margin-bottom:10px;margin-top:14px;"><label>¿Cuánto retiras?</label>' +
+        '<input type="number" id="rp-monto" placeholder="0.00" min="0" step="0.01" style="width:100%;border:1.5px solid var(--borde);border-radius:8px;padding:10px 12px;"></div>' +
+      '<div class="field" style="margin-bottom:14px;"><label>Motivo</label>' +
+        '<input type="text" id="rp-motivo" placeholder="ej: Depósito banco, Resguardo..." style="width:100%;border:1.5px solid var(--borde);border-radius:8px;padding:10px 12px;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button class="btn btn-naranja" style="flex:1;" onclick="guardarRetiroParcial()">Confirmar</button>' +
+        '<button class="btn btn-gris" style="flex:1;" onclick="document.getElementById(\'modal-retiro-parcial\').remove()">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+}
+
+function guardarRetiroParcial() {
+  if(!currentUser || (currentUser.role !== 'Gerencia' && currentUser.role !== 'Director')) { showToast('⚠️ Sin permisos'); return; }
+  var monto = parseFloat(document.getElementById('rp-monto').value) || 0;
+  var motivo = document.getElementById('rp-motivo').value.trim();
+  if(monto <= 0) { showToast('⚠️ Ingresa un monto válido'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+  var ahora = new Date();
+  var retiro = {
+    monto: monto,
+    motivo: motivo || 'Sin motivo',
+    usuario: currentUser ? currentUser.name : 'Desconocido',
+    fecha: fechaISOLocal(),
+    hora: ahora.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'}),
+    timestamp: Date.now()
+  };
+  db.collection('retiros_parciales').add(retiro).then(function(){
+    showToast('✅ Retiro parcial registrado');
+    var modal = document.getElementById('modal-retiro-parcial');
+    if(modal) modal.remove();
+    cargarRetirosParciales();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar retiro'); });
+}
+
 // ════ CORTE — Ventas del día (Notas de Venta + Tickets) por método de pago ════
 function cargarVentasDelDiaCorte() {
   var cont = document.getElementById('corte-ventas-sistema');
@@ -4739,16 +4837,26 @@ function iniciarCorte() {
   document.getElementById('corte-viri').style.display = 'none';
   document.getElementById('corte-director').style.display = 'none';
 
-  if(role === 'Ventas' || role === 'Compras') {
+  // Gerencia y Director deben poder capturar el corte igual que Ivette/Erika (no solo
+  // validarlo o verlo de lejos) — Viridiana maneja el efectivo y a veces ella misma
+  // hace el conteo del día.
+  if(role === 'Ventas' || role === 'Compras' || role === 'Gerencia' || role === 'Director') {
     document.getElementById('corte-ivette').style.display = 'block';
     document.getElementById('corte-fecha-hoy').textContent = 'Fecha: ' + new Date().toLocaleDateString('es-MX', {weekday:'long', day:'2-digit', month:'long', year:'numeric'});
     cargarTransferenciasConfirmadas();
     cargarApartadoCaja();
     cargarVentasDelDiaCorte();
-  } else if(role === 'Gerencia') {
+    cargarRetirosParciales();
+    var btnEnviar = document.getElementById('btn-enviar-corte');
+    var btnRetiro = document.getElementById('btn-retiro-parcial');
+    if(btnEnviar) btnEnviar.textContent = (role === 'Gerencia' || role === 'Director') ? '✅ CERRAR EL DÍA' : '✅ ENVIAR CORTE A VIRIDIANA';
+    if(btnRetiro) btnRetiro.style.display = (role === 'Gerencia' || role === 'Director') ? 'block' : 'none';
+  }
+  if(role === 'Gerencia') {
     document.getElementById('corte-viri').style.display = 'block';
     cargarCortesPendientes();
-  } else if(role === 'Director') {
+  }
+  if(role === 'Director') {
     document.getElementById('corte-director').style.display = 'block';
     cargarResumenDirector();
   }
@@ -4779,7 +4887,7 @@ function calcCorte() {
   document.getElementById('res-gran-total').textContent = fmtMoney(granTotal);
 
   var elOperativo = document.getElementById('res-efectivo-operativo');
-  if(elOperativo) elOperativo.textContent = fmtMoney(efTotal - apartadoHoy);
+  if(elOperativo) elOperativo.textContent = fmtMoney(efTotal - apartadoHoy - retirosParcialesHoy);
   var elApartado = document.getElementById('res-efectivo-apartado');
   if(elApartado) elApartado.textContent = fmtMoney(apartadoHoy) + ' (saldo acumulado: ' + fmtMoney(saldoApartadoAcumulado) + ')';
 
@@ -4986,17 +5094,22 @@ function enviarCorte() {
     totalTpv: tpvIzz + tpvCem + mp,
     granTotal: granTotal,
     apartadoDelDia: apartadoHoy,
-    efectivoOperativo: (ef + ret) - apartadoHoy,
+    retirosParcialesDelDia: retirosParcialesHoy,
+    retirosParcialesDetalle: retirosParcialesHoyDetalle,
+    efectivoOperativo: (ef + ret) - apartadoHoy - retirosParcialesHoy,
     saldoApartadoAcumulado: saldoApartadoAcumulado,
     terminalesDetalle: terminalesDetalle,
     netoTerminalesTotal: netoIzz.neto + netoCem.neto + netoMp.neto,
     notas: document.getElementById('c-notas').value,
-    status: 'pendiente_validacion'
+    status: (currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director')) ? 'aprobado' : 'pendiente_validacion',
+    validadoPor: (currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director')) ? currentUser.name : null,
+    timestampValidacion: (currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director')) ? Date.now() : null
   };
 
   if(db) {
     db.collection('cortes').add(corte).then(function(){
-      showToast('✅ Corte enviado a Viridiana para validación');
+      var esCierreDirecto = currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
+      showToast(esCierreDirecto ? '✅ Corte cerrado' : '✅ Corte enviado a Viridiana para validación');
       // Limpiar formulario
       ['c-efectivo','c-retiros','c-tpv-izz','c-tpv-izz-ops','c-tpv-cemcoya','c-tpv-cemcoya-ops','c-mp','c-mp-ops','c-notas','c-retiro-motivo'].forEach(function(id){
         var el = document.getElementById(id);
@@ -5122,15 +5235,17 @@ function iniciarSalidas() {
   document.getElementById('salidas-viri').style.display = 'none';
   document.getElementById('salidas-director').style.display = 'none';
 
-  if(role === 'Compras') {
+  if(role === 'Compras' || role === 'Gerencia' || role === 'Director') {
     document.getElementById('salidas-erika').style.display = 'block';
     document.getElementById('salidas-fecha-hoy').textContent = 'Fecha: ' + new Date().toLocaleDateString('es-MX',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
     cargarSalidasHoy();
     cargarApartadoCaja();
-  } else if(role === 'Gerencia') {
+  }
+  if(role === 'Gerencia') {
     document.getElementById('salidas-viri').style.display = 'block';
     cargarSalidasViri('hoy');
-  } else if(role === 'Director') {
+  }
+  if(role === 'Director') {
     document.getElementById('salidas-director').style.display = 'block';
     cargarSalidasDirector();
   }
@@ -6319,6 +6434,10 @@ var comprasProductos = [];
 var comprasProveedoresCache = [];
 var comprasProveedoresCargados = false;
 
+function puedeRegistrarCompra() {
+  return currentUser && (currentUser.role === 'Ventas' || currentUser.role === 'Compras' || currentUser.role === 'Gerencia' || currentUser.role === 'Director');
+}
+
 function iniciarCompras() {
   var role = currentUser ? currentUser.role : '';
   document.getElementById('compras-erika').style.display = 'none';
@@ -6330,13 +6449,17 @@ function iniciarCompras() {
   document.getElementById('compras-fecha-hoy').textContent =
     hoy.toLocaleDateString('es-MX', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
-  if(role === 'Compras') {
+  // Viridiana maneja la caja y debe poder registrar cualquier compra (incluida en
+  // efectivo) sin restricción — antes solo Erika (role Compras) veía este formulario.
+  if(puedeRegistrarCompra()) {
     document.getElementById('compras-erika').style.display = 'block';
     cargarComprasErika();
-  } else if(role === 'Gerencia') {
+  }
+  if(role === 'Gerencia') {
     document.getElementById('compras-viri').style.display = 'block';
     filtrarComprasViri('hoy');
-  } else if(role === 'Director') {
+  }
+  if(role === 'Director') {
     document.getElementById('compras-jm').style.display = 'block';
     cargarComprasJM();
   }
@@ -7982,8 +8105,12 @@ function renderTablaEmpleados() {
       celdaCaja = '<td style="text-align:right;">$'+fmtNumero(emp.cajaAhorro||0)+(emp.cajaAhorroManual?' <span title="Ajustado manualmente (negociación)" style="color:#FF9800;">✎</span>':'')+'</td>';
     }
 
+    var numAdelantos = (emp.adelantosSemana || []).length;
+    var labelPrestamo = numAdelantos > 0
+      ? 'Adelantos semana: -$'+fmtNumero(emp.prestamoSemanal)+' ('+numAdelantos+' adelanto'+(numAdelantos===1?'':'s')+')'
+      : 'Descuento préstamo: -$'+fmtNumero(emp.prestamoSemanal);
     var desglosePrestamo = (emp.prestamoSemanal > 0)
-      ? '<div style="font-size:9px;color:var(--suave);margin-top:2px;">Sueldo: $'+fmtNumero(emp.sueldoSemanal)+' — Descuento préstamo: -$'+fmtNumero(emp.prestamoSemanal)+' — Neto: $'+fmtNumero(neto)+'</div>'
+      ? '<div style="font-size:9px;color:var(--suave);margin-top:2px;">Sueldo: $'+fmtNumero(emp.sueldoSemanal)+' — '+labelPrestamo+' — Neto: $'+fmtNumero(neto)+'</div>'
       : '';
 
     var tr = document.createElement('tr');
@@ -8041,8 +8168,11 @@ function resetDescuentoFaltas(idx) {
 function resetPrestamoSemanal(idx) {
   var emp = nominaActual.empleados[idx];
   emp.prestamoSemanalManual = false;
-  var prest = prestamosActivos.find(p => p.empleado === emp.nombre);
-  emp.prestamoSemanal = prest ? Math.min(prest.montoSemanal, prest.saldoPendiente) : 0;
+  var adelantosEmp = prestamosActivos.filter(function(p){ return p.empleado === emp.nombre && p.tipo === 'adelanto'; });
+  var fijoEmp = prestamosActivos.find(function(p){ return p.empleado === emp.nombre && p.tipo !== 'adelanto'; });
+  var sumaAdelantos = adelantosEmp.reduce(function(s,p){ return s + Math.min(p.montoSemanal, p.saldoPendiente); }, 0);
+  var fijoCuota = fijoEmp ? Math.min(fijoEmp.montoSemanal, fijoEmp.saldoPendiente) : 0;
+  emp.prestamoSemanal = sumaAdelantos + fijoCuota;
   renderTablaEmpleados();
 }
 
@@ -8228,16 +8358,30 @@ function continuarProcesarNomina() {
 
       db.collection('salidas').add(salida).then(function() {
         // Decrementar préstamos — usa lo realmente descontado del sueldo (prestamoSemanal),
-        // no el montoSemanal nominal del préstamo, para que nunca se desincronicen.
+        // no el montoSemanal nominal del préstamo, para que nunca se desincronicen. Un
+        // empleado puede tener VARIOS préstamos/adelantos activos a la vez (ej. Agustín con
+        // 3 adelantos en la semana) — antes se restaba el mismo monto compartido de CADA
+        // uno, liquidando de golpe préstamos que no se habían pagado. Ahora se reparte el
+        // total descontado entre los préstamos del empleado en orden cronológico.
+        var prestamosPorEmpleado = {};
         prestamosActivos.forEach(function(prest) {
-          var empConPrest = nominaActual.empleados.find(e => e.nombre === prest.empleado);
-          if(empConPrest && empConPrest.prestamoSemanal > 0) {
-            var descontado = Math.min(empConPrest.prestamoSemanal, prest.saldoPendiente);
+          (prestamosPorEmpleado[prest.empleado] = prestamosPorEmpleado[prest.empleado] || []).push(prest);
+        });
+        Object.keys(prestamosPorEmpleado).forEach(function(nombreEmp) {
+          var empConPrest = nominaActual.empleados.find(e => e.nombre === nombreEmp);
+          if(!empConPrest || !(empConPrest.prestamoSemanal > 0)) return;
+          var restante = empConPrest.prestamoSemanal;
+          var docsOrdenados = prestamosPorEmpleado[nombreEmp].slice().sort(function(a,b){ return (a.timestamp||0) - (b.timestamp||0); });
+          docsOrdenados.forEach(function(prest) {
+            if(restante <= 0) return;
+            var descontado = Math.min(restante, prest.saldoPendiente);
+            if(descontado <= 0) return;
+            restante -= descontado;
             var nuevoSaldo = Math.max(0, prest.saldoPendiente - descontado);
             var update = { saldoPendiente: nuevoSaldo };
             if(nuevoSaldo <= 0) update.activo = false;
             db.collection('prestamos').doc(prest.id).update(update).catch(function(e) { console.log(e); });
-          }
+          });
         });
 
         showToast('✅ Nómina procesada');
@@ -8253,13 +8397,22 @@ function cargarPrestamos() {
   db.collection('prestamos').where('activo', '==', true).get().then(function(snap) {
     prestamosActivos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // Asignar préstamos activos a empleados de nómina (respeta ajuste manual de la semana)
+    // Asignar préstamos activos a empleados de nómina (respeta ajuste manual de la semana).
+    // Un empleado puede tener VARIOS adelantos activos la misma semana (ej. Agustín pide
+    // $100 diarios) — antes solo se tomaba el primero con .find(), ignorando el resto.
+    // Ahora se suman todos los de tipo 'adelanto', más la cuota del préstamo fijo si existe.
     if(nominaActual) {
       nominaActual.empleados.forEach(function(emp) {
-        var prest = prestamosActivos.find(p => p.empleado === emp.nombre);
-        emp.prestamoId = prest ? prest.id : null;
+        var adelantosEmp = prestamosActivos.filter(function(p){ return p.empleado === emp.nombre && p.tipo === 'adelanto'; });
+        var fijoEmp = prestamosActivos.find(function(p){ return p.empleado === emp.nombre && p.tipo !== 'adelanto'; });
+        emp.adelantosSemana = adelantosEmp.map(function(p){
+          return { id: p.id, monto: Math.min(p.montoSemanal, p.saldoPendiente), fecha: p.fechaInicio };
+        });
+        emp.prestamoId = fijoEmp ? fijoEmp.id : (adelantosEmp[0] ? adelantosEmp[0].id : null);
         if(!emp.prestamoSemanalManual) {
-          emp.prestamoSemanal = prest ? Math.min(prest.montoSemanal, prest.saldoPendiente) : 0;
+          var sumaAdelantos = adelantosEmp.reduce(function(s,p){ return s + Math.min(p.montoSemanal, p.saldoPendiente); }, 0);
+          var fijoCuota = fijoEmp ? Math.min(fijoEmp.montoSemanal, fijoEmp.saldoPendiente) : 0;
+          emp.prestamoSemanal = sumaAdelantos + fijoCuota;
         }
       });
       renderTablaEmpleados();
@@ -8288,7 +8441,7 @@ function renderPrestamosLista() {
       ? '<button class="btn btn-gris" onclick="abrirAdelantarPrestamo(\''+prest.id+'\')" style="margin-top:8px;padding:5px 10px;font-size:10px;">⏩ Adelantar pagos</button>' : '';
     item.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:baseline;"><div style="font-weight:700;">'+prest.empleado+'</div><div style="font-size:12px;color:var(--suave);">'+porcentaje+'% pagado</div></div>'+
-      '<div style="font-size:10px;color:var(--naranja);font-weight:700;margin-top:2px;">'+(LABEL_TIPO_PRESTAMO[tipo]||tipo)+'</div>'+
+      '<div style="font-size:10px;color:var(--naranja);font-weight:700;margin-top:2px;">'+(LABEL_TIPO_PRESTAMO[tipo]||tipo)+' · '+(prest.fechaInicio||'')+'</div>'+
       '<div style="font-size:12px;color:#666;margin:6px 0;">Saldo: $'+fmtNumero(prest.saldoPendiente)+' de $'+fmtNumero(prest.montoTotal)+'</div>'+
       '<div style="background:#F0F0F0;height:6px;border-radius:3px;overflow:hidden;margin:6px 0;"><div style="background:var(--naranja);height:100%;width:'+porcentaje+'%;"></div></div>'+
       '<div style="font-size:11px;color:var(--suave);">Descuento semanal: $'+fmtNumero(prest.montoSemanal)+'</div>'+
