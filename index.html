@@ -544,15 +544,8 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
                 <input type="number" id="c-tpv-izz-ops" placeholder="0" min="0" step="1">
                 <div class="ct-unit">Número de transacciones</div>
               </div>
-              <div class="field">
-                <label>Tipo de tarjeta</label>
-                <select id="c-tpv-izz-tipo" onchange="calcCorte()">
-                  <option value="debito">Débito</option>
-                  <option value="credito">Crédito</option>
-                </select>
-                <div class="ct-unit" id="c-tpv-izz-neto"></div>
-              </div>
             </div>
+            <div class="ct-unit" id="c-tpv-izz-neto" style="margin-top:6px;font-weight:700;"></div>
           </div>
 
           <!-- TPV BBVA CEMCOYA -->
@@ -569,15 +562,8 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
                 <input type="number" id="c-tpv-cemcoya-ops" placeholder="0" min="0" step="1">
                 <div class="ct-unit">Número de transacciones</div>
               </div>
-              <div class="field">
-                <label>Tipo de tarjeta</label>
-                <select id="c-tpv-cemcoya-tipo" onchange="calcCorte()">
-                  <option value="debito">Débito</option>
-                  <option value="credito">Crédito</option>
-                </select>
-                <div class="ct-unit" id="c-tpv-cemcoya-neto"></div>
-              </div>
             </div>
+            <div class="ct-unit" id="c-tpv-cemcoya-neto" style="margin-top:6px;font-weight:700;"></div>
           </div>
 
           <!-- TPV MERCADO PAGO -->
@@ -594,22 +580,25 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
                 <input type="number" id="c-mp-ops" placeholder="0" min="0" step="1">
                 <div class="ct-unit">Número de transacciones</div>
               </div>
-              <div class="field">
-                <label>Tipo de tarjeta</label>
-                <select id="c-mp-tipo" onchange="calcCorte()">
-                  <option value="debito">Débito</option>
-                  <option value="credito">Crédito</option>
-                </select>
-                <div class="ct-unit" id="c-mp-neto"></div>
-              </div>
             </div>
+            <div class="ct-unit" id="c-mp-neto" style="margin-top:6px;font-weight:700;"></div>
           </div>
 
           <!-- TRANSFERENCIAS -->
           <div style="background:#FFF8F5;border-radius:10px;padding:16px;margin-bottom:16px;">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;color:#E8500A;">📲 TRANSFERENCIAS CONFIRMADAS</div>
-            <div id="lista-transfers-corte" style="margin-bottom:10px;"></div>
-            <button class="btn btn-gris" onclick="agregarTransfer()" style="font-size:11px;padding:7px 14px;">+ Agregar transferencia</button>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;color:#E8500A;">📲 TRANSFERENCIAS</div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Total transferencias</label>
+                <input type="number" id="c-transfer-total" placeholder="0.00" min="0" step="0.01" oninput="calcCorte()">
+                <div class="ct-unit">Autollenado con las confirmadas del día — ajusta si falta alguna. Detalle por cliente: Cuentas por Cobrar.</div>
+              </div>
+              <div class="field">
+                <label>No. de operaciones</label>
+                <input type="number" id="c-transfer-ops" placeholder="0" min="0" step="1" oninput="calcCorte()">
+                <div class="ct-unit">Número de transferencias</div>
+              </div>
+            </div>
           </div>
 
           <!-- RESUMEN TOTAL -->
@@ -2163,7 +2152,8 @@ const PAGO_LABELS = {
   transferencia: '🏦 Transferencia',
   tpv: '💳 Tarjeta',
   credito: '📝 Crédito',
-  debito: '💳 Débito'
+  debito: '💳 Débito',
+  mixto: '🔀 Pago mixto'
 };
 function labelMetodoPago(codigo) {
   return PAGO_LABELS[codigo] || (codigo || '—');
@@ -2774,6 +2764,9 @@ function puedeAgregarProductoTruper() {
 function puedeVerPanelPermisos() {
   return currentPin === '9900' || (currentUser && currentUser.role === 'Gerencia');
 }
+function puedeVerHistorialInventario() {
+  return currentUser && (currentUser.role === 'Director' || currentUser.role === 'Gerencia' || currentUser.role === 'Compras');
+}
 
 function iniciarInventario() {
   if(!puedeVerInventario()) { showToast('⚠️ No tienes acceso a Inventario'); return; }
@@ -2815,6 +2808,7 @@ function renderInventarioLista() {
   var familia = document.getElementById('inv-filtro-familia').value;
   var puedeAjustar = puedeAjustarInventario();
   var esSuper = esSuperAdminInventario();
+  var puedeHistorial = puedeVerHistorialInventario();
 
   var lista = inventarioCache.filter(function(p){
     var matchQ = !q || p.clave.toLowerCase().indexOf(q) !== -1 || (p.descripcion||'').toLowerCase().indexOf(q) !== -1;
@@ -2838,6 +2832,7 @@ function renderInventarioLista() {
       '<div style="font-size:10px;color:var(--suave);">min ' + (p.min||0) + ' · max ' + (p.max||0) + '</div>' +
       (puedeAjustar ? '<button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:4px;" onclick="abrirAjusteExistencia(\'' + p.clave + '\')">✏️ Ajustar</button>' : '') +
       (esSuper ? ' <button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:4px;" onclick="abrirEditarProducto(\'' + p.clave + '\')">⚙️ Editar</button>' : '') +
+      (puedeHistorial ? ' <button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:4px;" onclick="abrirHistorialProducto(\'' + p.clave + '\')">📋 Historial</button>' : '') +
       '</div></div>';
   });
   document.getElementById('inv-lista').innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">Sin resultados</div>';
@@ -2980,6 +2975,153 @@ function guardarEdicionProducto(clave) {
     renderInventarioLista();
     if(puedeVerPanelPermisos()) renderPanelApartado();
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al actualizar producto'); });
+}
+
+// ════ INVENTARIO — Historial de movimientos por producto ════
+// Fuentes: movimientos_inventario (ajustes manuales + compras, ya loguean ahí
+// vía guardarAjusteExistencia/guardarCompra) + pedidos/tickets (ventas, leyendo
+// el inventarioDeltas ya calculado en cada documento — así se capturan también
+// los descuentos en cascada de insumo, ej. costal vacío, sin tener que volver
+// a escanear el arreglo de productos). No se consulta 'compras' aparte para no
+// contar dos veces la misma compra (ya está en movimientos_inventario).
+var MESES_CORTOS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fechaCortaHistorial(fechaISO) {
+  if(!fechaISO) return '';
+  var partes = fechaISO.split('-');
+  if(partes.length !== 3) return fechaISO;
+  var y = partes[0], m = parseInt(partes[1], 10), d = partes[2];
+  return d + '-' + (MESES_CORTOS[m-1] || partes[1]) + '-' + y;
+}
+
+var TIPOS_MOVIMIENTO_INV = {
+  ajuste_inicial: 'Ajuste inicial',
+  ajuste_operativo: 'Ajuste',
+  merma: 'Merma',
+  devolucion: 'Devolución',
+  compra: 'Compra'
+};
+
+function abrirHistorialProducto(clave) {
+  if(!puedeVerHistorialInventario()) { showToast('⚠️ Sin permisos'); return; }
+  var p = productosIndex[clave];
+  if(!p || !db) return;
+  var existente = document.getElementById('modal-historial-prod');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-historial-prod';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:1px;margin-bottom:4px;">📋 HISTORIAL — ' + p.clave + '</div>' +
+      '<div style="font-size:12px;color:var(--suave);margin-bottom:14px;">' + (p.descripcion||'') + '</div>' +
+      '<div id="historial-prod-body" style="font-size:12px;color:var(--suave);padding:20px 0;text-align:center;">Cargando...</div>' +
+      '<div style="display:flex;gap:8px;margin-top:14px;">' +
+        '<button class="btn btn-gris" style="flex:1;" onclick="document.getElementById(\'modal-historial-prod\').remove()">Cerrar</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  cargarHistorialProducto(clave);
+}
+
+function cargarHistorialProducto(clave) {
+  var cont = document.getElementById('historial-prod-body');
+  if(!cont) return;
+  Promise.all([
+    db.collection('movimientos_inventario').where('clave','==',clave).orderBy('timestamp','desc').limit(500).get(),
+    db.collection('pedidos').orderBy('timestamp','desc').limit(500).get(),
+    db.collection('tickets').orderBy('timestamp','desc').limit(500).get()
+  ]).then(function(results){
+    var movSnap = results[0], pedidosSnap = results[1], ticketsSnap = results[2];
+    var filas = [];
+
+    movSnap.forEach(function(doc){
+      var m = doc.data();
+      var esCompra = m.tipo === 'compra';
+      var cantidad = esCompra ? (m.cantidadConvertida || 0) : ((m.existenciaNueva||0) - (m.existenciaAnterior||0));
+      filas.push({
+        timestamp: m.timestamp || 0,
+        fecha: m.fecha || '',
+        tipo: TIPOS_MOVIMIENTO_INV[m.tipo] || m.tipo || 'Movimiento',
+        cantidad: cantidad,
+        usuario: m.usuario || '',
+        referencia: esCompra ? '' : (m.motivo || '')
+      });
+    });
+
+    pedidosSnap.forEach(function(doc){
+      var pe = doc.data();
+      if(pe.s === 'cancelado') return;
+      if(!pe.inventarioAplicado || !pe.inventarioDeltas || !pe.inventarioDeltas[clave]) return;
+      filas.push({
+        timestamp: pe.timestamp || 0,
+        fecha: pe.fecha || '',
+        tipo: 'Venta',
+        cantidad: -pe.inventarioDeltas[clave],
+        usuario: pe.a || pe.creadoPor || '',
+        referencia: pe.id || ''
+      });
+    });
+
+    ticketsSnap.forEach(function(doc){
+      var tk = doc.data();
+      if(tk.status === 'cancelado') return;
+      if(!tk.inventarioDeltas || !tk.inventarioDeltas[clave]) return;
+      filas.push({
+        timestamp: tk.timestamp || 0,
+        fecha: tk.fecha || '',
+        tipo: 'Venta (mostrador)',
+        cantidad: -tk.inventarioDeltas[clave],
+        usuario: tk.usuario || '',
+        referencia: tk.folio || ''
+      });
+    });
+
+    filas.sort(function(a,b){ return b.timestamp - a.timestamp; });
+
+    var totalEntradas = 0, totalSalidas = 0;
+    filas.forEach(function(f){
+      if(f.cantidad > 0) totalEntradas += f.cantidad;
+      else totalSalidas += -f.cantidad;
+    });
+
+    if(!filas.length) {
+      cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:12px;">Sin movimientos registrados para este producto.</div>';
+      return;
+    }
+
+    var filasHtml = filas.map(function(f){
+      var signo = f.cantidad > 0 ? '+' : '';
+      var color = f.cantidad > 0 ? '#1D7A4F' : (f.cantidad < 0 ? '#DC2626' : 'var(--suave)');
+      return '<tr>' +
+        '<td style="padding:6px 8px;font-size:11px;white-space:nowrap;">' + fechaCortaHistorial(f.fecha) + '</td>' +
+        '<td style="padding:6px 8px;font-size:11px;">' + f.tipo + '</td>' +
+        '<td style="padding:6px 8px;font-size:11px;text-align:right;color:' + color + ';font-weight:700;">' + signo + f.cantidad + '</td>' +
+        '<td style="padding:6px 8px;font-size:11px;">' + f.usuario + '</td>' +
+        '<td style="padding:6px 8px;font-size:11px;color:var(--suave);">' + f.referencia + '</td>' +
+      '</tr>';
+    }).join('');
+
+    var capNota = (movSnap.size >= 500 || pedidosSnap.size >= 500 || ticketsSnap.size >= 500)
+      ? '<div style="font-size:10px;color:var(--suave);margin-top:6px;">Mostrando los últimos 500 movimientos/documentos por fuente — puede haber historial más antiguo sin listar.</div>' : '';
+
+    cont.innerHTML =
+      '<div style="overflow-x:auto;">' +
+      '<table style="width:100%;border-collapse:collapse;">' +
+        '<thead><tr style="border-bottom:1.5px solid var(--borde);">' +
+          '<th style="padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--suave);">Fecha</th>' +
+          '<th style="padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--suave);">Tipo</th>' +
+          '<th style="padding:6px 8px;text-align:right;font-size:10px;text-transform:uppercase;color:var(--suave);">Cantidad</th>' +
+          '<th style="padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--suave);">Usuario</th>' +
+          '<th style="padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--suave);">Referencia</th>' +
+        '</tr></thead>' +
+        '<tbody>' + filasHtml + '</tbody>' +
+      '</table></div>' +
+      capNota +
+      '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;padding:10px 4px 2px;border-top:1px solid #E0DBD3;margin-top:10px;">' +
+        '<span>Total entradas: <span style="color:#1D7A4F;">+' + totalEntradas + '</span> | Total salidas: <span style="color:#DC2626;">-' + totalSalidas + '</span></span>' +
+        '<span>Existencia actual: ' + (productosIndex[clave] ? (productosIndex[clave].existencia||0) : '—') + '</span>' +
+      '</div>';
+  }).catch(function(e){ console.log('Error cargando historial de producto:', e); cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:12px;">Error al cargar el historial.</div>'; });
 }
 
 // ════ INVENTARIO — Alta de producto nuevo ════
@@ -4304,9 +4446,10 @@ function mostrarModalPedido(cot, docId) {
             <option value="transferencia">Transferencia</option>
             <option value="tpv">TPV / Tarjeta</option>
             ${cot.pago !== 'credito' ? '<option value="credito">Crédito</option>' : ''}
+            <option value="mixto">🔀 Pago mixto (2 métodos)</option>
           </select>
         </div>
-        <div style="grid-column:1/-1;">
+        <div style="grid-column:1/-1;" id="mp-anticipo-wrap">
           <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Anticipo recibido ($) — vacío o igual al total = pago completo</label>
           <input type="number" id="mp-anticipo" value="${cot.pago === 'credito' ? 0 : (cot.total||0)}" oninput="actualizarSaldoPedidoModal(${cot.total||0})" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
           <div id="mp-saldo-info" style="font-size:11px;color:#6B6560;margin-top:4px;"></div>
@@ -4315,6 +4458,54 @@ function mostrarModalPedido(cot, docId) {
           <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">💵 Efectivo recibido</label>
           <input type="number" id="mp-efectivo-recibido" oninput="actualizarCambioEfectivo(${cot.total||0},'mp-efectivo-recibido','mp-cambio-info')" placeholder="$0.00" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
           <div id="mp-cambio-info" style="font-size:11px;margin-top:4px;"></div>
+        </div>
+        <div style="grid-column:1/-1;display:none;" id="mp-mixto-wrap">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div>
+              <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Método 1</label>
+              <select id="mp-mixto-metodo1" onchange="actualizarPagoMixto(${cot.total||0})" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
+                <option value="efectivo">Efectivo</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="tpv">Tarjeta</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Monto 1</label>
+              <input type="number" id="mp-mixto-monto1" oninput="actualizarPagoMixto(${cot.total||0})" placeholder="$0.00" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
+            </div>
+          </div>
+          <div id="mp-mixto-terminal1-wrap" style="display:none;margin-bottom:8px;">
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Terminal (método 1)</label>
+            <select id="mp-mixto-terminal1" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
+              <option value="IZZ-BBVA">IZZ — BBVA</option>
+              <option value="IZZ-MERCADO PAGO">IZZ — Mercado Pago</option>
+              <option value="CEM-BBVA">CEM — BBVA</option>
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div>
+              <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Método 2 (opcional)</label>
+              <select id="mp-mixto-metodo2" onchange="actualizarPagoMixto(${cot.total||0})" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
+                <option value="ninguno">Ninguno</option>
+                <option value="efectivo">Efectivo</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="tpv">Tarjeta</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Monto 2</label>
+              <input type="number" id="mp-mixto-monto2" oninput="actualizarPagoMixto(${cot.total||0})" placeholder="$0.00" disabled style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
+            </div>
+          </div>
+          <div id="mp-mixto-terminal2-wrap" style="display:none;margin-bottom:8px;">
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Terminal (método 2)</label>
+            <select id="mp-mixto-terminal2" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
+              <option value="IZZ-BBVA">IZZ — BBVA</option>
+              <option value="IZZ-MERCADO PAGO">IZZ — Mercado Pago</option>
+              <option value="CEM-BBVA">CEM — BBVA</option>
+            </select>
+          </div>
+          <div id="mp-mixto-info" style="font-size:11px;color:#6B6560;margin-top:4px;"></div>
         </div>
       </div>
 
@@ -4331,17 +4522,65 @@ function mostrarModalPedido(cot, docId) {
   actualizarSaldoPedidoModal(cot.total || 0);
   toggleVisiblePorTransferencia('mp-pago', 'mp-btn-compartir-pago');
   toggleWrapPorMetodo('mp-pago', 'mp-efectivo-wrap', 'efectivo');
+  toggleWrapPorMetodo('mp-pago', 'mp-mixto-wrap', 'mixto');
   actualizarCambioEfectivo(cot.total || 0, 'mp-efectivo-recibido', 'mp-cambio-info');
+  actualizarPagoMixto(cot.total || 0);
 }
 
 function actualizarAnticipoPorFormaPago(total) {
   var pago = document.getElementById('mp-pago').value;
   var anticipoEl = document.getElementById('mp-anticipo');
+  var anticipoWrap = document.getElementById('mp-anticipo-wrap');
   anticipoEl.value = (pago === 'credito') ? 0 : total;
   actualizarSaldoPedidoModal(total);
   toggleVisiblePorTransferencia('mp-pago', 'mp-btn-compartir-pago');
   toggleWrapPorMetodo('mp-pago', 'mp-efectivo-wrap', 'efectivo');
+  toggleWrapPorMetodo('mp-pago', 'mp-mixto-wrap', 'mixto');
+  if(anticipoWrap) anticipoWrap.style.display = (pago === 'mixto') ? 'none' : '';
   actualizarCambioEfectivo(total, 'mp-efectivo-recibido', 'mp-cambio-info');
+  if(pago === 'mixto') actualizarPagoMixto(total);
+}
+
+// Pago mixto: hasta 2 métodos (efectivo/transferencia/tarjeta) para una misma
+// Nota de Venta. Lo que no se cubra entre monto1+monto2 se trata igual que el
+// saldo pendiente de siempre (actualizarSaldoPedidoModal/confirmarCierrePedido
+// ya crean la cuenta por cobrar automáticamente).
+function actualizarPagoMixto(total) {
+  var m1El = document.getElementById('mp-mixto-metodo1');
+  var m2El = document.getElementById('mp-mixto-metodo2');
+  var monto1El = document.getElementById('mp-mixto-monto1');
+  var monto2El = document.getElementById('mp-mixto-monto2');
+  var info = document.getElementById('mp-mixto-info');
+  if(!m1El || !m2El || !monto1El || !monto2El || !info) return;
+
+  var m1 = m1El.value, m2 = m2El.value;
+  monto2El.disabled = (m2 === 'ninguno');
+  if(m2 === 'ninguno') monto2El.value = '';
+
+  var monto1 = parseFloat(monto1El.value) || 0;
+  var monto2 = (m2 === 'ninguno') ? 0 : (parseFloat(monto2El.value) || 0);
+
+  var t1wrap = document.getElementById('mp-mixto-terminal1-wrap');
+  var t2wrap = document.getElementById('mp-mixto-terminal2-wrap');
+  if(t1wrap) t1wrap.style.display = (m1 === 'tpv') ? '' : 'none';
+  if(t2wrap) t2wrap.style.display = (m2 === 'tpv') ? '' : 'none';
+
+  var totalPagado = monto1 + monto2;
+  var pendiente = Math.max(0, total - totalPagado);
+  var mismoMetodo = (m2 !== 'ninguno' && m1 === m2);
+  var tieneCliente = !!(cotModalPedidoActual && cotModalPedidoActual.clienteId);
+
+  var msg = 'Total pagado: ' + fmtMoney(totalPagado) + ' de ' + fmtMoney(total) + ' total';
+  if(mismoMetodo) {
+    msg += ' — ⚠️ elige dos métodos distintos';
+  } else if(pendiente > 0) {
+    msg += ' · Pendiente: ' + fmtMoney(pendiente) + ' (se registra en Cuentas por Cobrar)';
+    if(!tieneCliente) msg += ' — ⚠️ selecciona un cliente registrado';
+  } else {
+    msg += ' · ✅ Pago completo';
+  }
+  info.textContent = msg;
+  info.style.color = (mismoMetodo || pendiente > 0) ? '#DC2626' : '#22C55E';
 }
 
 // Deja explícito cuando una venta es cobro híbrido (parte ahora + resto a
@@ -4470,7 +4709,44 @@ function confirmarCierrePedido(docId) {
   const operador = document.getElementById('mp-operador').value;
   const tipo = document.getElementById('mp-tipo').value;
   const pago = document.getElementById('mp-pago').value;
-  const anticipo = Math.min(parseFloat(document.getElementById('mp-anticipo').value) || 0, cot.total || 0);
+
+  // Pago mixto: hasta 2 métodos (efectivo/transferencia/tarjeta), cada uno
+  // con su propio monto y, si es tarjeta, su terminal. El resto de la lógica
+  // (saldo pendiente → cuenta por cobrar) es la misma que ya existía para
+  // anticipo/cobro híbrido, solo cambia de dónde sale el monto "anticipo".
+  var pagosMixto = null;
+  var anticipo;
+  if(pago === 'mixto') {
+    var m1 = document.getElementById('mp-mixto-metodo1').value;
+    var m2 = document.getElementById('mp-mixto-metodo2').value;
+    var monto1 = parseFloat(document.getElementById('mp-mixto-monto1').value) || 0;
+    var monto2 = (m2 === 'ninguno') ? 0 : (parseFloat(document.getElementById('mp-mixto-monto2').value) || 0);
+    if(m2 !== 'ninguno' && m1 === m2) {
+      creandoPedido = false;
+      showToast('⚠️ Elige dos métodos de pago distintos');
+      return;
+    }
+    if(monto1 <= 0) {
+      creandoPedido = false;
+      showToast('⚠️ Captura el monto del método 1');
+      return;
+    }
+    pagosMixto = [{ metodo: m1, monto: monto1 }];
+    if(m1 === 'tpv') {
+      pagosMixto[0].terminal = document.getElementById('mp-mixto-terminal1').value;
+      pagosMixto[0].tipoTarjeta = 'debito';
+    }
+    if(m2 !== 'ninguno') {
+      pagosMixto.push({ metodo: m2, monto: monto2 });
+      if(m2 === 'tpv') {
+        pagosMixto[1].terminal = document.getElementById('mp-mixto-terminal2').value;
+        pagosMixto[1].tipoTarjeta = 'debito';
+      }
+    }
+    anticipo = Math.min(monto1 + monto2, cot.total || 0);
+  } else {
+    anticipo = Math.min(parseFloat(document.getElementById('mp-anticipo').value) || 0, cot.total || 0);
+  }
   const saldoPendiente = Math.max(0, (cot.total || 0) - anticipo);
 
   // Cobro híbrido (parte ahora + resto a crédito) o 100% a crédito: en
@@ -4503,6 +4779,7 @@ function confirmarCierrePedido(docId) {
       operador: operador,
       tipo: tipo,
       pago: pago,
+      pagos: pagosMixto,
       terminal: pago === 'tpv' ? (cot.terminal || null) : null,
       tipoTarjeta: pago === 'tpv' ? (cot.tipoTarjeta || null) : null,
       razonSocial: cot.rs || 'JMG',
@@ -4596,8 +4873,6 @@ document.getElementById('tk-fecha') && (document.getElementById('tk-fecha').text
 
 // ════ CORTE DE CAJA ════
 
-var transfersCorte = [];
-var transferIdx = 0;
 
 function fechaISOLocal() {
   var d = new Date();
@@ -4727,20 +5002,21 @@ function cargarVentasDelDiaCorte() {
     db.collection('salidas').where('fecha','==',hoy).get()
   ]).then(function(results){
     var pedidosSnap = results[0], ticketsSnap = results[1], salidasSnap = results[2];
-    var buckets = { efectivo:0, debito:0, credito:0, transferencia:0 };
-    var comisiones = 0;
+    // Débito y crédito cobran igual en las 3 terminales — ya no se separan,
+    // solo se cuenta el total y las operaciones por terminal.
+    var buckets = { efectivo:0, tarjeta:0, tarjetaOps:0, transferencia:0, transferenciaOps:0 };
+    var comisiones = 0, ivaComisiones = 0;
     var terminales = {
-      'IZZ-BBVA':          { debito:0, credito:0, comDebito:0, comCredito:0 },
-      'CEM-BBVA':          { debito:0, credito:0, comDebito:0, comCredito:0 },
-      'IZZ-MERCADO PAGO':  { total:0, comision:0 }
+      'IZZ-BBVA':          { monto:0, comision:0 },
+      'CEM-BBVA':          { monto:0, comision:0 },
+      'IZZ-MERCADO PAGO':  { monto:0, comision:0 }
     };
 
-    function registrarTarjeta(terminalKey, tipoTarjeta, monto, comision) {
+    function registrarTarjeta(terminalKey, monto, comisionConIva) {
       var t = terminales[terminalKey];
       if(!t) return;
-      if(terminalKey === 'IZZ-MERCADO PAGO') { t.total += monto; t.comision += comision; return; }
-      if(tipoTarjeta === 'credito') { t.credito += monto; t.comCredito += comision; }
-      else { t.debito += monto; t.comDebito += comision; }
+      t.monto += monto;
+      t.comision += comisionConIva;
     }
 
     pedidosSnap.forEach(function(doc){
@@ -4748,16 +5024,31 @@ function cargarVentasDelDiaCorte() {
       if(p.s === 'cancelado') return;
       var monto = p.m || 0;
       if(p.pago === 'efectivo') buckets.efectivo += monto;
-      else if(p.pago === 'transferencia') buckets.transferencia += monto;
+      else if(p.pago === 'transferencia') { buckets.transferencia += monto; buckets.transferenciaOps++; }
       else if(p.pago === 'tpv' && p.terminal) {
         var t = p.terminal.split('-');
         var rs = t[0], banco = t.slice(1).join('-');
-        var tipoTarjeta = p.tipoTarjeta || 'debito';
-        if(tipoTarjeta === 'credito') buckets.credito += monto; else buckets.debito += monto;
-        var n = netoTerminal(monto, rs, banco, tipoTarjeta);
-        var com = n.comision + n.ivaCom;
-        comisiones += com;
-        registrarTarjeta(p.terminal, tipoTarjeta, monto, com);
+        var n = netoTerminal(monto, rs, banco, p.tipoTarjeta || 'debito');
+        buckets.tarjeta += monto; buckets.tarjetaOps++;
+        comisiones += n.comision; ivaComisiones += n.ivaCom;
+        registrarTarjeta(p.terminal, monto, n.comision + n.ivaCom);
+      }
+      else if(p.pago === 'mixto' && p.pagos) {
+        // Pago mixto: cada método entra al corte con su propio monto, no el
+        // total de la NV — así el efectivo, la transferencia y la tarjeta de
+        // una misma venta se contabilizan en su categoría real.
+        p.pagos.forEach(function(sub){
+          var m = sub.monto || 0;
+          if(sub.metodo === 'efectivo') buckets.efectivo += m;
+          else if(sub.metodo === 'transferencia') { buckets.transferencia += m; buckets.transferenciaOps++; }
+          else if(sub.metodo === 'tpv' && sub.terminal) {
+            var ts = sub.terminal.split('-');
+            var nsub = netoTerminal(m, ts[0], ts.slice(1).join('-'), sub.tipoTarjeta || 'debito');
+            buckets.tarjeta += m; buckets.tarjetaOps++;
+            comisiones += nsub.comision; ivaComisiones += nsub.ivaCom;
+            registrarTarjeta(sub.terminal, m, nsub.comision + nsub.ivaCom);
+          }
+        });
       }
       // pago === 'credito' (cuenta por cobrar / crédito a cliente) no se cuenta como cobrado hoy
     });
@@ -4767,33 +5058,34 @@ function cargarVentasDelDiaCorte() {
       if(t.status === 'cancelado') return;
       var monto = t.total || 0;
       if(t.metodoPago === 'efectivo') buckets.efectivo += monto;
-      else if(t.metodoPago === 'transferencia') buckets.transferencia += monto;
-      else if(t.metodoPago === 'debito') { buckets.debito += monto; comisiones += t.comision || 0; registrarTarjeta(t.razonSocial, 'debito', monto, t.comision || 0); }
-      else if(t.metodoPago === 'credito') { buckets.credito += monto; comisiones += t.comision || 0; registrarTarjeta(t.razonSocial, 'credito', monto, t.comision || 0); }
+      else if(t.metodoPago === 'transferencia') { buckets.transferencia += monto; buckets.transferenciaOps++; }
+      else if(t.metodoPago === 'debito' || t.metodoPago === 'credito') {
+        buckets.tarjeta += monto; buckets.tarjetaOps++;
+        var com = t.comision || 0;
+        // El comision guardado en el ticket ya incluye IVA (ver guardarTicket/netoTerminal);
+        // se reparte proporcional solo para el desglose informativo comisión/IVA.
+        var comSinIva = com / 1.16, ivaDeCom = com - comSinIva;
+        comisiones += comSinIva; ivaComisiones += ivaDeCom;
+        registrarTarjeta(t.razonSocial, monto, com);
+      }
     });
 
-    var totalVentas = buckets.efectivo + buckets.debito + buckets.credito + buckets.transferencia;
-    var neto = totalVentas - comisiones;
+    var totalComisionConIva = comisiones + ivaComisiones;
+    var totalVentas = buckets.efectivo + buckets.tarjeta + buckets.transferencia;
+    var neto = totalVentas - totalComisionConIva;
 
     var izzBbva = terminales['IZZ-BBVA'], cemBbva = terminales['CEM-BBVA'], izzMp = terminales['IZZ-MERCADO PAGO'];
-    var totalNetoTarjetas = (izzBbva.debito + izzBbva.credito - izzBbva.comDebito - izzBbva.comCredito) +
-      (cemBbva.debito + cemBbva.credito - cemBbva.comDebito - cemBbva.comCredito) +
-      (izzMp.total - izzMp.comision);
+    var totalNetoTarjetas = (izzBbva.monto - izzBbva.comision) + (cemBbva.monto - cemBbva.comision) + (izzMp.monto - izzMp.comision);
     function filaTarjeta(label, monto, comision) {
       return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>'+label+'</span><span>'+fmtMoney(monto)+' → -'+fmtMoney(comision)+' → <strong>'+fmtMoney(monto-comision)+'</strong></span></div>';
     }
     var htmlTerminales =
       '<div style="background:#F5F2EE;border-radius:10px;padding:14px;margin-bottom:10px;">' +
         '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">TARJETAS POR TERMINAL</div>' +
-        '<div style="font-size:11px;font-weight:700;color:var(--suave);margin-top:6px;">IZZ — BBVA (0.85%)</div>' +
-        filaTarjeta('Débito', izzBbva.debito, izzBbva.comDebito) +
-        filaTarjeta('Crédito', izzBbva.credito, izzBbva.comCredito) +
-        '<div style="font-size:11px;font-weight:700;color:var(--suave);margin-top:8px;">CEM — BBVA (1.54%)</div>' +
-        filaTarjeta('Débito', cemBbva.debito, cemBbva.comDebito) +
-        filaTarjeta('Crédito', cemBbva.credito, cemBbva.comCredito) +
-        '<div style="font-size:11px;font-weight:700;color:var(--suave);margin-top:8px;">MERCADO PAGO — IZZ (3.50%)</div>' +
-        filaTarjeta('Total', izzMp.total, izzMp.comision) +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;padding:6px 0 2px;border-top:1px solid #E0DBD3;margin-top:8px;color:#DC2626;"><span>TOTAL COMISIONES DEL DÍA</span><span>-'+fmtMoney(comisiones)+'</span></div>' +
+        filaTarjeta('IZZ — BBVA (0.85%)', izzBbva.monto, izzBbva.comision) +
+        filaTarjeta('CEM — BBVA (1.54%)', cemBbva.monto, cemBbva.comision) +
+        filaTarjeta('IZZ — Mercado Pago (3.50%)', izzMp.monto, izzMp.comision) +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;padding:6px 0 2px;border-top:1px solid #E0DBD3;margin-top:8px;color:#DC2626;"><span>TOTAL COMISIONES DEL DÍA</span><span>-'+fmtMoney(totalComisionConIva)+'</span></div>' +
         '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:4px 0;color:var(--naranja);"><span>TOTAL NETO TARJETAS</span><span>'+fmtMoney(totalNetoTarjetas)+'</span></div>' +
       '</div>';
 
@@ -4814,11 +5106,12 @@ function cargarVentasDelDiaCorte() {
       '<div style="background:#F5F2EE;border-radius:10px;padding:14px;margin-bottom:10px;">' +
         '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">VENTAS DEL DÍA</div>' +
         '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>💵 Efectivo</span><span>'+fmtMoney(buckets.efectivo)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>💳 Tarjeta Débito</span><span>'+fmtMoney(buckets.debito)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>💳 Tarjeta Crédito</span><span>'+fmtMoney(buckets.credito)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>🏦 Transferencia</span><span>'+fmtMoney(buckets.transferencia)+'</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>💳 Tarjeta</span><span>'+fmtMoney(buckets.tarjeta)+' ('+buckets.tarjetaOps+' operaciones)</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:11px;padding:0 0 2px;color:var(--suave);"><span>&nbsp;&nbsp;Comisión '+fmtMoney(comisiones)+' + IVA '+fmtMoney(ivaComisiones)+' = Descuento</span><span>-'+fmtMoney(totalComisionConIva)+'</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:11px;padding:0 0 2px;color:var(--suave);"><span>&nbsp;&nbsp;Neto tarjeta</span><span>'+fmtMoney(buckets.tarjeta-totalComisionConIva)+'</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>🏦 Transferencias</span><span>'+fmtMoney(buckets.transferencia)+' ('+buckets.transferenciaOps+' operaciones)</span></div>' +
         '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;padding:6px 0 2px;border-top:1px solid #E0DBD3;margin-top:4px;"><span>📊 TOTAL VENTAS</span><span>'+fmtMoney(totalVentas)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#DC2626;"><span>💸 Comisiones terminal</span><span>-'+fmtMoney(comisiones)+'</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#DC2626;"><span>💸 Comisiones terminal</span><span>-'+fmtMoney(totalComisionConIva)+'</span></div>' +
         '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:4px 0;color:var(--naranja);"><span>📊 NETO</span><span>'+fmtMoney(neto)+'</span></div>' +
       '</div>' +
       htmlTerminales +
@@ -4875,7 +5168,7 @@ function calcCorte() {
   var tpvIzz = parseFloat(document.getElementById('c-tpv-izz').value||0);
   var tpvCem = parseFloat(document.getElementById('c-tpv-cemcoya').value||0);
   var mp = parseFloat(document.getElementById('c-mp').value||0);
-  var totalTransfers = transfersCorte.reduce(function(a,t){ return a + (parseFloat(t.monto)||0); }, 0);
+  var totalTransfers = parseFloat(document.getElementById('c-transfer-total').value||0);
 
   var efTotal = ef + ret;
   var tpvTotal = tpvIzz + tpvCem + mp;
@@ -4891,53 +5184,24 @@ function calcCorte() {
   var elApartado = document.getElementById('res-efectivo-apartado');
   if(elApartado) elApartado.textContent = fmtMoney(apartadoHoy) + ' (saldo acumulado: ' + fmtMoney(saldoApartadoAcumulado) + ')';
 
-  var tipoIzz = document.getElementById('c-tpv-izz-tipo') ? document.getElementById('c-tpv-izz-tipo').value : 'debito';
-  var tipoCem = document.getElementById('c-tpv-cemcoya-tipo') ? document.getElementById('c-tpv-cemcoya-tipo').value : 'debito';
-  var tipoMp = document.getElementById('c-mp-tipo') ? document.getElementById('c-mp-tipo').value : 'debito';
+  // Débito y crédito cobran la misma tasa en las 3 terminales (puro contrato,
+  // no hay diferencia real) — ya no se captura el tipo de tarjeta, se usa
+  // 'debito' fijo nada más para satisfacer la firma de netoTerminal().
   var netoIzzEl = document.getElementById('c-tpv-izz-neto');
   var netoCemEl = document.getElementById('c-tpv-cemcoya-neto');
   var netoMpEl = document.getElementById('c-mp-neto');
   if(netoIzzEl) {
-    var ni = netoTerminal(tpvIzz, 'IZZ', 'BBVA', tipoIzz);
-    netoIzzEl.textContent = tpvIzz > 0 ? ('Comisión ' + fmtMoney(ni.comision + ni.ivaCom) + ' · Neto ' + fmtMoney(ni.neto)) : '';
+    var ni = netoTerminal(tpvIzz, 'IZZ', 'BBVA', 'debito');
+    netoIzzEl.textContent = tpvIzz > 0 ? ('Comisión ' + fmtMoney(ni.comision) + ' + IVA ' + fmtMoney(ni.ivaCom) + ' = Descuento ' + fmtMoney(ni.comision + ni.ivaCom) + ' · Neto ' + fmtMoney(ni.neto)) : '';
   }
   if(netoCemEl) {
-    var nc = netoTerminal(tpvCem, 'CEM', 'BBVA', tipoCem);
-    netoCemEl.textContent = tpvCem > 0 ? ('Comisión ' + fmtMoney(nc.comision + nc.ivaCom) + ' · Neto ' + fmtMoney(nc.neto)) : '';
+    var nc = netoTerminal(tpvCem, 'CEM', 'BBVA', 'debito');
+    netoCemEl.textContent = tpvCem > 0 ? ('Comisión ' + fmtMoney(nc.comision) + ' + IVA ' + fmtMoney(nc.ivaCom) + ' = Descuento ' + fmtMoney(nc.comision + nc.ivaCom) + ' · Neto ' + fmtMoney(nc.neto)) : '';
   }
   if(netoMpEl) {
-    var nm = netoTerminal(mp, 'IZZ', 'MERCADO PAGO', tipoMp);
-    netoMpEl.textContent = mp > 0 ? ('Comisión ' + fmtMoney(nm.comision + nm.ivaCom) + ' · Neto ' + fmtMoney(nm.neto)) : '';
+    var nm = netoTerminal(mp, 'IZZ', 'MERCADO PAGO', 'debito');
+    netoMpEl.textContent = mp > 0 ? ('Comisión ' + fmtMoney(nm.comision) + ' + IVA ' + fmtMoney(nm.ivaCom) + ' = Descuento ' + fmtMoney(nm.comision + nm.ivaCom) + ' · Neto ' + fmtMoney(nm.neto)) : '';
   }
-}
-
-function agregarTransfer() {
-  var idx = transferIdx++;
-  var div = document.createElement('div');
-  div.id = 'tr-' + idx;
-  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:center;';
-  div.innerHTML =
-    '<input type="text" placeholder="Cliente / concepto" id="tr-desc-'+idx+'" style="border:1.5px solid var(--borde);border-radius:8px;padding:9px;font-size:12px;">'+
-    '<input type="number" placeholder="Monto" id="tr-monto-'+idx+'" min="0" step="0.01" style="border:1.5px solid var(--borde);border-radius:8px;padding:9px;font-size:12px;" oninput="actualizarTransfer('+idx+')">'+
-    '<button onclick="eliminarTransfer('+idx+')" style="background:#FEE2E2;color:#CC0000;border:none;border-radius:8px;padding:9px 12px;cursor:pointer;font-weight:700;">✕</button>';
-  document.getElementById('lista-transfers-corte').appendChild(div);
-  transfersCorte.push({idx:idx, desc:'', monto:0});
-}
-
-function actualizarTransfer(idx) {
-  var t = transfersCorte.find(function(x){return x.idx===idx;});
-  if(t) {
-    t.desc = document.getElementById('tr-desc-'+idx).value;
-    t.monto = parseFloat(document.getElementById('tr-monto-'+idx).value||0);
-  }
-  calcCorte();
-}
-
-function eliminarTransfer(idx) {
-  var el = document.getElementById('tr-'+idx);
-  if(el) el.remove();
-  transfersCorte = transfersCorte.filter(function(t){return t.idx!==idx;});
-  calcCorte();
 }
 
 function imprimirCorte() {
@@ -4949,21 +5213,24 @@ function imprimirCorte() {
   var tpvCemOps = document.getElementById('c-tpv-cemcoya-ops').value||0;
   var mp = parseFloat(document.getElementById('c-mp').value||0);
   var mpOps = document.getElementById('c-mp-ops').value||0;
-  var totalTransfers = transfersCorte.reduce(function(a,t){return a+(parseFloat(t.monto)||0);},0);
+  var totalTransfers = parseFloat(document.getElementById('c-transfer-total').value||0);
+  var transferOps = document.getElementById('c-transfer-ops').value||0;
   var granTotal = ef + ret + tpvIzz + tpvCem + mp + totalTransfers;
   var fecha = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   var hora = new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
   var quien = currentUser ? currentUser.name : 'Ventas';
-  var transferLines = transfersCorte.length ? transfersCorte.map(function(t){
-    return '<tr><td style="padding:4px 8px;font-size:11px;">&nbsp;&nbsp;· '+t.desc+'</td><td style="padding:4px 8px;text-align:right;font-size:11px;">'+fmtMoney(t.monto)+'</td></tr>';
-  }).join('') : '<tr><td colspan="2" style="padding:4px 8px;font-size:11px;color:#888;">Sin transferencias</td></tr>';
+  var netoIzz = netoTerminal(tpvIzz, 'IZZ', 'BBVA', 'debito');
+  var netoCem = netoTerminal(tpvCem, 'CEM', 'BBVA', 'debito');
+  var netoMp = netoTerminal(mp, 'IZZ', 'MERCADO PAGO', 'debito');
+  var descIzz = netoIzz.comision + netoIzz.ivaCom, descCem = netoCem.comision + netoCem.ivaCom, descMp = netoMp.comision + netoMp.ivaCom;
+  var descTotal = descIzz + descCem + descMp;
   var notas = document.getElementById('c-notas').value;
   var w = window.open('','_blank','width=420,height=750');
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Corte de Caja</title><style>body{font-family:Arial,sans-serif;margin:0;padding:16px;font-size:12px;}.header{text-align:center;border-bottom:2px solid #E8500A;padding-bottom:12px;margin-bottom:12px;}.logo{font-size:20px;font-weight:900;letter-spacing:2px;color:#E8500A;}.sub{font-size:10px;color:#666;}.seccion{margin-bottom:10px;border:1px solid #DDD;border-radius:6px;overflow:hidden;}.sec-title{background:#1A1A1A;color:#fff;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;}table{width:100%;border-collapse:collapse;}td{padding:5px 10px;border-bottom:1px solid #F0EDE8;}.subtotal td{font-weight:700;background:#F5F2EE;}.total-row{background:#E8500A;color:#fff;}.total-row td{font-weight:700;font-size:14px;padding:8px 10px;}.footer{text-align:center;margin-top:16px;font-size:10px;color:#888;border-top:1px dashed #CCC;padding-top:10px;}.firma{margin-top:30px;display:flex;justify-content:space-around;}.firma-line{text-align:center;width:140px;}.firma-line hr{border:none;border-top:1px solid #333;margin-bottom:4px;}.firma-line p{font-size:10px;color:#666;margin:0;}@media print{body{margin:0;padding:8px;}}</style></head><body>');
   w.document.write('<div class="header"><div class="logo">MATERIALES TRONCOSO</div><div class="sub">Fco. del Paso y Troncoso #943 · Iztacalco, CDMX</div><div class="sub">Tel: 5555906802 / 5591800148</div><div style="margin-top:6px;font-size:11px;"><strong>CORTE DE CAJA</strong></div><div class="sub">'+fecha+' · '+hora+' · Elaboró: '+quien+'</div></div>');
   w.document.write('<div class="seccion"><div class="sec-title">💵 Efectivo</div><table><tr><td>Efectivo en caja</td><td style="text-align:right;">'+fmtMoney(ef)+'</td></tr><tr><td>Retiros del día</td><td style="text-align:right;">'+fmtMoney(ret)+'</td></tr><tr class="subtotal"><td>Subtotal efectivo</td><td style="text-align:right;">'+fmtMoney(ef+ret)+'</td></tr></table></div>');
-  w.document.write('<div class="seccion"><div class="sec-title">💳 Terminales</div><table><tr><td>TPV BBVA Itzayana ('+tpvIzzOps+' ops)</td><td style="text-align:right;">'+fmtMoney(tpvIzz)+'</td></tr><tr><td>TPV BBVA Cemcoya ('+tpvCemOps+' ops)</td><td style="text-align:right;">'+fmtMoney(tpvCem)+'</td></tr><tr><td>Mercado Pago Itzayana ('+mpOps+' ops)</td><td style="text-align:right;">'+fmtMoney(mp)+'</td></tr><tr class="subtotal"><td>Subtotal terminales</td><td style="text-align:right;">'+fmtMoney(tpvIzz+tpvCem+mp)+'</td></tr></table></div>');
-  w.document.write('<div class="seccion"><div class="sec-title">📲 Transferencias</div><table>'+transferLines+'<tr class="subtotal"><td>Subtotal transferencias</td><td style="text-align:right;">'+fmtMoney(totalTransfers)+'</td></tr></table></div>');
+  w.document.write('<div class="seccion"><div class="sec-title">💳 Terminales</div><table><tr><td>TPV BBVA Itzayana ('+tpvIzzOps+' ops)</td><td style="text-align:right;">'+fmtMoney(tpvIzz)+'</td></tr><tr><td style="font-size:10px;color:#888;">&nbsp;&nbsp;Comisión '+fmtMoney(netoIzz.comision)+' + IVA '+fmtMoney(netoIzz.ivaCom)+' = Descuento</td><td style="text-align:right;font-size:10px;color:#888;">-'+fmtMoney(descIzz)+'</td></tr><tr><td>TPV BBVA Cemcoya ('+tpvCemOps+' ops)</td><td style="text-align:right;">'+fmtMoney(tpvCem)+'</td></tr><tr><td style="font-size:10px;color:#888;">&nbsp;&nbsp;Comisión '+fmtMoney(netoCem.comision)+' + IVA '+fmtMoney(netoCem.ivaCom)+' = Descuento</td><td style="text-align:right;font-size:10px;color:#888;">-'+fmtMoney(descCem)+'</td></tr><tr><td>Mercado Pago Itzayana ('+mpOps+' ops)</td><td style="text-align:right;">'+fmtMoney(mp)+'</td></tr><tr><td style="font-size:10px;color:#888;">&nbsp;&nbsp;Comisión '+fmtMoney(netoMp.comision)+' + IVA '+fmtMoney(netoMp.ivaCom)+' = Descuento</td><td style="text-align:right;font-size:10px;color:#888;">-'+fmtMoney(descMp)+'</td></tr><tr class="subtotal"><td>Subtotal terminales</td><td style="text-align:right;">'+fmtMoney(tpvIzz+tpvCem+mp)+'</td></tr><tr><td>Descuento total (comisión + IVA)</td><td style="text-align:right;">-'+fmtMoney(descTotal)+'</td></tr><tr class="subtotal"><td>Neto terminales</td><td style="text-align:right;">'+fmtMoney(tpvIzz+tpvCem+mp-descTotal)+'</td></tr></table></div>');
+  w.document.write('<div class="seccion"><div class="sec-title">📲 Transferencias</div><table><tr><td>Transferencias ('+transferOps+' ops)</td><td style="text-align:right;">'+fmtMoney(totalTransfers)+'</td></tr></table></div>');
   w.document.write('<table style="margin-top:8px;"><tr class="total-row"><td>TOTAL DEL DÍA</td><td style="text-align:right;font-size:18px;">'+fmtMoney(granTotal)+'</td></tr></table>');
   if(notas) w.document.write('<div style="margin-top:10px;font-size:10px;padding:8px;background:#F5F2EE;border-radius:4px;"><strong>Notas:</strong> '+notas+'</div>');
   w.document.write('<div class="firma"><div class="firma-line"><hr><p>Elaboró: '+quien+'</p></div><div class="firma-line"><hr><p>Validó: Viridiana</p></div></div>');
@@ -4978,13 +5245,15 @@ function enviarCorteWhatsApp() {
   var tpvIzz = parseFloat(document.getElementById('c-tpv-izz').value||0);
   var tpvCem = parseFloat(document.getElementById('c-tpv-cemcoya').value||0);
   var mp = parseFloat(document.getElementById('c-mp').value||0);
-  var totalTransfers = transfersCorte.reduce(function(a,t){return a+(parseFloat(t.monto)||0);},0);
+  var totalTransfers = parseFloat(document.getElementById('c-transfer-total').value||0);
+  var transferOps = document.getElementById('c-transfer-ops').value||0;
   var granTotal = ef + ret + tpvIzz + tpvCem + mp + totalTransfers;
   var fecha = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
   var quien = currentUser ? currentUser.name : 'Ventas';
-  var transferLines = transfersCorte.length
-    ? transfersCorte.map(function(t){return '  · '+t.desc+': '+fmtMoney(t.monto);}).join('\n')
-    : '  Sin transferencias';
+  var netoIzz = netoTerminal(tpvIzz, 'IZZ', 'BBVA', 'debito');
+  var netoCem = netoTerminal(tpvCem, 'CEM', 'BBVA', 'debito');
+  var netoMp = netoTerminal(mp, 'IZZ', 'MERCADO PAGO', 'debito');
+  var descTotal = (netoIzz.comision + netoIzz.ivaCom) + (netoCem.comision + netoCem.ivaCom) + (netoMp.comision + netoMp.ivaCom);
   var notas = document.getElementById('c-notas').value;
   var msg =
     '🏗 *CORTE DE CAJA — MATERIALES TRONCOSO*\n'+
@@ -4994,13 +5263,12 @@ function enviarCorteWhatsApp() {
     '  Retiros: '+fmtMoney(ret)+'\n'+
     '  Subtotal: *'+fmtMoney(ef+ret)+'*\n\n'+
     '💳 *TERMINALES*\n'+
-    '  TPV BBVA Itzayana: '+fmtMoney(tpvIzz)+'\n'+
-    '  TPV BBVA Cemcoya: '+fmtMoney(tpvCem)+'\n'+
-    '  Mercado Pago Itzayana: '+fmtMoney(mp)+'\n'+
-    '  Subtotal: *'+fmtMoney(tpvIzz+tpvCem+mp)+'*\n\n'+
+    '  TPV BBVA Itzayana: '+fmtMoney(tpvIzz)+' → comisión '+fmtMoney(netoIzz.comision)+' + IVA '+fmtMoney(netoIzz.ivaCom)+'\n'+
+    '  TPV BBVA Cemcoya: '+fmtMoney(tpvCem)+' → comisión '+fmtMoney(netoCem.comision)+' + IVA '+fmtMoney(netoCem.ivaCom)+'\n'+
+    '  Mercado Pago Itzayana: '+fmtMoney(mp)+' → comisión '+fmtMoney(netoMp.comision)+' + IVA '+fmtMoney(netoMp.ivaCom)+'\n'+
+    '  Subtotal: *'+fmtMoney(tpvIzz+tpvCem+mp)+'* · Descuento total: -'+fmtMoney(descTotal)+'\n\n'+
     '📲 *TRANSFERENCIAS*\n'+
-    transferLines+'\n'+
-    '  Subtotal: *'+fmtMoney(totalTransfers)+'*\n\n'+
+    '  '+transferOps+' operaciones: *'+fmtMoney(totalTransfers)+'*\n\n'+
     '━━━━━━━━━━━━━━━\n'+
     '💰 *TOTAL DEL DÍA: '+fmtMoney(granTotal)+'*'+
     (notas ? '\n\n📝 '+notas : '')+
@@ -5018,30 +5286,25 @@ function enviarCorteWhatsApp() {
 }
 
 function cargarTransferenciasConfirmadas() {
-  // Cargar transfers confirmadas del día desde Firebase
+  // Autollena el total y las operaciones del día con las transferencias
+  // confirmadas en Firebase — el detalle de qué cliente pagó cuánto ya no
+  // se muestra aquí, se consulta en Cuentas por Cobrar si hace falta.
   if(!db) return;
   var hoy = fechaISOLocal();
   db.collection('transferencias')
     .where('fecha','==',hoy)
     .where('confirmada','==',true)
     .get().then(function(snap){
+      var total = 0, ops = 0;
       snap.forEach(function(doc){
         var t = doc.data();
-        // Auto-agregar al corte
-        var idx = transferIdx++;
-        transfersCorte.push({idx:idx, desc:t.cliente||t.concepto||'', monto:t.monto||0, docId:doc.id});
+        total += t.monto || 0;
+        ops++;
       });
-      // Render
-      transfersCorte.forEach(function(t){
-        var div = document.createElement('div');
-        div.id = 'tr-'+t.idx;
-        div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:center;';
-        div.innerHTML =
-          '<input type="text" value="'+t.desc+'" id="tr-desc-'+t.idx+'" style="border:1.5px solid #22C55E;border-radius:8px;padding:9px;font-size:12px;background:#F0FFF4;">'+
-          '<input type="number" value="'+t.monto+'" id="tr-monto-'+t.idx+'" style="border:1.5px solid #22C55E;border-radius:8px;padding:9px;font-size:12px;background:#F0FFF4;" oninput="actualizarTransfer('+t.idx+')">'+
-          '<span style="font-size:10px;color:#22C55E;font-weight:700;">✅ Conf.</span>';
-        document.getElementById('lista-transfers-corte').appendChild(div);
-      });
+      var elTotal = document.getElementById('c-transfer-total');
+      var elOps = document.getElementById('c-transfer-ops');
+      if(elTotal) elTotal.value = total || '';
+      if(elOps) elOps.value = ops || '';
       calcCorte();
     }).catch(function(e){ console.log(e); });
 }
@@ -5057,22 +5320,22 @@ function enviarCorte() {
   var tpvCemOps = parseInt(document.getElementById('c-tpv-cemcoya-ops').value||0);
   var mp = parseFloat(document.getElementById('c-mp').value||0);
   var mpOps = parseInt(document.getElementById('c-mp-ops').value||0);
-  var totalTransfers = transfersCorte.reduce(function(a,t){ return a+(parseFloat(t.monto)||0); },0);
+  var totalTransfers = parseFloat(document.getElementById('c-transfer-total').value||0);
+  var transferOps = parseInt(document.getElementById('c-transfer-ops').value||0);
   var granTotal = ef + ret + tpvIzz + tpvCem + mp + totalTransfers;
 
   if(granTotal === 0) { showToast('⚠️ Captura al menos un monto antes de enviar'); return; }
   enviandoCorte = true;
 
-  var tipoIzz = document.getElementById('c-tpv-izz-tipo') ? document.getElementById('c-tpv-izz-tipo').value : 'debito';
-  var tipoCem = document.getElementById('c-tpv-cemcoya-tipo') ? document.getElementById('c-tpv-cemcoya-tipo').value : 'debito';
-  var tipoMp = document.getElementById('c-mp-tipo') ? document.getElementById('c-mp-tipo').value : 'debito';
-  var netoIzz = netoTerminal(tpvIzz, 'IZZ', 'BBVA', tipoIzz);
-  var netoCem = netoTerminal(tpvCem, 'CEM', 'BBVA', tipoCem);
-  var netoMp = netoTerminal(mp, 'IZZ', 'MERCADO PAGO', tipoMp);
+  // Débito/crédito cobran igual en las 3 terminales — ya no se captura el
+  // tipo de tarjeta en el corte, se usa 'debito' fijo para netoTerminal().
+  var netoIzz = netoTerminal(tpvIzz, 'IZZ', 'BBVA', 'debito');
+  var netoCem = netoTerminal(tpvCem, 'CEM', 'BBVA', 'debito');
+  var netoMp = netoTerminal(mp, 'IZZ', 'MERCADO PAGO', 'debito');
   var terminalesDetalle = [
-    {rs:'IZZ', banco:'BBVA', tipoTarjeta:tipoIzz, bruto:netoIzz.bruto, comision:netoIzz.comision, ivaCom:netoIzz.ivaCom, neto:netoIzz.neto},
-    {rs:'CEM', banco:'BBVA', tipoTarjeta:tipoCem, bruto:netoCem.bruto, comision:netoCem.comision, ivaCom:netoCem.ivaCom, neto:netoCem.neto},
-    {rs:'IZZ', banco:'MERCADO PAGO', tipoTarjeta:tipoMp, bruto:netoMp.bruto, comision:netoMp.comision, ivaCom:netoMp.ivaCom, neto:netoMp.neto}
+    {rs:'IZZ', banco:'BBVA', bruto:netoIzz.bruto, comision:netoIzz.comision, ivaCom:netoIzz.ivaCom, neto:netoIzz.neto},
+    {rs:'CEM', banco:'BBVA', bruto:netoCem.bruto, comision:netoCem.comision, ivaCom:netoCem.ivaCom, neto:netoCem.neto},
+    {rs:'IZZ', banco:'MERCADO PAGO', bruto:netoMp.bruto, comision:netoMp.comision, ivaCom:netoMp.ivaCom, neto:netoMp.neto}
   ];
 
   var corte = {
@@ -5088,8 +5351,8 @@ function enviarCorte() {
     tpvCemcoyaOps: tpvCemOps,
     mercadoPago: mp,
     mercadoPagoOps: mpOps,
-    transferencias: transfersCorte.map(function(t){return{desc:t.desc,monto:t.monto};}),
     totalTransferencias: totalTransfers,
+    transferenciasOps: transferOps,
     totalEfectivo: ef + ret,
     totalTpv: tpvIzz + tpvCem + mp,
     granTotal: granTotal,
@@ -5111,12 +5374,10 @@ function enviarCorte() {
       var esCierreDirecto = currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
       showToast(esCierreDirecto ? '✅ Corte cerrado' : '✅ Corte enviado a Viridiana para validación');
       // Limpiar formulario
-      ['c-efectivo','c-retiros','c-tpv-izz','c-tpv-izz-ops','c-tpv-cemcoya','c-tpv-cemcoya-ops','c-mp','c-mp-ops','c-notas','c-retiro-motivo'].forEach(function(id){
+      ['c-efectivo','c-retiros','c-tpv-izz','c-tpv-izz-ops','c-tpv-cemcoya','c-tpv-cemcoya-ops','c-mp','c-mp-ops','c-transfer-total','c-transfer-ops','c-notas','c-retiro-motivo'].forEach(function(id){
         var el = document.getElementById(id);
         if(el) el.value = '';
       });
-      document.getElementById('lista-transfers-corte').innerHTML = '';
-      transfersCorte = [];
       calcCorte();
       enviandoCorte = false;
     }).catch(function(e){
