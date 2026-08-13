@@ -824,6 +824,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       <div id="nc-crear">
         <div class="card">
           <div class="card-title">📝 Nueva Nota de Crédito</div>
+          <div id="nc-nv-origen-banner" style="display:none;background:#FFF4E5;border:1px solid var(--naranja);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;"></div>
           <div class="form-grid">
             <div class="field" style="position:relative;">
               <label>Cliente</label>
@@ -922,6 +923,15 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         <div class="card">
           <div class="card-title">📊 Resumen de Notas de Crédito — Director</div>
           <div id="nc-resumen-director"></div>
+        </div>
+      </div>
+
+      <!-- VISTA VENTAS — solo lectura, no puede crear -->
+      <div id="nc-solo-lectura" style="display:none;">
+        <div class="card">
+          <div class="card-title">📋 Notas de Crédito</div>
+          <div style="font-size:11px;color:var(--suave);margin-bottom:10px;">Solo consulta — para crear una nueva pide a Gerencia o Director.</div>
+          <div id="nc-lista-solo-lectura"></div>
         </div>
       </div>
 
@@ -5746,8 +5756,16 @@ const TIPOS_NC = {
 var notasCredito = [];
 var clienteNC = null;
 var cotizacionNC = null;
+var ncPedidoOrigen = null;
 var folioNCActual = 1;
 var ncProdIdx = 0;
+
+// Gerencia y Director crean NC (y se autoaprueban al guardar). Compras
+// sigue creando NC que quedan pendientes de validación (igual que antes).
+// Ventas solo puede consultarlas.
+function puedeCrearNC() {
+  return currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director' || currentUser.role === 'Compras');
+}
 
 function cargarNotasCredito() {
   if(!db) {
@@ -5811,19 +5829,27 @@ function buscarCotizacionNC() {
 }
 
 // ════ NC — productos y totales ════
-function agregarProductoNC() {
+// prefill opcional: {clave, desc, precio, cant, max} — lo usa
+// precargarNCDesdeNV() para partir de los productos reales de la NV en vez
+// de una fila en blanco. Sin argumento se comporta igual que siempre.
+function agregarProductoNC(prefill) {
+  prefill = prefill || {};
   const idx = ncProdIdx++;
   const tbody = document.getElementById('nc-prod-body');
   const tr = document.createElement('tr');
   tr.id = 'ncprod-' + idx;
+  const cantDefault = prefill.cant != null ? prefill.cant : 1;
+  const precioDefault = prefill.precio != null ? prefill.precio : 0;
+  const descDefault = (prefill.desc || '').replace(/"/g,'&quot;');
+  const maxAttr = prefill.max != null ? (' max="' + prefill.max + '"') : '';
   tr.innerHTML =
-    '<td><input type="hidden" id="ncp-clave-' + idx + '" value="">' +
+    '<td><input type="hidden" id="ncp-clave-' + idx + '" value="' + (prefill.clave || '') + '">' +
     '<div style="display:flex;gap:4px;align-items:center;">' +
-    '<input type="text" placeholder="Descripción..." style="min-width:120px;" id="ncp-desc-' + idx + '" oninput="document.getElementById(\'ncp-clave-' + idx + '\').value=\'\'">' +
+    '<input type="text" placeholder="Descripción..." value="' + descDefault + '" style="min-width:120px;" id="ncp-desc-' + idx + '" oninput="document.getElementById(\'ncp-clave-' + idx + '\').value=\'\'">' +
     '<button type="button" class="btn btn-gris" style="padding:6px 8px;font-size:11px;" onclick="abrirBuscadorProducto(' + idx + ',\'ncp\')" title="Buscar en catálogo">🔍</button>' +
     '</div></td>' +
-    '<td><input type="number" value="1" min="0" step="0.01" style="width:65px;" id="ncp-cant-' + idx + '" oninput="recalcularNC()"></td>' +
-    '<td><input type="number" value="0" min="0" step="0.01" style="width:85px;" id="ncp-precio-' + idx + '" oninput="recalcularNC()"></td>' +
+    '<td><input type="number" value="' + cantDefault + '" min="0" step="0.01"' + maxAttr + ' style="width:65px;" id="ncp-cant-' + idx + '" oninput="recalcularNC()"></td>' +
+    '<td><input type="number" value="' + precioDefault + '" min="0" step="0.01" style="width:85px;" id="ncp-precio-' + idx + '" oninput="recalcularNC()"></td>' +
     '<td style="font-weight:700;font-size:12px;" id="ncp-imp-' + idx + '">$0.00</td>' +
     '<td><button class="btn-del" onclick="eliminarProdNC(' + idx + ')">✕</button></td>';
   tbody.appendChild(tr);
@@ -5857,7 +5883,9 @@ function getProductosNC() {
       importe: parseFloat(document.getElementById('ncp-cant-'+id)?.value || 0) * parseFloat(document.getElementById('ncp-precio-'+id)?.value || 0),
       clave: document.getElementById('ncp-clave-'+id)?.value || ''
     };
-  }).filter(p => p.desc || p.precioUnit > 0);
+  // cant > 0: un renglón precargado desde una NV con "0 a devolver" no debe
+  // colarse en la NC — eso significa que ese producto no se está devolviendo.
+  }).filter(p => (p.desc || p.precioUnit > 0) && p.cant > 0);
 }
 
 // ════ BUSCADOR DE PRODUCTO POR CLAVE (Cotización + NC + Compras + Pedido Manual) ════
@@ -5952,15 +5980,60 @@ function actualizarStockEnVivo(clave, contenedorId) {
 }
 
 // ════ NC — guardar ════
+// Solo tiene sentido si hay un saldo pendiente real ligado a esa NV — si ya
+// se pagó por completo, el reembolso lo cubre la salida en efectivo (arriba),
+// no cuentas_cobrar. min() evita que una NC grande deje saldo negativo.
+function ajustarCuentaCobrarPorNC(nc) {
+  if(!db || !nc || !nc.pedidoId || !(nc.total > 0)) return Promise.resolve();
+  return db.collection('cuentas_cobrar').where('pedidoId','==', nc.pedidoId).limit(1).get().then(function(snap){
+    if(snap.empty) return;
+    var doc = snap.docs[0];
+    var data = doc.data();
+    if(!(data.saldo > 0)) return;
+    var reduccion = Math.min(nc.total, data.saldo);
+    var nuevoSaldo = Math.max(0, data.saldo - reduccion);
+    var nuevoTotal = Math.max(0, (data.total || 0) - reduccion);
+    return doc.ref.update({
+      saldo: nuevoSaldo,
+      total: nuevoTotal,
+      estado: nuevoSaldo === 0 ? 'pagado' : 'pendiente',
+      ultimaNCFolio: nc.folio,
+      ultimaNCMonto: reduccion,
+      ultimaNCFecha: nc.fecha
+    });
+  }).catch(function(e){ console.log('Error ajustando cuenta por cobrar por NC:', e); });
+}
+
 function guardarNC() {
   const clienteInput = document.getElementById('nc-cliente-input').value.trim();
   if(!clienteNC && !clienteInput) { showToast('⚠️ Busca y selecciona un cliente'); return; }
   const motivo = document.getElementById('nc-motivo').value.trim();
   if(!motivo) { showToast('⚠️ Describe el motivo de la NC'); return; }
+
+  const productos = getProductosNC();
+  if(ncPedidoOrigen) {
+    if(!productos.length) { showToast('⚠️ Captura cuánto se devuelve de al menos un producto'); return; }
+    const vendidoPorClave = {};
+    (ncPedidoOrigen.productos || []).forEach(function(pr){
+      if(!pr.clave) return;
+      vendidoPorClave[pr.clave] = (vendidoPorClave[pr.clave] || 0) + (parseFloat(pr.cant) || 0);
+    });
+    for (const pr of productos) {
+      if(pr.clave && pr.cant > (vendidoPorClave[pr.clave] || 0)) {
+        showToast('⚠️ ' + pr.desc + ': no puedes devolver más de lo vendido en ' + (ncPedidoOrigen.id || 'la NV') + ' (' + (vendidoPorClave[pr.clave] || 0) + ')');
+        return;
+      }
+    }
+  }
+
   const { sub, desc, total } = recalcularNC();
   const tipo = document.getElementById('nc-tipo').value;
   const rs = document.getElementById('nc-rs').value;
   const folioStr = 'NC-' + String(folioNCActual).padStart(3,'0');
+  // Gerencia y Director se autoaprueban al guardar, igual que ya hace Corte
+  // de Caja (enviarCorte()) — no tiene caso que se manden a validar a sí
+  // mismos. Compras sigue quedando pendiente para que Gerencia la valide.
+  const autoAprobar = currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
 
   const nc = {
     folio: folioStr,
@@ -5969,12 +6042,14 @@ function guardarNC() {
     cliente: clienteNC ? clienteNC.nombre : clienteInput,
     clienteId: clienteNC?.id || null,
     clienteTel: clienteNC?.telefono || '',
+    pedidoId: ncPedidoOrigen ? ncPedidoOrigen._docId : null,
+    nvFolio: ncPedidoOrigen ? ncPedidoOrigen.id : null,
     cotizacionFolio: cotizacionNC ? cotizacionNC.folio : null,
     cotizacionId: cotizacionNC ? (cotizacionNC._docId || null) : null,
     tipo: tipo,
     tipoLabel: TIPOS_NC[tipo],
     motivo: motivo,
-    productos: getProductosNC(),
+    productos: productos,
     subtotal: sub,
     descuento: desc,
     total: total,
@@ -5982,15 +6057,29 @@ function guardarNC() {
     razonSocial: rs,
     rsNombre: RAZONES[rs].nombre,
     creadoPor: currentUser ? currentUser.name : 'Desconocido',
-    status: 'pendiente',
-    aprobadaPor: null,
-    timestampAprobacion: null,
+    status: autoAprobar ? 'aprobada' : 'pendiente',
+    aprobadaPor: autoAprobar ? currentUser.name : null,
+    timestampAprobacion: autoAprobar ? Date.now() : null,
     notas: document.getElementById('nc-notas').value || ''
   };
 
   function limpiarFormNC() {
     localStorage.setItem('ultimo_folio_nc', folioNCActual);
     folioNCActual++;
+    ncPedidoOrigen = null;
+    var banner = document.getElementById('nc-nv-origen-banner');
+    if(banner) banner.style.display = 'none';
+    var clienteInputEl = document.getElementById('nc-cliente-input');
+    if(clienteInputEl) clienteInputEl.value = '';
+    var cotFolioEl = document.getElementById('nc-cot-folio');
+    if(cotFolioEl) cotFolioEl.value = '';
+    document.getElementById('nc-motivo').value = '';
+    document.getElementById('nc-notas').value = '';
+    document.getElementById('nc-desc').value = '0';
+    document.getElementById('nc-prod-body').innerHTML = '';
+    clienteNC = null;
+    cotizacionNC = null;
+    recalcularNC();
     renderNCRecientes();
   }
 
@@ -6002,17 +6091,56 @@ function guardarNC() {
     return;
   }
 
-  db.collection('notas_credito').add(nc).then(function(ref){
-    nc._docId = ref.id;
+  if(!autoAprobar) {
+    db.collection('notas_credito').add(nc).then(function(ref){
+      nc._docId = ref.id;
+      notasCredito.unshift(nc);
+      showToast('✅ ' + folioStr + ' guardada — pendiente de validación');
+      limpiarFormNC();
+    }).catch(function(e){
+      console.log('Error guardando NC:', e);
+      notasCredito.unshift(nc);
+      localStorage.setItem('nc_troncoso', JSON.stringify(notasCredito));
+      showToast('⚠️ Guardado local (sin conexión)');
+      limpiarFormNC();
+    });
+    return;
+  }
+
+  var ncRef = db.collection('notas_credito').doc();
+  var deltasRestock = calcularDeltasInventario(nc.productos);
+  var batch = db.batch();
+  batch.set(ncRef, nc);
+  aplicarDeltasEnBatch(batch, deltasRestock, +1);
+  batch.commit().then(function(){
+    actualizarCacheLocalInventario(deltasRestock, +1);
+    nc._docId = ncRef.id;
     notasCredito.unshift(nc);
-    showToast('✅ ' + folioStr + ' guardada en la nube');
-    limpiarFormNC();
+    var pendientes = [];
+    if(nc.formaPago === 'efectivo') {
+      pendientes.push(db.collection('salidas').add({
+        fecha: nc.fecha,
+        timestamp: Date.now(),
+        tipo: 'devolucion',
+        tipoLabel: '↩️ Devolución a cliente',
+        monto: nc.total,
+        concepto: nc.folio + ' — ' + nc.cliente,
+        rs: nc.razonSocial,
+        rsNombre: nc.rsNombre,
+        factura: 'no',
+        registradoPor: nc.creadoPor,
+        status: 'aprobado',
+        ncId: ncRef.id
+      }).catch(function(e){ console.log('Error registrando salida de NC:', e); }));
+    }
+    pendientes.push(ajustarCuentaCobrarPorNC(nc));
+    Promise.all(pendientes).then(function(){
+      showToast('✅ ' + folioStr + ' creada y aprobada' + (Object.keys(deltasRestock).length ? ' — inventario actualizado' : ''));
+      limpiarFormNC();
+    });
   }).catch(function(e){
     console.log('Error guardando NC:', e);
-    notasCredito.unshift(nc);
-    localStorage.setItem('nc_troncoso', JSON.stringify(notasCredito));
-    showToast('⚠️ Guardado local (sin conexión)');
-    limpiarFormNC();
+    showToast('⚠️ Error al guardar la NC');
   });
 }
 
@@ -6070,23 +6198,51 @@ function whatsappNC() {
   window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
-// ════ NC — vista Viridiana (validar) ════
+// ════ NC — vista por rol ════
+// Gerencia y Director tienen el formulario real de creación (se autoaprueban
+// al guardar, ver guardarNC()) y Gerencia además valida las NC que deje
+// pendientes Compras (mismo criterio que Corte de Caja: quien puede cerrar
+// directo no necesita mandarse a validar a sí mismo). Ventas solo consulta.
 function iniciarNC() {
   var role = currentUser ? currentUser.role : '';
   document.getElementById('nc-crear').style.display = 'none';
   document.getElementById('nc-viri').style.display = 'none';
   document.getElementById('nc-director').style.display = 'none';
+  document.getElementById('nc-solo-lectura').style.display = 'none';
 
-  if(role === 'Ventas' || role === 'Compras') {
+  if(role === 'Compras') {
     document.getElementById('nc-crear').style.display = 'block';
     renderNCRecientes();
   } else if(role === 'Gerencia') {
+    document.getElementById('nc-crear').style.display = 'block';
+    renderNCRecientes();
     document.getElementById('nc-viri').style.display = 'block';
     cargarNCPendientes();
   } else if(role === 'Director') {
+    document.getElementById('nc-crear').style.display = 'block';
+    renderNCRecientes();
     document.getElementById('nc-director').style.display = 'block';
     cargarResumenNCDirector();
+  } else if(role === 'Ventas') {
+    document.getElementById('nc-solo-lectura').style.display = 'block';
+    renderNCSoloLectura();
   }
+}
+
+function renderNCSoloLectura() {
+  var cont = document.getElementById('nc-lista-solo-lectura');
+  if(!cont) return;
+  if(!notasCredito.length) { cont.innerHTML = '<div style="padding:16px;text-align:center;color:var(--suave);font-size:13px;">Sin notas de crédito registradas</div>'; return; }
+  cont.innerHTML = notasCredito.slice(0, 50).map(function(n){
+    var statusColor = n.status==='aprobada'?'#22C55E':n.status==='rechazada'?'#EF4444':'#F59E0B';
+    var statusLabel = n.status==='aprobada'?'✅ Aprobada':n.status==='rechazada'?'❌ Rechazada':'⏳ Pendiente';
+    var ref = n.nvFolio ? (' · ' + n.nvFolio) : '';
+    return '<div style="padding:12px 14px;border-bottom:1px solid #F0EDE8;display:flex;justify-content:space-between;align-items:center;">'+
+      '<div><div style="font-size:13px;font-weight:700;">'+n.folio+' · '+n.cliente+'</div>'+
+      '<div style="font-size:11px;color:var(--suave);">'+n.tipoLabel+' · '+n.fecha+ref+'</div></div>'+
+      '<div style="text-align:right;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--naranja);">'+fmtMoney(n.total)+'</div>'+
+      '<span style="font-size:10px;font-weight:700;color:'+statusColor+';">'+statusLabel+'</span></div></div>';
+  }).join('');
 }
 
 var _origSwitchTab3 = switchTab;
@@ -6157,22 +6313,25 @@ function validarNC(docId, status) {
     return batch.commit().then(function(){
       actualizarCacheLocalInventario(deltasRestock, +1);
       showToast(status === 'aprobada' ? '✅ Nota de crédito aprobada' + (Object.keys(deltasRestock).length ? ' — inventario actualizado' : '') : '❌ Nota de crédito rechazada');
-      if(status === 'aprobada' && nc.formaPago === 'efectivo') {
-        var salida = {
-          fecha: nc.fecha,
-          timestamp: Date.now(),
-          tipo: 'devolucion',
-          tipoLabel: '↩️ Devolución a cliente',
-          monto: nc.total,
-          concepto: nc.folio + ' — ' + nc.cliente,
-          rs: nc.razonSocial,
-          rsNombre: nc.rsNombre,
-          factura: 'no',
-          registradoPor: nc.creadoPor,
-          status: 'aprobado',
-          ncId: docId
-        };
-        db.collection('salidas').add(salida).catch(function(e){ console.log('Error registrando salida de NC:', e); });
+      if(status === 'aprobada') {
+        if(nc.formaPago === 'efectivo') {
+          var salida = {
+            fecha: nc.fecha,
+            timestamp: Date.now(),
+            tipo: 'devolucion',
+            tipoLabel: '↩️ Devolución a cliente',
+            monto: nc.total,
+            concepto: nc.folio + ' — ' + nc.cliente,
+            rs: nc.razonSocial,
+            rsNombre: nc.rsNombre,
+            factura: 'no',
+            registradoPor: nc.creadoPor,
+            status: 'aprobado',
+            ncId: docId
+          };
+          db.collection('salidas').add(salida).catch(function(e){ console.log('Error registrando salida de NC:', e); });
+        }
+        ajustarCuentaCobrarPorNC(nc);
       }
       cargarNCPendientes();
     });
@@ -10016,6 +10175,8 @@ function filaNotaVenta(p) {
   var st = STATUS_PEDIDO[estado] || STATUS_PEDIDO.confirmado;
   var cancelBtn = (estado !== 'cancelado' && estado !== 'entregado')
     ? '<button class="btn btn-gris" onclick="event.stopPropagation();cancelarPedido(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;background:#FEE2E2;color:#DC2626;">❌ Cancelar</button>' : '';
+  var ncBtn = puedeCrearNC()
+    ? '<button class="btn btn-gris" onclick="event.stopPropagation();nvGenerarNC(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;">NC</button>' : '';
   return `
     <tr onclick="abrirDetalleNotaVenta('${p._docId}')" style="cursor:pointer;border-bottom:1px solid #F0EDE8;">
       <td style="padding:8px 10px;font-weight:700;">${p.id}</td>
@@ -10024,7 +10185,7 @@ function filaNotaVenta(p) {
       <td style="padding:8px 10px;">${labelMetodoPago(p.pago)}</td>
       <td style="padding:8px 10px;"><span style="background:#${st.bg};color:#${st.color};border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700;white-space:nowrap;">${st.label}</span></td>
       <td style="padding:8px 10px;white-space:nowrap;">
-        <button class="btn btn-gris" onclick="event.stopPropagation();nvGenerarNC('${p._docId}')" style="font-size:10px;padding:5px 10px;">NC</button>
+        ${ncBtn}
         ${cancelBtn}
       </td>
     </tr>`;
@@ -10113,14 +10274,58 @@ function verRemisionEntrega(remisionId) {
   }).catch(function(e){ console.log('Error cargando remisión:', e); showToast('⚠️ Error al cargar la remisión'); });
 }
 
+// Liga la NC a la NV real (pedidoId), no a la cotización que la originó —
+// antes intentaba prellenar el buscador de cotización con cotizacionFolio,
+// que ni es el documento correcto ni deja elegir qué se devuelve.
 function nvGenerarNC(docId) {
+  if(!puedeCrearNC()) { showToast('⚠️ Sin permisos para crear notas de crédito'); return; }
   var p = pedidosCache.find(function(x){ return x._docId === docId; });
   if(!p) return;
   switchTab('nc', document.getElementById('tab-nc-btn'));
-  setTimeout(function(){
-    var input = document.getElementById('nc-cot-folio');
-    if(input && p.cotizacionFolio) { input.value = p.cotizacionFolio; buscarCotizacionNC(); }
-  }, 300);
+  setTimeout(function(){ precargarNCDesdeNV(p); }, 300);
+}
+
+function precargarNCDesdeNV(p) {
+  var bloqueCrear = document.getElementById('nc-crear');
+  if(!bloqueCrear || bloqueCrear.style.display === 'none') { showToast('⚠️ Sin permisos para crear notas de crédito'); return; }
+
+  ncPedidoOrigen = p;
+  clienteNC = p.clienteId ? { id: p.clienteId, nombre: p.cliente || p.c || '', telefono: p.telefono || '' } : null;
+  cotizacionNC = null;
+
+  var clienteInput = document.getElementById('nc-cliente-input');
+  if(clienteInput) clienteInput.value = p.cliente || p.c || '';
+  var cotFolioInput = document.getElementById('nc-cot-folio');
+  if(cotFolioInput) cotFolioInput.value = '';
+  var rsSelect = document.getElementById('nc-rs');
+  if(rsSelect && p.razonSocial) rsSelect.value = p.razonSocial;
+
+  document.getElementById('nc-prod-body').innerHTML = '';
+  (p.productos || []).forEach(function(prod){
+    agregarProductoNC({
+      clave: prod.clave || '',
+      desc: prod.desc || '',
+      precio: prod.precio || 0,
+      cant: 0,
+      max: prod.cant || 0
+    });
+  });
+  recalcularNC();
+
+  var banner = document.getElementById('nc-nv-origen-banner');
+  if(banner) {
+    banner.style.display = 'block';
+    banner.innerHTML = '🔗 Ligada a <strong>' + (p.id || '') + '</strong> · ' + (p.cliente || p.c || '') +
+      ' — captura cuánto se devuelve de cada línea (0 = no se devuelve)' +
+      ' <button type="button" class="btn btn-gris" style="margin-left:8px;font-size:10px;padding:4px 8px;" onclick="quitarLigaNC()">✕ Quitar liga</button>';
+  }
+  showToast('📝 NC precargada desde ' + (p.id || 'la NV'));
+}
+
+function quitarLigaNC() {
+  ncPedidoOrigen = null;
+  var banner = document.getElementById('nc-nv-origen-banner');
+  if(banner) banner.style.display = 'none';
 }
 
 // ════ TICKETS DE MOSTRADOR — venta rápida presencial (TK-XXX) ════
