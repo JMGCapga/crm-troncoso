@@ -10404,11 +10404,6 @@ function abrirNuevoTicket() {
         '</select>' +
       '</div>' +
       '<div style="text-align:right;font-family:\'Bebas Neue\',sans-serif;font-size:22px;margin-bottom:14px;" id="tk-nuevo-total">TOTAL: $0.00</div>' +
-      '<div class="field" style="margin-bottom:14px;">' +
-        '<label>Anticipo recibido ($) — vacío o igual al total = pago completo</label>' +
-        '<input type="number" id="tk-nuevo-anticipo" oninput="actualizarSaldoTicketModal()">' +
-        '<div id="tk-saldo-info" style="font-size:11px;color:var(--suave);margin-top:4px;"></div>' +
-      '</div>' +
       '<div class="field" id="tk-efectivo-wrap" style="display:none;margin-bottom:14px;">' +
         '<label>💵 Efectivo recibido</label>' +
         '<input type="number" id="tk-efectivo-recibido" oninput="actualizarCambioEfectivo(totalTicket(),\'tk-efectivo-recibido\',\'tk-cambio-info\')" placeholder="$0.00">' +
@@ -10500,28 +10495,6 @@ function actualizarTotalTicket() {
   var el = document.getElementById('tk-nuevo-total');
   if(el) el.textContent = 'TOTAL: ' + fmtMoney(totalTicket());
   actualizarComisionTicket();
-  actualizarSaldoTicketModal();
-}
-
-function actualizarSaldoTicketModal() {
-  var anticipoEl = document.getElementById('tk-nuevo-anticipo');
-  var info = document.getElementById('tk-saldo-info');
-  if(!anticipoEl || !info) return;
-  var total = totalTicket();
-  var anticipoVal = anticipoEl.value;
-  var anticipo = anticipoVal === '' ? total : (parseFloat(anticipoVal) || 0);
-  var saldo = Math.max(0, total - anticipo);
-  if(saldo <= 0) {
-    info.textContent = '✅ Pago completo';
-    info.style.color = '#22C55E';
-    return;
-  }
-  var etiqueta = anticipo > 0
-    ? '🔀 Cobro híbrido: ' + fmtMoney(anticipo) + ' ahora + ' + fmtMoney(saldo) + ' a crédito'
-    : '📅 Todo a crédito: ' + fmtMoney(saldo);
-  if(!ticketClienteSel) etiqueta += ' — ⚠️ selecciona un cliente registrado para poder cobrarlo después';
-  info.textContent = etiqueta;
-  info.style.color = '#DC2626';
 }
 
 function actualizarComisionTicket() {
@@ -10562,16 +10535,10 @@ function guardarTicket() {
     }
   }
 
-  var anticipoVal = document.getElementById('tk-nuevo-anticipo').value;
-  var anticipo = anticipoVal === '' ? total : Math.min(parseFloat(anticipoVal) || 0, total);
-  var saldoPendiente = Math.max(0, total - anticipo);
-
-  // Mismo resguardo que Confirmar Venta: no tiene caso fiarle a "Público
-  // General" — sin cliente registrado no hay a quién cobrarle después.
-  if(saldoPendiente > 0 && !ticketClienteSel) {
-    showToast('⚠️ Hay saldo a crédito pero no hay cliente registrado — búscalo primero');
-    return;
-  }
+  // Ticket = venta mostrador, cobro inmediato siempre. No admite anticipo
+  // parcial ni saldo a crédito (eso es lo que distingue un Ticket de una NV).
+  var anticipo = total;
+  var saldoPendiente = 0;
 
   var terminal = null, comision = 0, neto = total;
   if(metodo === 'debito' || metodo === 'credito') {
@@ -10633,24 +10600,6 @@ function guardarTicket() {
         }).catch(function(e){ console.log('Error registrando caja_apartada:', e); });
       }
       guardarPreciosClienteDesdeVenta(ticket.clienteId, productosValidos, ticketClienteSel ? ticketClienteSel.canal : 'publico', ticket.fecha, folio);
-      if(saldoPendiente > 0){
-        db.collection('cuentas_cobrar').add({
-          pedidoId: ticketRef.id,
-          folio: folio,
-          origen: 'ticket',
-          clienteId: ticket.clienteId,
-          cliente: cliente,
-          telefono: ticketClienteSel ? (ticketClienteSel.telefono || '') : '',
-          total: total,
-          anticipo: anticipo,
-          metodoPagoAnticipo: metodo,
-          saldo: saldoPendiente,
-          estado: 'pendiente',
-          alertaSent: false,
-          fecha: ticket.fecha,
-          timestamp: Date.now()
-        }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear cuenta por cobrar'); });
-      }
       showToast('✅ Ticket ' + folio + ' creado');
       var modal = document.getElementById('modal-nuevo-ticket');
       if(modal) modal.remove();
