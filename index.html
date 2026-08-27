@@ -697,7 +697,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             </div>
             <div class="field">
               <label>Categoría</label>
-              <select id="s-categoria">
+              <select id="s-categoria" onchange="cambiarCategoriaSalida()">
                 <option value="Nómina">Nómina</option>
                 <option value="Préstamo">Préstamo</option>
                 <option value="Talacha / Mantenimiento de flota">Talacha / Mantenimiento de flota</option>
@@ -707,6 +707,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
                 <option value="Ahorro">Ahorro</option>
                 <option value="Pago a proveedor en efectivo">Pago a proveedor en efectivo</option>
                 <option value="Retiro bancario">Retiro bancario</option>
+                <option value="Cambio/Error de cobro">↩️ Cambio/Error de cobro</option>
                 <option value="Otro" selected>Otro</option>
               </select>
             </div>
@@ -732,8 +733,12 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
               <input type="text" id="s-proveedor" placeholder="ej: Ferretería López, OXXO, Costco...">
             </div>
             <div class="field" id="campo-ticket">
-              <label>No. de ticket / vale</label>
+              <label id="label-s-ticket">No. de ticket / vale</label>
               <input type="text" id="s-ticket" placeholder="ej: T-1234 o VAL-001">
+            </div>
+            <div class="field" id="campo-cliente-devolucion" style="display:none;">
+              <label>Nombre del cliente</label>
+              <input type="text" id="s-cliente-devolucion" placeholder="A quién se le devuelve el efectivo">
             </div>
             <div class="field" id="campo-operador" style="display:none;">
               <label>Operador</label>
@@ -4634,10 +4639,12 @@ function compartirDatosPagoNV() {
 function registrarPagoCliente(docId, monto, metodoPago, quienTrajo) {
   if(!db || !docId || !(monto > 0)) return;
   var ref = db.collection('cuentas_cobrar').doc(docId);
+  var cuentaData = null;
   return db.runTransaction(function(tx){
     return tx.get(ref).then(function(doc){
       if(!doc.exists) throw new Error('Cuenta por cobrar no encontrada');
       var data = doc.data();
+      cuentaData = data;
       var nuevoSaldo = Math.max(0, (data.saldo || 0) - monto);
       tx.update(ref, {
         saldo: nuevoSaldo,
@@ -4650,6 +4657,19 @@ function registrarPagoCliente(docId, monto, metodoPago, quienTrajo) {
         ultimoPagoTimestamp: Date.now()
       });
     });
+  }).then(function(){
+    // Registro aparte del abono en sí (no solo el saldo actualizado), para
+    // que el Corte de Caja del día pueda sumarlo en su método de pago real.
+    return db.collection('cobros_cuentas_cobrar').add({
+      clienteId: cuentaData.clienteId || null,
+      cliente: cuentaData.cliente || '',
+      monto: monto,
+      metodoPago: metodoPago || '',
+      usuario: currentUser ? currentUser.name : 'Desconocido',
+      fecha: fechaISOLocal(),
+      timestamp: Date.now(),
+      pedidoId: cuentaData.pedidoId || docId
+    }).catch(function(e){ console.log('Error registrando cobro para el corte:', e); });
   }).then(function(){
     showToast('💰 Pago registrado');
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar pago'); });
@@ -5014,9 +5034,10 @@ function cargarVentasDelDiaCorte() {
   Promise.all([
     db.collection('pedidos').where('fecha','==',hoy).get(),
     db.collection('tickets').where('fecha','==',hoy).get(),
-    db.collection('salidas').where('fecha','==',hoy).get()
+    db.collection('salidas').where('fecha','==',hoy).get(),
+    db.collection('cobros_cuentas_cobrar').where('fecha','==',hoy).get()
   ]).then(function(results){
-    var pedidosSnap = results[0], ticketsSnap = results[1], salidasSnap = results[2];
+    var pedidosSnap = results[0], ticketsSnap = results[1], salidasSnap = results[2], cobrosCxCSnap = results[3];
     // Débito y crédito cobran igual en las 3 terminales — ya no se separan,
     // solo se cuenta el total y las operaciones por terminal.
     var buckets = { efectivo:0, tarjeta:0, tarjetaOps:0, transferencia:0, transferenciaOps:0 };
@@ -5083,6 +5104,17 @@ function cargarVentasDelDiaCorte() {
         comisiones += comSinIva; ivaComisiones += ivaDeCom;
         registrarTarjeta(t.razonSocial, monto, com);
       }
+    });
+
+    // Abonos a Cuentas por Cobrar (cliente que llega después a pagar lo
+    // que debía) — no tienen terminal propia, solo se suman al total del
+    // método; no afectan el desglose de comisión por terminal.
+    cobrosCxCSnap.forEach(function(doc){
+      var c = doc.data();
+      var monto = c.monto || 0;
+      if(c.metodoPago === 'efectivo') buckets.efectivo += monto;
+      else if(c.metodoPago === 'transferencia') { buckets.transferencia += monto; buckets.transferenciaOps++; }
+      else if(c.metodoPago === 'tpv') { buckets.tarjeta += monto; buckets.tarjetaOps++; }
     });
 
     var totalComisionConIva = comisiones + ivaComisiones;
@@ -5541,6 +5573,15 @@ function cambiarTipoSalida() {
   document.getElementById('campo-proveedor').style.display = tipo !== 'fondo' && tipo !== 'nomina' ? 'block' : 'none';
 }
 
+// "Cambio/Error de cobro": devolución de efectivo al cliente por cobro
+// incorrecto, error de material o cambio no dado en el momento. Pide
+// referencia (folio NV/ticket) y nombre del cliente para poder rastrearla.
+function cambiarCategoriaSalida() {
+  var esDevolucion = document.getElementById('s-categoria').value === 'Cambio/Error de cobro';
+  document.getElementById('campo-cliente-devolucion').style.display = esDevolucion ? 'block' : 'none';
+  document.getElementById('label-s-ticket').textContent = esDevolucion ? 'Referencia (folio de NV o ticket)' : 'No. de ticket / vale';
+}
+
 function verificarSaldoApartado() {
   var aviso = document.getElementById('s-fuente-aviso');
   var fuenteEl = document.getElementById('s-fuente');
@@ -5556,22 +5597,30 @@ function verificarSaldoApartado() {
 
 function guardarSalida() {
   var tipo = document.getElementById('s-tipo').value;
+  var categoria = document.getElementById('s-categoria').value;
   var monto = parseFloat(document.getElementById('s-monto').value||0);
   var concepto = document.getElementById('s-concepto').value.trim();
   var fuente = document.getElementById('s-fuente').value;
+  var ticket = document.getElementById('s-ticket').value||'';
+  var clienteDevolucion = document.getElementById('s-cliente-devolucion').value.trim();
   if(!monto || !concepto) { showToast('⚠️ Ingresa monto y concepto'); return; }
+  if(categoria === 'Cambio/Error de cobro' && (!ticket.trim() || !clienteDevolucion)) {
+    showToast('⚠️ Captura la referencia (folio NV/ticket) y el nombre del cliente');
+    return;
+  }
 
   var salida = {
     fecha: fechaISOLocal(),
     timestamp: Date.now(),
     tipo: tipo,
     tipoLabel: TIPOS_SALIDA[tipo].label,
-    categoria: document.getElementById('s-categoria').value,
+    categoria: categoria,
     fuente: fuente,
     monto: monto,
     concepto: concepto,
     proveedor: document.getElementById('s-proveedor').value||'',
-    ticket: document.getElementById('s-ticket').value||'',
+    ticket: ticket,
+    clienteDevolucion: categoria === 'Cambio/Error de cobro' ? clienteDevolucion : '',
     operador: tipo === 'fondo' || tipo === 'gasolina' ? document.getElementById('s-operador').value : '',
     empleado: tipo === 'nomina' ? document.getElementById('s-empleado').value : '',
     rs: document.getElementById('s-rs').value,
@@ -5601,7 +5650,7 @@ function guardarSalida() {
           .catch(function(e){ console.log('Error registrando movimiento apartado:', e); });
       }
       // Limpiar
-      ['s-monto','s-concepto','s-proveedor','s-ticket','s-notas'].forEach(function(id){
+      ['s-monto','s-concepto','s-proveedor','s-ticket','s-notas','s-cliente-devolucion'].forEach(function(id){
         var el = document.getElementById(id); if(el) el.value='';
       });
       document.getElementById('s-tipo').value = 'compra';
@@ -5609,6 +5658,7 @@ function guardarSalida() {
       document.getElementById('s-fuente').value = 'operativo';
       verificarSaldoApartado();
       cambiarTipoSalida();
+      cambiarCategoriaSalida();
       cargarSalidasHoy();
     }).catch(function(e){
       console.log(e);
@@ -7903,11 +7953,15 @@ function cargarComprasJM() {
 // ════════════════════════════════════════════════════════════
 
 function puedeRegistrarCobro() {
-  return currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director' || currentUser.role === 'Ventas');
+  return currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director' || currentUser.role === 'Ventas' || currentUser.role === 'Compras');
 }
 
+// Antes solo Gerencia/Director registraban abonos en efectivo. Ahora
+// cualquier rol que atiende mostrador (Ventas/Compras) también puede —
+// caso real: cliente llega en la tarde a pagar en efectivo lo que pidió
+// en la mañana, e Ivette/Erika lo cobran ahí mismo.
 function puedeRegistrarCobroEfectivo() {
-  return currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
+  return puedeRegistrarCobro();
 }
 
 function iniciarCuentas() {
@@ -8180,18 +8234,32 @@ function renderEmpleadosTable() {
   tbody.innerHTML = '';
 
   nominaEmpleados.forEach(function(emp) {
+    var inactivo = emp.activo === false;
     var tr = document.createElement('tr');
+    if(inactivo) tr.style.cssText = 'opacity:0.5;background:#F5F2EE;';
+    var accionBtn = inactivo
+      ? '<button class="btn btn-gris" onclick="reactivarEmpleado(\''+emp.id+'\')" style="padding:3px 6px;font-size:9px;">↺ Reactivar</button>'
+      : '<button class="btn btn-gris" onclick="eliminaEmpleado(\''+emp.id+'\')" style="padding:3px 6px;font-size:9px;">🗑</button>';
     tr.innerHTML =
-      '<td>'+emp.nombre+'</td>'+
-      '<td><input type="checkbox" id="emp-imss-'+emp.id+'" '+(emp.imss?'checked':'')+' onchange="updateEmpleado(\''+emp.id+'\',\'imss\',this.checked)"></td>'+
-      '<td><input type="number" id="emp-sueldo-'+emp.id+'" value="'+(emp.sueldoSemanal||0)+'" min="0" step="100" style="width:80px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'sueldo\',this.value)"></td>'+
-      '<td><input type="number" id="emp-imss-monto-'+emp.id+'" value="'+(emp.montoIMSS||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'montoIMSS\',this.value)" '+(emp.imss?'':'disabled')+'"></td>'+
-      '<td><input type="number" id="emp-caja-'+emp.id+'" value="'+(emp.cajaAhorro||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'cajaAhorro\',this.value)" title="Descuento semanal caja de ahorro"></td>'+
-      '<td><input type="number" id="emp-prestfijo-'+emp.id+'" value="'+(emp.prestamoFijo||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'prestamoFijo\',this.value)" title="Descuento fijo semanal"></td>'+
-      '<td><input type="number" id="emp-dias-'+emp.id+'" value="'+(emp.diasSemana||7)+'" min="1" max="7" style="width:50px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'diasSemana\',this.value)"></td>'+
-      '<td><button class="btn btn-gris" onclick="eliminaEmpleado(\''+emp.id+'\')" style="padding:3px 6px;font-size:9px;">🗑</button></td>';
+      '<td>'+emp.nombre+(inactivo?' <span style="font-size:9px;color:#DC2626;font-weight:700;">(Inactivo)</span>':'')+'</td>'+
+      '<td><input type="checkbox" id="emp-imss-'+emp.id+'" '+(emp.imss?'checked':'')+' onchange="updateEmpleado(\''+emp.id+'\',\'imss\',this.checked)" '+(inactivo?'disabled':'')+'></td>'+
+      '<td><input type="number" id="emp-sueldo-'+emp.id+'" value="'+(emp.sueldoSemanal||0)+'" min="0" step="100" style="width:80px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'sueldo\',this.value)" '+(inactivo?'disabled':'')+'></td>'+
+      '<td><input type="number" id="emp-imss-monto-'+emp.id+'" value="'+(emp.montoIMSS||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'montoIMSS\',this.value)" '+(emp.imss&&!inactivo?'':'disabled')+'"></td>'+
+      '<td><input type="number" id="emp-caja-'+emp.id+'" value="'+(emp.cajaAhorro||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'cajaAhorro\',this.value)" title="Descuento semanal caja de ahorro" '+(inactivo?'disabled':'')+'></td>'+
+      '<td><input type="number" id="emp-prestfijo-'+emp.id+'" value="'+(emp.prestamoFijo||0)+'" min="0" step="50" style="width:70px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'prestamoFijo\',this.value)" title="Descuento fijo semanal" '+(inactivo?'disabled':'')+'></td>'+
+      '<td><input type="number" id="emp-dias-'+emp.id+'" value="'+(emp.diasSemana||7)+'" min="1" max="7" style="width:50px;border:1px solid var(--borde);border-radius:4px;padding:4px 6px;font-size:10px;" onchange="updateEmpleado(\''+emp.id+'\',\'diasSemana\',this.value)" '+(inactivo?'disabled':'')+'></td>'+
+      '<td>'+accionBtn+'</td>';
     tbody.appendChild(tr);
   });
+}
+
+function reactivarEmpleado(empId) {
+  if(!puedeEditarNomina()) { showToast('⚠️ Sin permisos'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+  db.collection('empleados').doc(empId).update({ activo: true }).then(function(){
+    showToast('✓ Empleado reactivado');
+    cargarEmpleados();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al reactivar'); });
 }
 
 function updateEmpleado(empId, campo, valor) {
@@ -8215,12 +8283,30 @@ function updateEmpleado(empId, campo, valor) {
 }
 
 function eliminaEmpleado(empId) {
-  if(!confirm('¿Eliminar este empleado?')) return;
-  if(!db) return;
-  db.collection('empleados').doc(empId).delete().then(function() {
-    showToast('✓ Empleado eliminado');
-    cargarEmpleados();
-  }).catch(function(e) { console.log(e); });
+  if(!puedeEditarNomina()) { showToast('⚠️ Sin permisos'); return; }
+  var emp = nominaEmpleados.find(function(e){ return e.id === empId; });
+  if(!emp) return;
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+
+  db.collection('nomina_semanas').get().then(function(snap){
+    var tieneHistorial = snap.docs.some(function(doc){
+      return (doc.data().empleados || []).some(function(e){ return e.empleadoId === empId; });
+    });
+
+    if(tieneHistorial) {
+      if(!confirm('¿Desactivar a ' + emp.nombre + '? Ya no aparecerá en nóminas nuevas pero se conserva su historial.')) return;
+      db.collection('empleados').doc(empId).update({ activo: false }).then(function(){
+        showToast('✓ ' + emp.nombre + ' desactivado');
+        cargarEmpleados();
+      }).catch(function(e){ console.log(e); showToast('⚠️ Error al desactivar'); });
+    } else {
+      if(!confirm('¿Eliminar a ' + emp.nombre + ' por completo? Nunca tuvo nómina registrada, se puede borrar sin dejar rastro.')) return;
+      db.collection('empleados').doc(empId).delete().then(function() {
+        showToast('🗑 ' + emp.nombre + ' eliminado');
+        cargarEmpleados();
+      }).catch(function(e) { console.log(e); showToast('⚠️ Error al eliminar'); });
+    }
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al verificar historial de nómina'); });
 }
 
 // ════ Alta de empleado (solo Director/Gerencia) ════
@@ -8390,7 +8476,9 @@ function resincronizarEmpleadosNomina() {
   });
 
   // Agregar empleados nuevos que no estaban en el borrador (ej. dados de alta después)
+  // — los desactivados no se agregan a nóminas nuevas.
   nominaEmpleados.forEach(function(actual) {
+    if(actual.activo === false) return;
     var yaExiste = nominaActual.empleados.some(function(emp) {
       return emp.empleadoId === actual.id || emp.nombre === actual.nombre;
     });
@@ -8437,7 +8525,7 @@ function crearNominaNueva() {
     timestamp: Date.now(),
     procesadoPor: currentUser ? currentUser.name : 'Sistema',
     status: 'borrador',
-    empleados: nominaEmpleados.map(function(emp) {
+    empleados: nominaEmpleados.filter(function(emp) { return emp.activo !== false; }).map(function(emp) {
       return {
         nombre: emp.nombre,
         empleadoId: emp.id,
@@ -8540,7 +8628,7 @@ function renderTablaEmpleados() {
     var tr = document.createElement('tr');
     tr.innerHTML =
       '<td>'+emp.nombre+desglosePrestamo+'</td>'+
-      '<td style="text-align:right;">$'+fmtNumero(emp.sueldoSemanal)+'</td>'+
+      '<td><input type="number" value="'+(emp.sueldoSemanal||0)+'" min="0" step="50" onchange="updateNominaEmpleado('+idx+',\'sueldoSemanal\',this.value);renderTablaEmpleados();" style="width:60px;border:1px solid var(--borde);border-radius:3px;padding:3px;font-size:9px;"></td>'+
       '<td><input type="number" value="'+(emp.faltas||0)+'" min="0" max="6" onchange="updateNominaEmpleado('+idx+',\'faltas\',this.value);renderTablaEmpleados();" style="width:40px;border:1px solid var(--borde);border-radius:3px;padding:3px;font-size:9px;"></td>'+
       celdaDescFaltas+
       celdaPrestSem+
@@ -8732,6 +8820,11 @@ function procesarNomina() {
   if(!nominaActual || !db) { showToast('⚠️ Sin conexión'); return; }
   if(procesandoNomina) return;
   procesandoNomina = true;
+
+  // Gerencia y Director son administradores de nómina: procesan/corrigen
+  // las veces que haga falta, sin el candado de "una sola vez por semana".
+  var esAdminNomina = currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
+  if(esAdminNomina) { continuarProcesarNomina(); return; }
 
   db.collection('nomina_semanas').where('semana', '==', nominaActual.semana).get().then(function(snap) {
     var yaProcesada = snap.docs.find(function(doc) {
@@ -9107,7 +9200,7 @@ function renderHistorialNomina() {
     var acciones = '<button class="btn btn-gris" onclick="event.stopPropagation();verDetalleNomina(\''+nom._docId+'\')" style="font-size:10px;padding:5px 10px;">👁 Ver</button>';
     if(puedeEditar) acciones += ' <button class="btn btn-gris" onclick="event.stopPropagation();abrirEditarNomina(\''+nom._docId+'\')" style="font-size:10px;padding:5px 10px;">✏️ Editar</button>';
     if(puedeBorrar) acciones += ' <button class="btn btn-gris" onclick="event.stopPropagation();borrarNomina(\''+nom._docId+'\')" style="font-size:10px;padding:5px 10px;background:#FEE2E2;color:#DC2626;">🗑 Borrar</button>';
-    return '<tr style="border-bottom:1px solid #F0EDE8;">' +
+    return '<tr onclick="verDetalleNomina(\''+nom._docId+'\')" style="cursor:pointer;border-bottom:1px solid #F0EDE8;">' +
       '<td style="padding:8px 10px;font-weight:700;">'+nom.semana+'</td>' +
       '<td style="padding:8px 10px;">'+(nom.fechaSabado||'')+'</td>' +
       '<td style="padding:8px 10px;text-align:center;">'+(nom.empleados?nom.empleados.length:0)+'</td>' +
@@ -9128,7 +9221,61 @@ function renderHistorialNomina() {
 function verDetalleNomina(docId) {
   var nom = historialNominaCache.find(function(x){ return x._docId === docId; });
   if(!nom) return;
-  alert('Semana: '+nom.semana+'\nEmpleados: '+nom.empleados.length+'\nTotal nómina: $'+fmtNumero(nom.totalNomina)+'\nTotal IMSS: $'+fmtNumero(nom.totalIMSS)+'\nTotal efectivo: $'+fmtNumero(nom.totalEfectivo));
+
+  var existente = document.getElementById('modal-detalle-nomina');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-detalle-nomina';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  var filas = (nom.empleados||[]).map(function(emp){
+    return '<tr style="border-bottom:1px solid #F0EDE8;">' +
+      '<td style="padding:6px 8px;font-weight:700;">'+emp.nombre+'</td>' +
+      '<td style="padding:6px 8px;text-align:right;">$'+fmtNumero(emp.sueldoSemanal||0)+'</td>' +
+      '<td style="padding:6px 8px;text-align:center;">'+(emp.faltas||0)+'</td>' +
+      '<td style="padding:6px 8px;text-align:right;">$'+fmtNumero(emp.descuentoFaltas||0)+'</td>' +
+      '<td style="padding:6px 8px;text-align:right;">$'+fmtNumero(emp.prestamoSemanal||0)+'</td>' +
+      '<td style="padding:6px 8px;text-align:right;">$'+fmtNumero(emp.prestamoFijo||0)+'</td>' +
+      '<td style="padding:6px 8px;text-align:right;">$'+fmtNumero(emp.cajaAhorro||0)+'</td>' +
+      '<td style="padding:6px 8px;text-align:right;">$'+fmtNumero(emp.otrosDescuentos||0)+'</td>' +
+      '<td style="padding:6px 8px;text-align:right;">$'+fmtNumero(emp.bonos||0)+'</td>' +
+      '<td style="padding:6px 8px;text-align:right;font-weight:700;">$'+fmtNumero(emp.netoAPagar||0)+'</td>' +
+      '<td style="padding:6px 8px;text-align:right;">$'+fmtNumero(emp.montoIMSS||0)+'</td>' +
+      '<td style="padding:6px 8px;text-align:right;color:var(--naranja);font-weight:700;">$'+fmtNumero(emp.efectivoViri||0)+'</td>' +
+    '</tr>';
+  }).join('');
+
+  var btnEditar = puedeEditarNomina()
+    ? '<button class="btn btn-naranja" style="flex:1;" onclick="document.getElementById(\'modal-detalle-nomina\').remove();abrirEditarNomina(\''+docId+'\')">✏️ Editar esta nómina</button>'
+    : '';
+
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:900px;width:100%;max-height:90vh;overflow-y:auto;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:4px;">📋 NÓMINA — '+nom.semana+'</div>' +
+      '<div style="font-size:11px;color:var(--suave);margin-bottom:14px;">'+(nom.fechaSabado||'')+' · '+(nom.empleados?nom.empleados.length:0)+' empleados</div>' +
+      '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:760px;">' +
+        '<thead><tr style="background:#1A1A1A;color:#fff;text-align:left;">' +
+          '<th style="padding:6px 8px;">Empleado</th><th style="padding:6px 8px;text-align:right;">Sueldo</th>' +
+          '<th style="padding:6px 8px;text-align:center;">Faltas</th><th style="padding:6px 8px;text-align:right;">Desc. faltas</th>' +
+          '<th style="padding:6px 8px;text-align:right;">Adelanto</th><th style="padding:6px 8px;text-align:right;">Desc. fijo</th>' +
+          '<th style="padding:6px 8px;text-align:right;">Caja ahorro</th><th style="padding:6px 8px;text-align:right;">Otros desc.</th>' +
+          '<th style="padding:6px 8px;text-align:right;">Bonos</th><th style="padding:6px 8px;text-align:right;">Neto</th>' +
+          '<th style="padding:6px 8px;text-align:right;">IMSS</th><th style="padding:6px 8px;text-align:right;">Efectivo</th>' +
+        '</tr></thead>' +
+        '<tbody>'+filas+'</tbody>' +
+      '</table></div>' +
+      '<div style="background:#F5F2EE;border-radius:8px;padding:12px;margin-top:14px;font-size:13px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">' +
+        '<div>Total nómina: <strong>$'+fmtNumero(nom.totalNomina||0)+'</strong></div>' +
+        '<div>Total IMSS: <strong>$'+fmtNumero(nom.totalIMSS||0)+'</strong></div>' +
+        '<div>Total transferencia: <strong>$'+fmtNumero(nom.totalTransferencia||0)+'</strong></div>' +
+        '<div style="grid-column:1/-1;">Total efectivo: <strong style="color:var(--naranja);">$'+fmtNumero(nom.totalEfectivo||0)+'</strong></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:14px;">' +
+        btnEditar +
+        '<button class="btn btn-gris" style="flex:1;" onclick="document.getElementById(\'modal-detalle-nomina\').remove()">Cerrar</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
 }
 
 function borrarNomina(docId) {
@@ -9144,16 +9291,18 @@ function borrarNomina(docId) {
 }
 
 // ════ Edición de nómina cerrada (Gerencia/Director) — recalcula y audita ════
-var CAMPOS_EDITABLES_NOMINA = ['descuentoFaltas', 'prestamoSemanal', 'prestamoFijo', 'cajaAhorro', 'otrosDescuentos', 'bonos', 'pagoTransferencia'];
+var CAMPOS_EDITABLES_NOMINA = ['sueldoSemanal', 'descuentoFaltas', 'prestamoSemanal', 'prestamoFijo', 'cajaAhorro', 'otrosDescuentos', 'bonos', 'pagoTransferencia'];
 var LABEL_CAMPO_NOMINA = {
-  descuentoFaltas: 'Desc. faltas', prestamoSemanal: 'Adelanto/Préstamo', prestamoFijo: 'Descuento fijo',
+  sueldoSemanal: 'Sueldo', descuentoFaltas: 'Desc. faltas', prestamoSemanal: 'Adelanto/Préstamo', prestamoFijo: 'Descuento fijo',
   cajaAhorro: 'Caja ahorro', otrosDescuentos: 'Otros desc.', bonos: 'Bonos', pagoTransferencia: 'Transferencia'
 };
+var _edicionNominaPendiente = null;
 
 function abrirEditarNomina(docId) {
   if(!puedeEditarNomina()) { showToast('⚠️ Sin permisos'); return; }
   var nom = historialNominaCache.find(function(x){ return x._docId === docId; });
   if(!nom) return;
+  _edicionNominaPendiente = null;
 
   var existente = document.getElementById('modal-editar-nomina');
   if(existente) existente.remove();
@@ -9165,7 +9314,7 @@ function abrirEditarNomina(docId) {
 
   var filas = nom.empleados.map(function(emp, idx) {
     return '<div style="border:1px solid var(--borde);border-radius:8px;padding:10px;margin-bottom:8px;">' +
-      '<div style="font-weight:700;font-size:12px;margin-bottom:6px;">' + emp.nombre + ' — sueldo $' + fmtNumero(emp.sueldoSemanal||0) + '</div>' +
+      '<div style="font-weight:700;font-size:12px;margin-bottom:6px;">' + emp.nombre + '</div>' +
       '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">' +
       CAMPOS_EDITABLES_NOMINA.map(function(campo) {
         return '<div><label style="display:block;font-size:9px;color:var(--suave);">' + LABEL_CAMPO_NOMINA[campo] + '</label>' +
@@ -9181,8 +9330,9 @@ function abrirEditarNomina(docId) {
       '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:1px;margin-bottom:4px;">✏️ EDITAR NÓMINA — ' + nom.semana + '</div>' +
       '<div style="font-size:11px;color:var(--suave);margin-bottom:14px;">Los cambios quedan registrados en el historial de auditoría.</div>' +
       filas +
+      '<div style="background:#F5F2EE;border-radius:8px;padding:10px 12px;margin-top:10px;font-size:12px;font-weight:700;" id="edn-total-general">Total nómina: $' + fmtNumero(nom.totalNomina||0) + ' · Efectivo: $' + fmtNumero(nom.totalEfectivo||0) + '</div>' +
       '<div style="display:flex;gap:8px;margin-top:10px;">' +
-        '<button class="btn btn-naranja" style="flex:1;" onclick="guardarEdicionNomina()">Guardar cambios</button>' +
+        '<button class="btn btn-naranja" style="flex:1;" onclick="revisarEdicionNomina()">Revisar cambios</button>' +
         '<button class="btn btn-gris" style="flex:1;" onclick="document.getElementById(\'modal-editar-nomina\').remove()">Cancelar</button>' +
       '</div>' +
     '</div>';
@@ -9191,44 +9341,64 @@ function abrirEditarNomina(docId) {
 
 function calcularNetoEmpleadoEditado(emp) {
   var totalDesc = (parseFloat(emp.descuentoFaltas)||0) + (parseFloat(emp.prestamoSemanal)||0) + (parseFloat(emp.prestamoFijo)||0) + (parseFloat(emp.cajaAhorro)||0) + (parseFloat(emp.otrosDescuentos)||0);
-  var neto = (emp.sueldoSemanal||0) - totalDesc + (parseFloat(emp.bonos)||0);
+  var neto = (parseFloat(emp.sueldoSemanal)||0) - totalDesc + (parseFloat(emp.bonos)||0);
   var transferencia = parseFloat(emp.pagoTransferencia)||0;
   var efectivo = emp.imss ? (neto - (emp.montoIMSS||0) - transferencia) : (neto - transferencia);
   if(efectivo < 0) efectivo = 0;
   return { totalDesc: totalDesc, neto: neto, efectivo: efectivo, transferencia: transferencia };
 }
 
+// Lee los inputs de todas las filas del modal (aunque solo se haya editado
+// una), para poder recalcular el total general en cada tecla — no solo el
+// renglón que cambió.
+function _leerEmpleadosEditadosDelModal(nom) {
+  return nom.empleados.map(function(emp, idx) {
+    var actualizado = Object.assign({}, emp);
+    CAMPOS_EDITABLES_NOMINA.forEach(function(campo) {
+      var el = document.getElementById('edn-' + idx + '-' + campo);
+      if(el) actualizado[campo] = parseFloat(el.value) || 0;
+    });
+    return actualizado;
+  });
+}
+
 function recalcEdicionNomina(idx) {
   var modal = document.getElementById('modal-editar-nomina');
   var docId = modal.dataset.docId;
   var nom = historialNominaCache.find(function(x){ return x._docId === docId; });
-  var emp = Object.assign({}, nom.empleados[idx]);
-  CAMPOS_EDITABLES_NOMINA.forEach(function(campo) {
-    var el = document.getElementById('edn-' + idx + '-' + campo);
-    if(el) emp[campo] = parseFloat(el.value) || 0;
-  });
-  var r = calcularNetoEmpleadoEditado(emp);
+
+  var r = calcularNetoEmpleadoEditado(_leerEmpleadosEditadosDelModal(nom)[idx]);
   document.getElementById('edn-neto-' + idx).textContent = 'Neto: $' + fmtNumero(r.neto) + ' · Efectivo: $' + fmtNumero(r.efectivo);
+
+  // Total general: recorre todas las filas del modal, no solo la que cambió.
+  var totalNomina = 0, totalEfectivo = 0;
+  _leerEmpleadosEditadosDelModal(nom).forEach(function(emp){
+    var rr = calcularNetoEmpleadoEditado(emp);
+    totalNomina += rr.neto;
+    totalEfectivo += rr.efectivo;
+  });
+  var totalEl = document.getElementById('edn-total-general');
+  if(totalEl) totalEl.textContent = 'Total nómina: $' + fmtNumero(totalNomina) + ' · Efectivo: $' + fmtNumero(totalEfectivo);
 }
 
-function guardarEdicionNomina() {
-  if(!puedeEditarNomina()) { showToast('⚠️ Sin permisos'); return; }
+// Paso 1: calcula el diff y lo muestra como comparativo antes/después,
+// sin escribir nada en Firestore todavía.
+function revisarEdicionNomina() {
   var modal = document.getElementById('modal-editar-nomina');
   var docId = modal.dataset.docId;
   var original = JSON.parse(modal.dataset.original);
   var nom = historialNominaCache.find(function(x){ return x._docId === docId; });
-  if(!nom || !db) return;
+  if(!nom) return;
 
   var editor = currentUser ? currentUser.name : 'Desconocido';
   var ahora = Date.now();
   var auditoria = [];
   var totalNomina = 0, totalIMSS = 0, totalEfectivo = 0, totalTransferencia = 0;
 
-  var empleadosNuevos = nom.empleados.map(function(emp, idx) {
-    var actualizado = Object.assign({}, emp);
+  var empleadosNuevos = _leerEmpleadosEditadosDelModal(nom).map(function(actualizado, idx) {
+    var emp = nom.empleados[idx];
     CAMPOS_EDITABLES_NOMINA.forEach(function(campo) {
-      var el = document.getElementById('edn-' + idx + '-' + campo);
-      var valorNuevo = el ? (parseFloat(el.value) || 0) : (emp[campo] || 0);
+      var valorNuevo = actualizado[campo] || 0;
       var valorAnterior = original[idx][campo] || 0;
       if(valorNuevo !== valorAnterior) {
         auditoria.push({
@@ -9236,7 +9406,6 @@ function guardarEdicionNomina() {
           editadoPor: editor, fecha: fechaISOLocal(), timestamp: ahora
         });
       }
-      actualizado[campo] = valorNuevo;
     });
     var r = calcularNetoEmpleadoEditado(actualizado);
     actualizado.totalDescuentos = r.totalDesc;
@@ -9249,22 +9418,66 @@ function guardarEdicionNomina() {
     return actualizado;
   });
 
-  if(!auditoria.length) { showToast('Sin cambios que guardar'); modal.remove(); return; }
+  if(!auditoria.length) { showToast('Sin cambios que guardar'); return; }
 
-  var docRef = db.collection('nomina_semanas').doc(docId);
-  docRef.update({
-    empleados: empleadosNuevos,
+  _edicionNominaPendiente = {
+    docId: docId, auditoria: auditoria, empleadosNuevos: empleadosNuevos,
     totalNomina: totalNomina, totalIMSS: totalIMSS, totalEfectivo: totalEfectivo, totalTransferencia: totalTransferencia
+  };
+
+  var filasComparativo = auditoria.map(function(a){
+    return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F0EDE8;font-size:12px;">' +
+      '<div>' + a.empleado + ' — ' + (LABEL_CAMPO_NOMINA[a.campo]||a.campo) + '</div>' +
+      '<div><span style="color:#999;text-decoration:line-through;">$' + fmtNumero(a.valorAnterior) + '</span> → <strong>$' + fmtNumero(a.valorNuevo) + '</strong></div>' +
+    '</div>';
+  }).join('');
+
+  var totalAntes = (nom.totalNomina||0);
+  var efectivoAntes = (nom.totalEfectivo||0);
+
+  var modalBox = modal.querySelector('div');
+  modalBox.innerHTML =
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:1px;margin-bottom:4px;">🔍 CONFIRMAR CAMBIOS — ' + nom.semana + '</div>' +
+    '<div style="font-size:11px;color:var(--suave);margin-bottom:12px;">Revisa el antes/después antes de guardar. Esto queda registrado en el historial de auditoría.</div>' +
+    filasComparativo +
+    '<div style="background:#F5F2EE;border-radius:8px;padding:10px 12px;margin-top:12px;font-size:12px;">' +
+      '<div>Total nómina: <span style="color:#999;text-decoration:line-through;">$' + fmtNumero(totalAntes) + '</span> → <strong>$' + fmtNumero(totalNomina) + '</strong></div>' +
+      '<div>Total efectivo: <span style="color:#999;text-decoration:line-through;">$' + fmtNumero(efectivoAntes) + '</span> → <strong>$' + fmtNumero(totalEfectivo) + '</strong></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;margin-top:14px;">' +
+      '<button class="btn btn-naranja" style="flex:1;" onclick="confirmarGuardarEdicionNomina()">✅ Confirmar y guardar</button>' +
+      '<button class="btn btn-gris" style="flex:1;" onclick="abrirEditarNomina(\'' + docId + '\')">↩ Volver a editar</button>' +
+    '</div>';
+}
+
+// Paso 2: ya confirmado el comparativo, aquí sí se escribe en Firestore.
+function confirmarGuardarEdicionNomina() {
+  if(!puedeEditarNomina()) { showToast('⚠️ Sin permisos'); return; }
+  var pendiente = _edicionNominaPendiente;
+  if(!pendiente || !db) return;
+  var modal = document.getElementById('modal-editar-nomina');
+  var nom = historialNominaCache.find(function(x){ return x._docId === pendiente.docId; });
+  if(!nom) return;
+
+  var docRef = db.collection('nomina_semanas').doc(pendiente.docId);
+  docRef.update({
+    empleados: pendiente.empleadosNuevos,
+    totalNomina: pendiente.totalNomina, totalIMSS: pendiente.totalIMSS,
+    totalEfectivo: pendiente.totalEfectivo, totalTransferencia: pendiente.totalTransferencia
   }).then(function(){
     var batch = db.batch();
-    auditoria.forEach(function(a){
+    pendiente.auditoria.forEach(function(a){
       batch.set(docRef.collection('historial_ediciones').doc(), a);
     });
     return batch.commit();
   }).then(function(){
-    Object.assign(nom, { empleados: empleadosNuevos, totalNomina: totalNomina, totalIMSS: totalIMSS, totalEfectivo: totalEfectivo, totalTransferencia: totalTransferencia });
-    showToast('✅ Nómina actualizada (' + auditoria.length + ' cambio' + (auditoria.length>1?'s':'') + ')');
-    modal.remove();
+    Object.assign(nom, {
+      empleados: pendiente.empleadosNuevos, totalNomina: pendiente.totalNomina, totalIMSS: pendiente.totalIMSS,
+      totalEfectivo: pendiente.totalEfectivo, totalTransferencia: pendiente.totalTransferencia
+    });
+    showToast('✅ Nómina actualizada (' + pendiente.auditoria.length + ' cambio' + (pendiente.auditoria.length>1?'s':'') + ')');
+    _edicionNominaPendiente = null;
+    if(modal) modal.remove();
     renderHistorialNomina();
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar cambios'); });
 }
