@@ -7972,9 +7972,8 @@ function renderCuentasCobrar() {
       acciones += '<input type="number" id="cc-abono-' + c._docId + '" placeholder="Monto a abonar" min="0" step="0.01" style="flex:1;min-width:100px;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-family:\'Barlow\',sans-serif;font-size:12px;">'
         + '<select id="cc-metodo-' + c._docId + '" style="border:1.5px solid var(--borde);border-radius:8px;padding:8px 6px;font-family:\'Barlow\',sans-serif;font-size:12px;">'
         +   (puedeEfectivo ? '<option value="efectivo">💵 Efectivo</option>' : '')
+        +   '<option value="tpv">💳 Tarjeta</option>'
         +   '<option value="transferencia">🏦 Transferencia</option>'
-        +   '<option value="tarjeta_nu">💜 Tarjeta Nu</option>'
-        +   '<option value="tarjeta_afirme">🟠 Tarjeta Afirme</option>'
         + '</select>'
         + '<input type="text" id="cc-trajo-' + c._docId + '" placeholder="¿Quién lo trajo? (opcional)" style="flex:1;min-width:130px;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-family:\'Barlow\',sans-serif;font-size:12px;">'
         + '<button class="btn btn-naranja" onclick="abonarCuentaCobrar(\'' + c._docId + '\')" style="font-size:11px;padding:8px 14px;">💰 Registrar pago</button>';
