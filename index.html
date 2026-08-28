@@ -4117,8 +4117,13 @@ function guardarPreciosClienteDesdeVenta(clienteId, productos, canal, fecha, ped
 }
 
 // ════ Precio sugerido por fila: volumen (Tarea C) + canal (Tarea B) + histórico por cliente (Tarea D) ════
+// El precio histórico/por volumen es una SUGERENCIA, no un límite — cualquier
+// rol que puede vender edita el precio libremente. Antes solo Director/Gerencia
+// podían tocarlo (el campo quedaba readOnly para el resto), lo que en la
+// práctica le impedía a Ventas cobrarle a un cliente distinto un precio
+// distinto al último negociado. Quitado a propósito.
 function puedeEditarPrecioLibre() {
-  return currentUser && (currentUser.role === 'Director' || currentUser.role === 'Gerencia');
+  return true;
 }
 
 function actualizarTodasLasFilasProducto() {
