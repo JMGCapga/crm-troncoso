@@ -7020,7 +7020,7 @@ function buscarHistorialCompras() {
   lista.innerHTML = filtradas.slice(0, 100).map(function(c) {
     var color = statusColor[c.status] || '#F59E0B';
     var label = statusLabel[c.status] || c.status;
-    return '<div style="padding:12px;border-bottom:1px solid #F0EDE8;">' +
+    return '<div onclick="verDetalleCompra(\'' + c._docId + '\')" style="padding:12px;border-bottom:1px solid #F0EDE8;cursor:pointer;">' +
       '<div style="display:flex;justify-content:space-between;align-items:baseline;">' +
         '<div style="font-weight:700;color:var(--naranja);">' + c.folio + '</div>' +
         '<div style="font-weight:700;">' + fmtMoney(c.total) + '</div>' +
@@ -7029,6 +7029,241 @@ function buscarHistorialCompras() {
       '<div style="font-size:11px;color:var(--suave);margin-top:2px;">' + c.fecha + ' · ' + labelFormaPagoCompra(c.formaPago) + ' · <span style="color:' + color + ';font-weight:700;">' + label + '</span></div>' +
     '</div>';
   }).join('') + (filtradas.length > 100 ? '<div style="padding:10px;text-align:center;color:var(--suave);font-size:11px;">Mostrando 100 de ' + filtradas.length + ' — afina los filtros</div>' : '');
+}
+
+// ════ HISTORIAL DE COMPRAS — detalle + edición ════
+// El modal de historial (filtros + lista) se reutiliza como "listado" y
+// "detalle" son dos pantallas dentro del mismo #modal-historial-compras,
+// para poder volver sin perder los filtros que ya estaban capturados.
+var _hcFiltrosGuardados = null;
+
+function _guardarFiltrosHistorialCompras() {
+  var proveedorEl = document.getElementById('hc-proveedor');
+  if(!proveedorEl) return;
+  _hcFiltrosGuardados = {
+    proveedor: proveedorEl.value,
+    rs: document.getElementById('hc-rs').value,
+    pago: document.getElementById('hc-pago').value,
+    desde: document.getElementById('hc-desde').value,
+    hasta: document.getElementById('hc-hasta').value
+  };
+}
+
+function volverListadoCompras() {
+  var modalBox = document.querySelector('#modal-historial-compras > div');
+  if(!modalBox) return;
+  modalBox.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;">📜 HISTORIAL DE COMPRAS</div>' +
+      '<button onclick="document.getElementById(\'modal-historial-compras\').remove()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#888;">✕</button>' +
+    '</div>' +
+    '<div class="form-grid" style="margin-bottom:12px;">' +
+      '<div class="field"><label>Proveedor</label><input type="text" id="hc-proveedor" placeholder="Nombre..." oninput="buscarHistorialCompras()"></div>' +
+      '<div class="field"><label>Razón Social</label><select id="hc-rs" onchange="buscarHistorialCompras()">' +
+        '<option value="">Todas</option><option value="JMG">JMG</option><option value="IZZ">IZZ</option><option value="CEM">CEM</option>' +
+      '</select></div>' +
+      '<div class="field"><label>Desde</label><input type="date" id="hc-desde" onchange="buscarHistorialCompras()"></div>' +
+      '<div class="field"><label>Hasta</label><input type="date" id="hc-hasta" onchange="buscarHistorialCompras()"></div>' +
+      '<div class="field" style="grid-column:1/-1;"><label>Forma de pago</label><select id="hc-pago" onchange="buscarHistorialCompras()">' +
+        '<option value="">Todas</option>' +
+        '<option value="efectivo">Efectivo</option>' +
+        '<option value="transferencia">Transferencia</option>' +
+        '<option value="tarjeta_credito">Tarjeta de crédito</option>' +
+        '<option value="credito_proveedor">Crédito de proveedor</option>' +
+      '</select></div>' +
+    '</div>' +
+    '<div id="hc-resumen" style="font-size:12px;color:var(--suave);margin-bottom:10px;"></div>' +
+    '<div id="hc-lista" style="border:1px solid var(--borde);border-radius:10px;min-height:60px;"></div>';
+
+  if(_hcFiltrosGuardados) {
+    document.getElementById('hc-proveedor').value = _hcFiltrosGuardados.proveedor;
+    document.getElementById('hc-rs').value = _hcFiltrosGuardados.rs;
+    document.getElementById('hc-pago').value = _hcFiltrosGuardados.pago;
+    document.getElementById('hc-desde').value = _hcFiltrosGuardados.desde;
+    document.getElementById('hc-hasta').value = _hcFiltrosGuardados.hasta;
+  }
+  buscarHistorialCompras();
+}
+
+function puedeEditarCompra() {
+  return currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
+}
+
+function verDetalleCompra(docId) {
+  var c = historialComprasCache.find(function(x){ return x._docId === docId; });
+  if(!c) return;
+  _guardarFiltrosHistorialCompras();
+
+  var filas = (c.productos || []).map(function(p){
+    return '<tr style="border-bottom:1px solid #F0EDE8;">' +
+      '<td style="padding:6px 8px;">' + (p.cantidad||0) + ' ' + (p.unidad||'') + '</td>' +
+      '<td style="padding:6px 8px;">' + (p.desc||'') + '</td>' +
+      '<td style="padding:6px 8px;">' + (p.clave||'—') + '</td>' +
+      '<td style="padding:6px 8px;text-align:right;">' + fmtMoney(p.precioUnit||0) + '</td>' +
+      '<td style="padding:6px 8px;text-align:right;font-weight:700;">' + fmtMoney(p.importe||0) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  var botones = '<button class="btn btn-gris" onclick="volverListadoCompras()">← Regresar</button>';
+  if(puedeEditarCompra()) botones += ' <button class="btn btn-naranja" onclick="abrirEditarCompraDetalle(\'' + docId + '\')">✏️ Editar</button>';
+  if(puedeCancelarCompra() && c.status !== 'cancelada') botones += ' <button class="btn btn-gris" style="background:#FEE2E2;color:#DC2626;" onclick="cancelarCompra(\'' + docId + '\')">🚫 Cancelar compra</button>';
+
+  var modalBox = document.querySelector('#modal-historial-compras > div');
+  modalBox.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;">' + c.folio + '</div>' +
+      '<button onclick="document.getElementById(\'modal-historial-compras\').remove()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#888;">✕</button>' +
+    '</div>' +
+    '<div style="font-size:13px;color:#666;margin-bottom:14px;">' +
+      '<div><strong>Proveedor:</strong> ' + (c.proveedor||'Sin nombre') + ' (' + (c.rsNombre||c.razonSocial||'') + ')</div>' +
+      '<div><strong>Fecha:</strong> ' + c.fecha + '</div>' +
+      '<div><strong>Método de pago:</strong> ' + labelFormaPagoCompra(c.formaPago) + '</div>' +
+      (c.noFactura ? '<div><strong>No. factura:</strong> ' + c.noFactura + '</div>' : '') +
+      (c.notas ? '<div><strong>Notas:</strong> ' + c.notas + '</div>' : '') +
+    '</div>' +
+    '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:480px;">' +
+      '<thead><tr style="background:#1A1A1A;color:#fff;text-align:left;">' +
+        '<th style="padding:6px 8px;">Cantidad</th><th style="padding:6px 8px;">Producto</th>' +
+        '<th style="padding:6px 8px;">Clave</th><th style="padding:6px 8px;text-align:right;">Costo unit</th>' +
+        '<th style="padding:6px 8px;text-align:right;">Subtotal</th>' +
+      '</tr></thead>' +
+      '<tbody>' + filas + '</tbody>' +
+    '</table></div>' +
+    '<div style="text-align:right;font-family:\'Bebas Neue\',sans-serif;font-size:20px;margin-top:12px;">TOTAL: ' + fmtMoney(c.total) + '</div>' +
+    '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">' + botones + '</div>';
+}
+
+// Solo permite corregir cantidades/costos/notas de una compra ya guardada,
+// no proveedor ni forma de pago — cambiar eso significaría mover el monto
+// entre cuenta por pagar/salida distintas, mejor cancelar y volver a
+// capturar en ese caso.
+function abrirEditarCompraDetalle(docId) {
+  if(!puedeEditarCompra()) { showToast('⚠️ Sin permisos'); return; }
+  var c = historialComprasCache.find(function(x){ return x._docId === docId; });
+  if(!c) return;
+
+  var filas = (c.productos || []).map(function(p, idx){
+    return '<tr>' +
+      '<td style="padding:6px 8px;">' + (p.desc||'') + (p.clave ? ' <span style="color:var(--suave);font-size:10px;">(' + p.clave + ')</span>' : '') + '</td>' +
+      '<td style="padding:6px 8px;"><input type="number" id="edc-cant-' + idx + '" value="' + (p.cantidad||0) + '" min="0" step="0.01" style="width:70px;border:1.5px solid var(--borde);border-radius:6px;padding:5px;" oninput="recalcEdicionCompra()"></td>' +
+      '<td style="padding:6px 8px;">' + (p.unidad||'') + '</td>' +
+      '<td style="padding:6px 8px;"><input type="number" id="edc-precio-' + idx + '" value="' + (p.precioUnit||0).toFixed(2) + '" min="0" step="0.01" style="width:80px;border:1.5px solid var(--borde);border-radius:6px;padding:5px;" oninput="recalcEdicionCompra()"></td>' +
+      '<td style="padding:6px 8px;text-align:right;" id="edc-imp-' + idx + '">' + fmtMoney(p.importe||0) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  var modalBox = document.querySelector('#modal-historial-compras > div');
+  modalBox.dataset.docId = docId;
+  modalBox.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;">✏️ EDITAR ' + c.folio + '</div>' +
+      '<button onclick="document.getElementById(\'modal-historial-compras\').remove()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#888;">✕</button>' +
+    '</div>' +
+    '<div style="font-size:11px;color:var(--suave);margin-bottom:12px;">' +
+      'Solo cantidades, costos y notas. Proveedor y forma de pago (' + labelFormaPagoCompra(c.formaPago) + ') no cambian aquí — para eso cancela y vuelve a capturar.' +
+    '</div>' +
+    '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:440px;">' +
+      '<thead><tr style="background:#1A1A1A;color:#fff;text-align:left;">' +
+        '<th style="padding:6px 8px;">Producto</th><th style="padding:6px 8px;">Cantidad</th>' +
+        '<th style="padding:6px 8px;">Unidad</th><th style="padding:6px 8px;">Costo unit</th>' +
+        '<th style="padding:6px 8px;text-align:right;">Subtotal</th>' +
+      '</tr></thead>' +
+      '<tbody>' + filas + '</tbody>' +
+    '</table></div>' +
+    '<div class="field" style="margin-top:12px;"><label>Notas</label><textarea id="edc-notas" style="width:100%;border:1.5px solid var(--borde);border-radius:8px;padding:8px;">' + (c.notas||'') + '</textarea></div>' +
+    '<div style="text-align:right;font-family:\'Bebas Neue\',sans-serif;font-size:20px;margin-top:12px;" id="edc-total">TOTAL: ' + fmtMoney(c.total) + '</div>' +
+    '<div style="display:flex;gap:8px;margin-top:16px;">' +
+      '<button class="btn btn-naranja" style="flex:1;" onclick="guardarEdicionCompra(\'' + docId + '\')">💾 Guardar cambios</button>' +
+      '<button class="btn btn-gris" style="flex:1;" onclick="verDetalleCompra(\'' + docId + '\')">Cancelar</button>' +
+    '</div>';
+}
+
+function recalcEdicionCompra() {
+  var c = historialComprasCache.find(function(x){ return x._docId === document.querySelector('#modal-historial-compras > div').dataset.docId; });
+  if(!c) return;
+  var total = 0;
+  (c.productos || []).forEach(function(p, idx){
+    var cant = parseFloat(document.getElementById('edc-cant-' + idx).value) || 0;
+    var precio = parseFloat(document.getElementById('edc-precio-' + idx).value) || 0;
+    var importe = cant * precio;
+    total += importe;
+    document.getElementById('edc-imp-' + idx).textContent = fmtMoney(importe);
+  });
+  document.getElementById('edc-total').textContent = 'TOTAL: ' + fmtMoney(total);
+}
+
+function guardarEdicionCompra(docId) {
+  if(!puedeEditarCompra()) { showToast('⚠️ Sin permisos'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+  var c = historialComprasCache.find(function(x){ return x._docId === docId; });
+  if(!c) return;
+
+  var productosNuevos = (c.productos || []).map(function(p, idx){
+    var cant = parseFloat(document.getElementById('edc-cant-' + idx).value) || 0;
+    var precio = parseFloat(document.getElementById('edc-precio-' + idx).value) || 0;
+    return Object.assign({}, p, { cantidad: cant, precioUnit: precio, importe: cant * precio });
+  });
+  var totalNuevo = productosNuevos.reduce(function(a,p){ return a + p.importe; }, 0);
+  var ivaNuevo = c.iva > 0 ? totalNuevo * 0.16 / 1.16 : 0; // conserva la proporción si ya tenía IVA
+  var subtotalNuevo = totalNuevo - ivaNuevo;
+  var notasNuevas = document.getElementById('edc-notas').value || '';
+
+  // Delta de existencia por clave: lo que sube/baja respecto a lo ya
+  // aplicado, mismo criterio de factorConversion/servicio que guardarCompra
+  // y cancelarCompra.
+  function deltasPorClave(productos) {
+    var deltas = {};
+    productos.forEach(function(p){
+      if(!p.clave || !productosIndex[p.clave] || productosIndex[p.clave].tipo === 'servicio') return;
+      var prod = productosIndex[p.clave];
+      var cantidadConvertida = prod.factorConversion ? p.cantidad * prod.factorConversion : p.cantidad;
+      deltas[p.clave] = (deltas[p.clave] || 0) + cantidadConvertida;
+    });
+    return deltas;
+  }
+  var deltasViejos = deltasPorClave(c.productos || []);
+  var deltasNuevos = deltasPorClave(productosNuevos);
+  var claves = Object.keys(Object.assign({}, deltasViejos, deltasNuevos));
+
+  var batch = db.batch();
+  batch.update(db.collection('compras').doc(docId), {
+    productos: productosNuevos, subtotal: subtotalNuevo, iva: ivaNuevo, total: totalNuevo, notas: notasNuevas,
+    editadoPor: currentUser.name, timestampEdicion: Date.now()
+  });
+  claves.forEach(function(clave){
+    var delta = (deltasNuevos[clave] || 0) - (deltasViejos[clave] || 0);
+    if(delta !== 0) batch.update(db.collection('productos').doc(clave), { existencia: firebase.firestore.FieldValue.increment(delta) });
+  });
+  if(c.proveedorId && totalNuevo !== c.total) {
+    batch.update(db.collection('proveedores').doc(c.proveedorId), { totalComprado: firebase.firestore.FieldValue.increment(totalNuevo - c.total) });
+  }
+
+  batch.commit().then(function(){
+    claves.forEach(function(clave){
+      var delta = (deltasNuevos[clave] || 0) - (deltasViejos[clave] || 0);
+      if(delta !== 0 && productosIndex[clave]) productosIndex[clave].existencia = (productosIndex[clave].existencia || 0) + delta;
+    });
+    var promesas = [];
+    if(c.formaPago === 'credito_proveedor' && totalNuevo !== c.total) {
+      promesas.push(db.collection('cuentas_pagar').where('compraId','==', c.folio).limit(1).get().then(function(snap){
+        if(snap.empty) return;
+        var doc = snap.docs[0], d = doc.data();
+        var diff = totalNuevo - c.total;
+        return doc.ref.update({ total: Math.max(0,(d.total||0)+diff), saldo: Math.max(0,(d.saldo||0)+diff) });
+      }));
+    }
+    if(c.formaPago === 'efectivo' && totalNuevo !== c.total) {
+      promesas.push(db.collection('salidas').where('compraId','==', c.folio).limit(1).get().then(function(snap){
+        if(snap.empty) return;
+        return snap.docs[0].ref.update({ monto: totalNuevo });
+      }));
+    }
+    return Promise.all(promesas);
+  }).then(function(){
+    Object.assign(c, { productos: productosNuevos, subtotal: subtotalNuevo, iva: ivaNuevo, total: totalNuevo, notas: notasNuevas });
+    showToast('✅ Compra actualizada');
+    verDetalleCompra(docId);
+  }).catch(function(e){ console.log('Error editando compra:', e); showToast('⚠️ Error al guardar cambios'); });
 }
 
 function labelFormaPagoCompra(fp) {
