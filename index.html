@@ -225,6 +225,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         <div class="cli-list" id="cli-list"></div>
         <div class="cli-detalle" id="cli-detalle">
           <h3 id="det-nombre"></h3>
+          <div id="det-saldo-favor"></div>
           <div class="cli-info">
             <div class="cli-info-item"><label>Teléfono</label><span id="det-tel"></span></div>
             <div class="cli-info-item"><label>ID Cliente</label><span id="det-id"></span></div>
@@ -3628,6 +3629,23 @@ function seleccionarCliente(id) {
   document.getElementById('cli-detalle').classList.add('visible');
   document.getElementById('cli-fiscal').innerHTML = renderClienteFiscal(c);
   document.getElementById('cli-admin-acciones').innerHTML = renderClienteAdminAcciones(c);
+  mostrarSaldoFavorCliente(c.id);
+}
+
+// Visible para Ventas/Compras/Gerencia/Director — mismo permiso que ya
+// tienen para ver la ficha del cliente, no hace falta restringirlo más.
+function mostrarSaldoFavorCliente(clienteId) {
+  var el = document.getElementById('det-saldo-favor');
+  if(!el) return;
+  el.innerHTML = '';
+  if(!db || !clienteId) return;
+  db.collection('saldos_favor').doc(clienteId).get().then(function(doc){
+    if(clienteSeleccionado?.id !== clienteId) return; // el usuario ya cambió de cliente
+    var saldo = doc.exists ? (doc.data().saldo || 0) : 0;
+    if(saldo > 0) {
+      el.innerHTML = '<div style="background:#FFF6E5;border:1.5px solid #FF9800;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:13px;font-weight:700;color:#92400E;">💰 Saldo a favor: ' + fmtMoney(saldo) + '</div>';
+    }
+  }).catch(function(e){ console.log('Error cargando saldo a favor:', e); });
 }
 
 // ════ Eliminar / desactivar cliente — solo Director y Gerencia ════
@@ -4435,7 +4453,8 @@ function mostrarModalPedido(cot, docId) {
     <div style="background:#fff;border-radius:14px;padding:24px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:#1A1A1A;margin-bottom:4px;">🎯 CONFIRMAR VENTA</div>
       <div style="font-size:12px;color:#6B6560;margin-bottom:16px;">${cot.cliente} · ${cot.total ? '$'+cot.total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : ''}</div>
-      
+      <div id="mp-saldo-favor-banner"></div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
         <div>
           <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Dirección de entrega</label>
@@ -4539,19 +4558,65 @@ function mostrarModalPedido(cot, docId) {
   `;
   document.body.appendChild(modal);
   cotModalPedidoActual = cot;
+  window._saldoFavorAplicado = null;
   actualizarSaldoPedidoModal(cot.total || 0);
   toggleVisiblePorTransferencia('mp-pago', 'mp-btn-compartir-pago');
   toggleWrapPorMetodo('mp-pago', 'mp-efectivo-wrap', 'efectivo');
   toggleWrapPorMetodo('mp-pago', 'mp-mixto-wrap', 'mixto');
   actualizarCambioEfectivo(cot.total || 0, 'mp-efectivo-recibido', 'mp-cambio-info');
   actualizarPagoMixto(cot.total || 0);
+  mostrarBannerSaldoFavorModal(cot.clienteId, cot.cliente, cot.total || 0);
+}
+
+// ════ SALDO A FAVOR — aviso y aplicación en Confirmar Venta ════
+function mostrarBannerSaldoFavorModal(clienteId, cliente, total) {
+  var el = document.getElementById('mp-saldo-favor-banner');
+  if(!el || !db || !clienteId) return;
+  db.collection('saldos_favor').doc(clienteId).get().then(function(doc){
+    if(!cotModalPedidoActual || cotModalPedidoActual.clienteId !== clienteId) return;
+    var saldo = doc.exists ? (doc.data().saldo || 0) : 0;
+    if(saldo > 0) renderBannerSaldoFavorModal(clienteId, cliente, saldo, total);
+  }).catch(function(e){ console.log('Error cargando saldo a favor:', e); });
+}
+function renderBannerSaldoFavorModal(clienteId, cliente, saldoDisponible, total) {
+  var el = document.getElementById('mp-saldo-favor-banner');
+  if(!el) return;
+  el.innerHTML =
+    '<div style="background:#FFF6E5;border:1.5px solid #FF9800;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;">' +
+      '<div style="font-weight:700;margin-bottom:6px;">💰 Este cliente tiene ' + fmtMoney(saldoDisponible) + ' a favor. ¿Aplicar?</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button type="button" class="btn btn-verde" style="font-size:11px;padding:6px 12px;" onclick="aplicarSaldoFavorModal(\'' + clienteId + '\',\'' + cliente.replace(/'/g,"\\'") + '\',' + saldoDisponible + ')">Aplicar saldo</button>' +
+        '<button type="button" class="btn btn-gris" style="font-size:11px;padding:6px 12px;" onclick="document.getElementById(\'mp-saldo-favor-banner\').innerHTML=\'\';">No aplicar</button>' +
+      '</div>' +
+    '</div>';
+}
+function aplicarSaldoFavorModal(clienteId, cliente, saldoDisponible) {
+  var total = cotModalPedidoActual ? (cotModalPedidoActual.total || 0) : 0;
+  var monto = Math.min(saldoDisponible, total);
+  window._saldoFavorAplicado = { clienteId: clienteId, cliente: cliente, monto: monto, saldoDisponible: saldoDisponible };
+  document.getElementById('mp-anticipo').value = monto;
+  actualizarSaldoPedidoModal(total);
+  var el = document.getElementById('mp-saldo-favor-banner');
+  el.innerHTML =
+    '<div style="background:#DCFCE7;border:1.5px solid #22C55E;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;font-weight:700;color:#15803D;">' +
+      '✅ Saldo aplicado: ' + fmtMoney(monto) + ' — resta pagar ' + fmtMoney(Math.max(0, total - monto)) +
+      ' <a href="javascript:void(0)" onclick="quitarSaldoFavorModal(\'' + clienteId + '\',\'' + cliente.replace(/'/g,"\\'") + '\',' + saldoDisponible + ')" style="color:#DC2626;font-weight:700;margin-left:8px;">Quitar</a>' +
+    '</div>';
+}
+function quitarSaldoFavorModal(clienteId, cliente, saldoDisponible) {
+  window._saldoFavorAplicado = null;
+  var total = cotModalPedidoActual ? (cotModalPedidoActual.total || 0) : 0;
+  document.getElementById('mp-anticipo').value = total;
+  actualizarSaldoPedidoModal(total);
+  renderBannerSaldoFavorModal(clienteId, cliente, saldoDisponible, total);
 }
 
 function actualizarAnticipoPorFormaPago(total) {
   var pago = document.getElementById('mp-pago').value;
   var anticipoEl = document.getElementById('mp-anticipo');
   var anticipoWrap = document.getElementById('mp-anticipo-wrap');
-  anticipoEl.value = (pago === 'credito') ? 0 : total;
+  var saldoFavorMonto = (window._saldoFavorAplicado && cotModalPedidoActual && window._saldoFavorAplicado.clienteId === cotModalPedidoActual.clienteId) ? window._saldoFavorAplicado.monto : 0;
+  anticipoEl.value = saldoFavorMonto > 0 ? saldoFavorMonto : ((pago === 'credito') ? 0 : total);
   actualizarSaldoPedidoModal(total);
   toggleVisiblePorTransferencia('mp-pago', 'mp-btn-compartir-pago');
   toggleWrapPorMetodo('mp-pago', 'mp-efectivo-wrap', 'efectivo');
@@ -4744,6 +4809,7 @@ function confirmarCierrePedido(docId) {
   const operador = document.getElementById('mp-operador').value;
   const tipo = document.getElementById('mp-tipo').value;
   const pago = document.getElementById('mp-pago').value;
+  const saldoFavorMontoAplicado = (window._saldoFavorAplicado && window._saldoFavorAplicado.clienteId === cot.clienteId) ? window._saldoFavorAplicado.monto : 0;
 
   // Pago mixto: hasta 2 métodos (efectivo/transferencia/tarjeta), cada uno
   // con su propio monto y, si es tarjeta, su terminal. El resto de la lógica
@@ -4778,7 +4844,7 @@ function confirmarCierrePedido(docId) {
         pagosMixto[1].tipoTarjeta = 'debito';
       }
     }
-    anticipo = Math.min(monto1 + monto2, cot.total || 0);
+    anticipo = Math.min(monto1 + monto2 + saldoFavorMontoAplicado, cot.total || 0);
   } else {
     anticipo = Math.min(parseFloat(document.getElementById('mp-anticipo').value) || 0, cot.total || 0);
   }
@@ -4824,7 +4890,8 @@ function confirmarCierrePedido(docId) {
       origen: 'crm',
       timestamp: Date.now(),
       historial: [{ status: 'confirmado', user: currentUser ? currentUser.name : 'Ivette', timestamp: Date.now() }],
-      productos: cot.productos || []
+      productos: cot.productos || [],
+      saldoFavorAplicado: saldoFavorMontoAplicado
     };
     var inventarioDeltas = calcularDeltasInventario(pedido.productos);
     pedido.inventarioDeltas = inventarioDeltas;
@@ -4863,6 +4930,18 @@ function confirmarCierrePedido(docId) {
           actualizarCacheLocalInventario(inventarioDeltas, -1);
           showToast('🎯 Nota de venta '+folioBase+' creada en Sistema Operativo');
           if(operador !== 'Sin asignar') notificarOperadorPedido(pedido, operador);
+          if(saldoFavorMontoAplicado > 0 && cot.clienteId) {
+            db.collection('saldos_favor').doc(cot.clienteId).set({
+              saldo: firebase.firestore.FieldValue.increment(-saldoFavorMontoAplicado)
+            }, { merge: true }).catch(function(e){ console.log('Error descontando saldo a favor:', e); });
+            db.collection('movimientos_saldo_favor').add({
+              clienteId: cot.clienteId, cliente: cot.cliente, tipo: 'aplicacion',
+              monto: saldoFavorMontoAplicado, ventaId: pedidoRef.id,
+              usuario: currentUser ? currentUser.name : 'Desconocido',
+              fecha: fechaISOLocal(), timestamp: Date.now()
+            }).catch(function(e){ console.log('Error registrando movimiento de saldo a favor:', e); });
+            window._saldoFavorAplicado = null;
+          }
           var clienteDeLaVenta = clientesCache.find(function(x){ return x.id === cot.clienteId; });
           guardarPreciosClienteDesdeVenta(cot.clienteId, pedido.productos, clienteDeLaVenta ? clienteDeLaVenta.canal : 'publico', pedido.fecha, folioBase);
           if(totalApartado > 0) {
@@ -6038,6 +6117,24 @@ function actualizarStockEnVivo(clave, contenedorId) {
 // Solo tiene sentido si hay un saldo pendiente real ligado a esa NV — si ya
 // se pagó por completo, el reembolso lo cubre la salida en efectivo (arriba),
 // no cuentas_cobrar. min() evita que una NC grande deje saldo negativo.
+// ════ SALDO A FAVOR — solo NC tipo "Crédito para próxima compra" ════
+// Las demás formas de resolver una NC (devolución en efectivo ya sale de
+// caja de inmediato vía 'salidas'; transferencia/tarjeta se maneja aparte)
+// no generan saldo — solo evitar duplicar el reembolso.
+function aplicarSaldoFavorPorNC(nc, ncId) {
+  if(!db || nc.tipo !== 'credito_proxima' || !(nc.total > 0)) return Promise.resolve();
+  if(!nc.clienteId) { console.log('NC de crédito para próxima compra sin cliente registrado — no se generó saldo a favor'); return Promise.resolve(); }
+  return db.collection('saldos_favor').doc(nc.clienteId).set({
+    clienteId: nc.clienteId,
+    cliente: nc.cliente,
+    saldo: firebase.firestore.FieldValue.increment(nc.total),
+    origen: 'NC',
+    ncId: ncId,
+    fecha: nc.fecha,
+    timestamp: Date.now()
+  }, { merge: true }).catch(function(e){ console.log('Error generando saldo a favor:', e); });
+}
+
 function ajustarCuentaCobrarPorNC(nc) {
   if(!db || !nc || !nc.pedidoId || !(nc.total > 0)) return Promise.resolve();
   return db.collection('cuentas_cobrar').where('pedidoId','==', nc.pedidoId).limit(1).get().then(function(snap){
@@ -6189,6 +6286,7 @@ function guardarNC() {
       }).catch(function(e){ console.log('Error registrando salida de NC:', e); }));
     }
     pendientes.push(ajustarCuentaCobrarPorNC(nc));
+    pendientes.push(aplicarSaldoFavorPorNC(nc, ncRef.id));
     Promise.all(pendientes).then(function(){
       showToast('✅ ' + folioStr + ' creada y aprobada' + (Object.keys(deltasRestock).length ? ' — inventario actualizado' : ''));
       limpiarFormNC();
@@ -6387,6 +6485,7 @@ function validarNC(docId, status) {
           db.collection('salidas').add(salida).catch(function(e){ console.log('Error registrando salida de NC:', e); });
         }
         ajustarCuentaCobrarPorNC(nc);
+        aplicarSaldoFavorPorNC(nc, docId);
       }
       cargarNCPendientes();
     });
@@ -10804,6 +10903,7 @@ function abrirNuevoTicket() {
   if(!puedeHacerTicket()) { showToast('⚠️ Sin permisos'); return; }
   ticketProductos = [];
   ticketClienteSel = null;
+  window._saldoFavorAplicado = null;
   var existente = document.getElementById('modal-nuevo-ticket');
   if(existente) existente.remove();
   var modal = document.createElement('div');
@@ -10817,6 +10917,7 @@ function abrirNuevoTicket() {
         '<input type="text" id="tk-nuevo-cliente" placeholder="Público general o buscar cliente..." oninput="buscarClienteTicket()" autocomplete="off">' +
         '<div id="tk-nuevo-cliente-lista" style="border:1px solid var(--borde);border-radius:8px;max-height:130px;overflow-y:auto;display:none;position:absolute;background:#fff;z-index:100;width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>' +
       '</div>' +
+      '<div id="tk-saldo-favor-banner"></div>' +
       '<div class="field" id="tk-direccion-wrap" style="display:none;margin-bottom:10px;">' +
         '<label>¿A cuál dirección se entrega?</label>' +
         '<select id="tk-direccion-select"></select>' +
@@ -10892,6 +10993,48 @@ function elegirClienteTicket(id) {
   } else {
     wrap.style.display = 'none';
   }
+  window._saldoFavorAplicado = null;
+  mostrarBannerSaldoFavorTicket(c.id, c.nombre);
+}
+
+function mostrarBannerSaldoFavorTicket(clienteId, cliente) {
+  var el = document.getElementById('tk-saldo-favor-banner');
+  if(!el || !db || !clienteId) return;
+  el.innerHTML = '';
+  db.collection('saldos_favor').doc(clienteId).get().then(function(doc){
+    if(!ticketClienteSel || ticketClienteSel.id !== clienteId) return;
+    var saldo = doc.exists ? (doc.data().saldo || 0) : 0;
+    if(saldo > 0) renderBannerSaldoFavorTicket(clienteId, cliente, saldo);
+  }).catch(function(e){ console.log('Error cargando saldo a favor:', e); });
+}
+function renderBannerSaldoFavorTicket(clienteId, cliente, saldoDisponible) {
+  var el = document.getElementById('tk-saldo-favor-banner');
+  if(!el) return;
+  el.innerHTML =
+    '<div style="background:#FFF6E5;border:1.5px solid #FF9800;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;">' +
+      '<div style="font-weight:700;margin-bottom:6px;">💰 Este cliente tiene ' + fmtMoney(saldoDisponible) + ' a favor. ¿Aplicar?</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button type="button" class="btn btn-verde" style="font-size:11px;padding:6px 12px;" onclick="aplicarSaldoFavorTicket(\'' + clienteId + '\',\'' + cliente.replace(/'/g,"\\'") + '\',' + saldoDisponible + ')">Aplicar saldo</button>' +
+        '<button type="button" class="btn btn-gris" style="font-size:11px;padding:6px 12px;" onclick="document.getElementById(\'tk-saldo-favor-banner\').innerHTML=\'\';">No aplicar</button>' +
+      '</div>' +
+    '</div>';
+}
+function aplicarSaldoFavorTicket(clienteId, cliente, saldoDisponible) {
+  var total = totalTicket();
+  var monto = Math.min(saldoDisponible, total);
+  window._saldoFavorAplicado = { clienteId: clienteId, cliente: cliente, monto: monto, saldoDisponible: saldoDisponible };
+  var el = document.getElementById('tk-saldo-favor-banner');
+  el.innerHTML =
+    '<div style="background:#DCFCE7;border:1.5px solid #22C55E;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;font-weight:700;color:#15803D;">' +
+      '✅ Saldo aplicado: ' + fmtMoney(monto) + ' — resta pagar ' + fmtMoney(Math.max(0, total - monto)) +
+      ' <a href="javascript:void(0)" onclick="quitarSaldoFavorTicket(\'' + clienteId + '\',\'' + cliente.replace(/'/g,"\\'") + '\',' + saldoDisponible + ')" style="color:#DC2626;font-weight:700;margin-left:8px;">Quitar</a>' +
+    '</div>';
+  actualizarTotalTicket();
+}
+function quitarSaldoFavorTicket(clienteId, cliente, saldoDisponible) {
+  window._saldoFavorAplicado = null;
+  renderBannerSaldoFavorTicket(clienteId, cliente, saldoDisponible);
+  actualizarTotalTicket();
 }
 
 function agregarProductoTicket() {
@@ -10939,9 +11082,18 @@ function renderProductosTicket() {
 function totalTicket() {
   return ticketProductos.reduce(function(a,p){ return a + ((p.cant||0) * (p.precio||0)); }, 0);
 }
+// Saldo a favor aplicado reduce lo que hay que cobrar hoy, pero el total
+// del ticket (para reportes/ventas) sigue siendo el valor completo.
+function saldoFavorAplicadoTicket() {
+  return (window._saldoFavorAplicado && ticketClienteSel && window._saldoFavorAplicado.clienteId === ticketClienteSel.id) ? window._saldoFavorAplicado.monto : 0;
+}
+function montoACobrarTicket() {
+  return Math.max(0, totalTicket() - saldoFavorAplicadoTicket());
+}
 function actualizarTotalTicket() {
   var el = document.getElementById('tk-nuevo-total');
-  if(el) el.textContent = 'TOTAL: ' + fmtMoney(totalTicket());
+  var saldoAplicado = saldoFavorAplicadoTicket();
+  if(el) el.textContent = 'TOTAL: ' + fmtMoney(totalTicket()) + (saldoAplicado > 0 ? ' · A cobrar: ' + fmtMoney(montoACobrarTicket()) : '');
   actualizarComisionTicket();
 }
 
@@ -10952,12 +11104,12 @@ function actualizarComisionTicket() {
   var metodo = metodoEl.value;
   toggleVisiblePorTransferencia('tk-nuevo-metodo', 'tk-nuevo-rs-wrap');
   toggleWrapPorMetodo('tk-nuevo-metodo', 'tk-efectivo-wrap', 'efectivo');
-  actualizarCambioEfectivo(totalTicket(), 'tk-efectivo-recibido', 'tk-cambio-info');
+  actualizarCambioEfectivo(montoACobrarTicket(), 'tk-efectivo-recibido', 'tk-cambio-info');
   if(metodo !== 'debito' && metodo !== 'credito') { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   var terminal = document.getElementById('tk-nuevo-terminal').value.split('-');
   var rs = terminal[0], banco = terminal.slice(1).join('-');
-  var total = totalTicket();
+  var total = montoACobrarTicket();
   var n = netoTerminal(total, rs, banco, metodo);
   document.getElementById('tk-nuevo-comision').textContent =
     total > 0 ? ('Comisión: ' + fmtMoney(n.comision + n.ivaCom) + ' · Neto: ' + fmtMoney(n.neto)) : '';
@@ -10985,15 +11137,19 @@ function guardarTicket() {
 
   // Ticket = venta mostrador, cobro inmediato siempre. No admite anticipo
   // parcial ni saldo a crédito (eso es lo que distingue un Ticket de una NV).
+  // El saldo a favor de una NC sí puede cubrir parte o todo — no es crédito
+  // nuevo, es dinero que el cliente ya le dio al negocio antes.
+  var saldoFavorMonto = saldoFavorAplicadoTicket();
+  var montoACobrar = montoACobrarTicket();
   var anticipo = total;
   var saldoPendiente = 0;
 
-  var terminal = null, comision = 0, neto = total;
+  var terminal = null, comision = 0, neto = montoACobrar;
   if(metodo === 'debito' || metodo === 'credito') {
     var t = document.getElementById('tk-nuevo-terminal').value.split('-');
     var rs = t[0], banco = t.slice(1).join('-');
     terminal = document.getElementById('tk-nuevo-terminal').value;
-    var n = netoTerminal(total, rs, banco, metodo);
+    var n = netoTerminal(montoACobrar, rs, banco, metodo);
     comision = n.comision + n.ivaCom;
     neto = n.neto;
   }
@@ -11011,6 +11167,8 @@ function guardarTicket() {
       total: total,
       anticipo: anticipo,
       saldoPendiente: saldoPendiente,
+      saldoFavorAplicado: saldoFavorMonto,
+      montoCobrado: montoACobrar,
       metodoPago: metodo,
       razonSocial: metodo === 'transferencia' ? rsTransferencia : terminal,
       comision: comision,
@@ -11048,6 +11206,18 @@ function guardarTicket() {
         }).catch(function(e){ console.log('Error registrando caja_apartada:', e); });
       }
       guardarPreciosClienteDesdeVenta(ticket.clienteId, productosValidos, ticketClienteSel ? ticketClienteSel.canal : 'publico', ticket.fecha, folio);
+      if(saldoFavorMonto > 0 && ticket.clienteId) {
+        db.collection('saldos_favor').doc(ticket.clienteId).set({
+          saldo: firebase.firestore.FieldValue.increment(-saldoFavorMonto)
+        }, { merge: true }).catch(function(e){ console.log('Error descontando saldo a favor:', e); });
+        db.collection('movimientos_saldo_favor').add({
+          clienteId: ticket.clienteId, cliente: ticket.cliente, tipo: 'aplicacion',
+          monto: saldoFavorMonto, ventaId: ticketRef.id,
+          usuario: currentUser ? currentUser.name : 'Desconocido',
+          fecha: fechaISOLocal(), timestamp: Date.now()
+        }).catch(function(e){ console.log('Error registrando movimiento de saldo a favor:', e); });
+        window._saldoFavorAplicado = null;
+      }
       showToast('✅ Ticket ' + folio + ' creado');
       var modal = document.getElementById('modal-nuevo-ticket');
       if(modal) modal.remove();
