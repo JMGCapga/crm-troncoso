@@ -147,6 +147,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <div class="pdots"><div class="pdot" id="pd0"></div><div class="pdot" id="pd1"></div><div class="pdot" id="pd2"></div><div class="pdot" id="pd3"></div></div>
     <div class="pgrid" id="pingrid"></div>
     <div class="lerr" id="lerr"></div>
+    <div id="login-timeout-msg" style="display:none;text-align:center;margin-top:16px;padding:14px;background:#FEF3C7;border-radius:10px;color:#92400E;font-size:13px;font-weight:600;">
+      ⚠️ Conexión lenta. Verifica tu señal e intenta de nuevo.
+      <button onclick="location.reload()" style="display:block;margin:10px auto 0;padding:10px 20px;border:none;border-radius:8px;background:#E8500A;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">🔄 Reintentar</button>
+    </div>
   </div>
 </div>
 
@@ -1537,12 +1541,24 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <input type="number" id="flota-op-km-llegada" placeholder="Ej. 776312">
           </div>
           <div class="field">
-            <label>Foto del odómetro (obligatoria)</label>
+            <label>Foto del odómetro (opcional — si no tienes señal, ciérralo sin foto)</label>
             <input type="file" id="flota-op-foto-cierre" accept="image/*" capture="environment" onchange="previsualizarFotoFlota(this,'cierre')">
             <img id="flota-foto-preview-cierre" style="display:none;max-width:100%;border-radius:8px;margin-top:8px;">
           </div>
           <div id="flota-op-resumen-turno" style="font-size:12px;color:var(--suave);margin-bottom:10px;"></div>
           <button class="btn btn-verde" onclick="finalizarTurnoFlota()">🏁 Finalizar turno</button>
+          <div id="flota-turno-no-encontrado" style="display:none;margin-top:14px;padding:12px;background:#FEF3C7;border-radius:10px;color:#92400E;font-size:12px;">
+            <div style="font-weight:700;margin-bottom:8px;">⚠️ No encontramos tu turno activo. ¿Iniciaste turno hoy?</div>
+            <div class="field">
+              <label>Unidad</label>
+              <select class="flota-unidad-select" id="flota-op-cierre-manual-unidad"></select>
+            </div>
+            <div class="field">
+              <label>Km de salida (el que traía la unidad al iniciar)</label>
+              <input type="number" id="flota-op-cierre-manual-km-salida" placeholder="Ej. 776049">
+            </div>
+            <button class="btn btn-gris" onclick="cerrarTurnoManual()">Cerrar turno manualmente</button>
+          </div>
         </div>
       </div>
 
@@ -1979,8 +1995,15 @@ try {
 // ════ AUTH ANÓNIMA — requerida por las reglas de Firestore/Storage ════
 // No cambia el sistema de PINes: solo autentica la conexión antes de
 // que cualquier función (teclado de PIN, magic link de fondeos) toque Firestore.
+// En datos móviles con mala señal, signInAnonymously() puede quedarse
+// colgado sin éxito ni error — el teclado de PIN nunca aparece y no hay
+// ninguna pista de qué pasó. Si a los 10s no conectó, se avisa y se
+// ofrece recargar en vez de dejar la pantalla en blanco.
+var _authConectada = false;
 firebase.auth().onAuthStateChanged(function(user) {
   if (user) {
+    _authConectada = true;
+    document.getElementById('login-timeout-msg').style.display = 'none';
     buildPinGrid();
     checkMagicLinkFondeo();
   }
@@ -1988,6 +2011,9 @@ firebase.auth().onAuthStateChanged(function(user) {
 firebase.auth().signInAnonymously().catch(function(e) {
   console.log('Error de autenticación anónima:', e);
 });
+setTimeout(function(){
+  if(!_authConectada) document.getElementById('login-timeout-msg').style.display = 'block';
+}, 10000);
 
 // ════ USUARIOS — mismo sistema de PIN que Sistema Troncoso ════
 const USERS = {
@@ -12297,14 +12323,39 @@ function iniciarTurnoFlota(){
 }
 
 function finalizarTurnoFlota(){
-  var raw = localStorage.getItem('flota_turno_'+currentPin);
-  if(!raw){ showToast('⚠️ No tienes un turno activo'); return; }
-  var turno = JSON.parse(raw);
   var kmLlegada = parseFloat(document.getElementById('flota-op-km-llegada').value||0);
   if(!kmLlegada){ showToast('⚠️ Ingresa el km de llegada'); return; }
-  if(!window._flotaFotocierre){ showToast('⚠️ Toma la foto del odómetro antes de finalizar turno'); return; }
+  document.getElementById('flota-turno-no-encontrado').style.display = 'none';
+
+  var raw = localStorage.getItem('flota_turno_'+currentPin);
+  if(raw){
+    cerrarTurnoConDatos(JSON.parse(raw), kmLlegada);
+    return;
+  }
+
+  // Este celular no tiene guardado el turno (localStorage se pudo haber
+  // borrado, o se inició en otro dispositivo) — antes de rendirse, se busca
+  // en Firestore si este operador tiene un turno realmente abierto.
+  if(!db){ showToast('⚠️ Sin conexión'); return; }
+  db.collection('kilometraje')
+    .where('operador','==', currentUser ? currentUser.name : '')
+    .where('kmLlegada','==', null)
+    .get().then(function(snap){
+      if(snap.empty){ mostrarTurnoNoEncontrado(); return; }
+      var docs = snap.docs.slice().sort(function(a,b){ return (b.data().timestamp||0) - (a.data().timestamp||0); });
+      var d = docs[0].data();
+      cerrarTurnoConDatos({ docId: docs[0].id, unidad: d.unidad, kmSalida: d.kmSalida }, kmLlegada);
+    }).catch(function(e){ console.log('Error buscando turno abierto:', e); showToast('⚠️ Error al buscar tu turno'); });
+}
+
+// Foto de cierre ahora es opcional (obligatoria solo al iniciar) — con
+// mala señal, esperar a que suba una foto en base64 no debe bloquear el
+// cierre del turno.
+function cerrarTurnoConDatos(turno, kmLlegada){
   var kmRecorridos = kmLlegada - turno.kmSalida;
-  db.collection('kilometraje').doc(turno.docId).update({ kmLlegada: kmLlegada, kmRecorridos: kmRecorridos, fotoOdometroCierreBase64: window._flotaFotocierre }).then(function(){
+  var update = { kmLlegada: kmLlegada, kmRecorridos: kmRecorridos };
+  if(window._flotaFotocierre) update.fotoOdometroCierreBase64 = window._flotaFotocierre;
+  db.collection('kilometraje').doc(turno.docId).update(update).then(function(){
     var u = unidadesCache.find(function(x){ return x.placas === turno.unidad; });
     if(u) db.collection('unidades').doc(u._docId).update({ kmActual: kmLlegada }).catch(function(e){ console.log(e); });
     localStorage.removeItem('flota_turno_'+currentPin);
@@ -12314,8 +12365,48 @@ function finalizarTurnoFlota(){
     window._flotaFotocierre = null;
     document.getElementById('flota-op-foto-cierre').value = '';
     document.getElementById('flota-foto-preview-cierre').style.display = 'none';
+    document.getElementById('flota-turno-no-encontrado').style.display = 'none';
     renderTurnoActivoFlota();
-  }).catch(function(e){ console.log(e); showToast('⚠️ Error al finalizar turno'); });
+  }).catch(function(e){ console.log('Error al finalizar turno:', e); showToast('⚠️ Error al finalizar turno'); });
+}
+
+function mostrarTurnoNoEncontrado(){
+  poblarSelectsUnidadesFlota();
+  document.getElementById('flota-turno-no-encontrado').style.display = 'block';
+}
+
+// Último recurso: ni el celular ni Firestore tienen registro de un turno
+// abierto para este operador (nunca se guardó, o ya se cerró antes). Se
+// captura todo a mano y se crea el registro completo de una sola vez.
+function cerrarTurnoManual(){
+  var unidad = document.getElementById('flota-op-cierre-manual-unidad').value;
+  var kmSalida = parseFloat(document.getElementById('flota-op-cierre-manual-km-salida').value||0);
+  var kmLlegada = parseFloat(document.getElementById('flota-op-km-llegada').value||0);
+  if(!unidad || !kmSalida){ showToast('⚠️ Selecciona la unidad y captura el km de salida'); return; }
+  if(!kmLlegada){ showToast('⚠️ Ingresa el km de llegada'); return; }
+  if(kmLlegada < kmSalida){ showToast('⚠️ El km de llegada no puede ser menor al de salida'); return; }
+  if(!db){ showToast('⚠️ Sin conexión'); return; }
+  var kmRecorridos = kmLlegada - kmSalida;
+  var turno = {
+    unidad: unidad, operador: currentUser ? currentUser.name : '', fecha: fechaISOLocal(),
+    kmSalida: kmSalida, kmLlegada: kmLlegada, kmRecorridos: kmRecorridos, estadoInicio: 'ok',
+    cierreManual: true, notaCierreManual: 'Turno no encontrado automáticamente — capturado a mano',
+    timestamp: Date.now()
+  };
+  if(window._flotaFotocierre) turno.fotoOdometroCierreBase64 = window._flotaFotocierre;
+  db.collection('kilometraje').add(turno).then(function(ref){
+    var u = unidadesCache.find(function(x){ return x.placas === unidad; });
+    if(u) db.collection('unidades').doc(u._docId).update({ kmActual: kmLlegada }).catch(function(e){ console.log(e); });
+    localStorage.removeItem('flota_turno_'+currentPin);
+    showToast('✅ Turno cerrado manualmente — ' + kmRecorridos + ' km recorridos');
+    document.getElementById('flota-op-km-llegada').value = '';
+    document.getElementById('flota-op-cierre-manual-km-salida').value = '';
+    window._flotaFotocierre = null;
+    document.getElementById('flota-op-foto-cierre').value = '';
+    document.getElementById('flota-foto-preview-cierre').style.display = 'none';
+    document.getElementById('flota-turno-no-encontrado').style.display = 'none';
+    renderTurnoActivoFlota();
+  }).catch(function(e){ console.log('Error en cierre manual:', e); showToast('⚠️ Error al cerrar el turno'); });
 }
 
 function guardarGasolinaFlota(){
