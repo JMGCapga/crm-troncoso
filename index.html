@@ -376,8 +376,11 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       <div class="nota-paper" id="nota-content">
         <div class="nota-header">
           <div class="nota-logo-area">
-            <h2>MATERIALES TRONCOSO</h2>
-            <p>Fco. del Paso y Troncoso #943 Col. Los Reyes<br>Iztacalco, C.P. 08620, CDMX<br>📱 5555906802 / 5591800148<br>pedidostroncoso@gmail.com</p>
+            <img id="nota-logo-img" src="" style="display:none;max-height:50px;max-width:160px;margin-bottom:6px;">
+            <h2 id="nota-nombre-comercial">MATERIALES TRONCOSO</h2>
+            <p id="nota-direccion-linea">Fco. del Paso y Troncoso #943 Col. Los Reyes<br>Iztacalco, C.P. 08620, CDMX</p>
+            <p id="nota-tel-linea" style="margin-top:2px;">📱 5555906802 / 5591800148</p>
+            <p id="nota-email-linea" style="margin-top:2px;">pedidostroncoso@gmail.com</p>
           </div>
           <div class="nota-folio">
             <div class="folio-label">Nota de Remisión</div>
@@ -404,10 +407,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <div class="row total"><span>TOTAL</span><span id="nota-total-val">$0.00</span></div>
           </div>
         </div>
-        <div class="nota-pie">TODOS NUESTROS PEDIDOS Y MATERIALES SE ENTREGAN A PIE DE CARRO</div>
+        <div class="nota-pie" id="nota-pie-msg">TODOS NUESTROS PEDIDOS Y MATERIALES SE ENTREGAN A PIE DE CARRO</div>
         <div class="nota-footer">
-          <div><div style="margin-bottom:4px;font-weight:700;">Forma de pago: <span id="nota-pago">—</span></div><div>pedidostroncoso@gmail.com</div></div>
-          <div style="text-align:center;"><div>Cotiza por WhatsApp</div><div style="font-weight:700;color:var(--naranja);">wa.me/525555906802</div></div>
+          <div><div style="margin-bottom:4px;font-weight:700;">Forma de pago: <span id="nota-pago">—</span></div><div id="nota-footer-email">pedidostroncoso@gmail.com</div></div>
+          <div style="text-align:center;"><div>Cotiza por WhatsApp</div><div style="font-weight:700;color:var(--naranja);" id="nota-footer-wa">wa.me/525555906802</div></div>
           <div style="text-align:right;"><div style="margin-bottom:20px;">Firma de recibido:</div><div style="border-top:1px solid #CCC;padding-top:4px;width:120px;margin-left:auto;">_______________</div></div>
         </div>
       </div>
@@ -420,8 +423,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       </div>
       <div class="ticket-paper" id="ticket-content">
         <div class="t-header">
-          <h3>MATERIALES TRONCOSO</h3>
-          <p>Fco. del Paso y Troncoso #943<br>Iztacalco, CDMX · 5555906802</p>
+          <img id="tk-logo" src="" style="display:none;max-height:50px;max-width:150px;margin:0 auto 6px;">
+          <h3 id="tk-nombre-comercial">MATERIALES TRONCOSO</h3>
+          <p id="tk-direccion">Fco. del Paso y Troncoso #943<br>Iztacalco, CDMX</p>
+          <p id="tk-tels" style="margin-top:2px;">Tel: 5555906802 / 5591800148</p>
           <div style="margin-top:6px;font-size:10px;color:var(--suave);">Folio: <strong id="tk-folio">#0001</strong> &nbsp;|&nbsp; <span id="tk-fecha"></span></div>
         </div>
         <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed #CCC;font-size:10px;">
@@ -429,7 +434,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         </div>
         <table><thead><tr><th>Desc.</th><th>Cant.</th><th>P.U.</th><th>Imp.</th></tr></thead><tbody id="tk-body"></tbody></table>
         <div class="t-total">TOTAL: <span id="tk-total">$0.00</span></div>
-        <div class="t-footer">Forma de pago: <strong id="tk-pago">—</strong><br><br>¡Gracias por su compra!<br>Cotice por WhatsApp: 5555906802<br>materialestroncoso.com</div>
+        <div class="t-footer">Forma de pago: <strong id="tk-pago">—</strong><br><br><span id="tk-mensaje-cierre">¡Gracias por su compra!</span></div>
       </div>
     </div>
 
@@ -1959,14 +1964,19 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     </div>
 
     <div class="panel" id="panel-fiscal">
-      <div class="card">
+      <div class="card" id="fiscal-cards-card">
         <div class="card-title">📄 Expediente Fiscal — Razones Sociales</div>
-        <div style="font-size:11px;color:#888;margin-bottom:16px;">Visible solo para Director. Datos sensibles (CLABEs, comisiones, constancias fiscales).</div>
+        <div style="font-size:11px;color:#888;margin-bottom:16px;">Visible para Director y Gerencia. Datos sensibles (CLABEs, comisiones, constancias fiscales).</div>
         <div id="fiscal-cards"></div>
       </div>
-      <div class="card">
+      <div class="card" id="fiscal-terminales-card">
         <div class="card-title">💳 Terminales y comisiones</div>
         <div id="fiscal-terminales"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🖨️ Configuración de impresión</div>
+        <div style="font-size:11px;color:#888;margin-bottom:16px;">Datos que aparecen en el ticket de mostrador y en cada Nota de Venta (JMG/IZZ/CEM). Editable por Director y Gerencia.</div>
+        <div id="config-impresion-content"></div>
       </div>
     </div>
 
@@ -2458,6 +2468,7 @@ function initApp(){
     cargarProductos();
     cargarPermisosRoles();
   cargarPreciosVolumen();
+    cargarConfigImpresion();
     mostrarDashboardParaUsuario();
     mostrarFiscalParaUsuario();
     aplicarCandadoOperador();
@@ -2471,6 +2482,7 @@ function initApp(){
   cargarProductos();
   cargarPermisosRoles();
   cargarPreciosVolumen();
+  cargarConfigImpresion();
   mostrarDashboardParaUsuario();
   mostrarFiscalParaUsuario();
   aplicarCandadoOperador();
@@ -4382,6 +4394,13 @@ function generarTicket() {
   const { total } = recalcular();
   const cliente = clienteCotizacion;
   const pago = document.getElementById('cot-pago')?.value || 'efectivo';
+  const cfgTicket = getConfigImpresion('ticket');
+  document.getElementById('tk-nombre-comercial').textContent = cfgTicket.nombreComercial;
+  document.getElementById('tk-direccion').innerHTML = cfgTicket.direccion1 + '<br>' + cfgTicket.direccion2;
+  document.getElementById('tk-tels').textContent = 'Tel: ' + cfgTicket.tel1 + (cfgTicket.tel2 ? ' / ' + cfgTicket.tel2 : '');
+  document.getElementById('tk-mensaje-cierre').textContent = cfgTicket.mensajeCierre;
+  const tkLogo = document.getElementById('tk-logo');
+  if(cfgTicket.logoBase64) { tkLogo.src = cfgTicket.logoBase64; tkLogo.style.display = 'block'; } else { tkLogo.style.display = 'none'; }
   document.getElementById('tk-folio').textContent = '#' + String(folioActual).padStart(4,'0');
   document.getElementById('tk-fecha').textContent = new Date().toLocaleDateString('es-MX');
   document.getElementById('tk-cliente').textContent = cliente ? cliente.nombre : 'Público en General';
@@ -9903,12 +9922,12 @@ function mostrarDashboardParaUsuario() {
   }
 }
 
-// Fiscal es SOLO Director (9900) — a diferencia del Dashboard, Gerencia (5678) no entra.
-// Datos más sensibles: CLABEs, comisiones, constancias fiscales.
+// Fiscal es Director (9900) y Gerencia (5678) — acceso completo para ambos,
+// incluyendo CLABEs/comisiones/constancias fiscales.
 function mostrarFiscalParaUsuario() {
   if(!currentPin) return;
   const tabBtn = document.getElementById('tab-fiscal-btn');
-  if(currentPin === '9900') {
+  if(currentPin === '9900' || currentPin === '5678') {
     if(tabBtn) tabBtn.style.display = 'inline-block';
   } else {
     if(tabBtn) tabBtn.style.display = 'none';
@@ -10115,9 +10134,10 @@ async function cargarDashboard() {
 //  FISCAL — Expediente Fiscal Parte 1: Razones Sociales
 // ════════════════════════════════════════════
 function iniciarFiscal() {
-  if(currentPin !== '9900') { showToast('⚠️ Solo el Director tiene acceso a Fiscal'); return; }
+  if(currentPin !== '9900' && currentPin !== '5678') { showToast('⚠️ Solo Director y Gerencia tienen acceso a Fiscal'); return; }
   cargarRazonesSociales(renderFiscalCards);
   cargarTerminales(renderFiscalTerminales);
+  cargarConfigImpresion(renderConfigImpresion);
 }
 
 function campoFiscal(codigo, campo, label, valor, tipo) {
@@ -10285,6 +10305,171 @@ function renderFiscalTerminales() {
     '</div>';
   }).join('');
   document.getElementById('fiscal-terminales').innerHTML = rows;
+}
+
+// ════ CONFIGURACIÓN DE IMPRESIÓN — ticket + notas de venta (JMG/IZZ/CEM) ════
+// Editable desde Fiscal (Director y Gerencia). Firestore: config_impresion/{ticket,nv_jmg,nv_izz,nv_cem}
+var configImpresionCache = {};
+const CONFIG_IMPRESION_SEED = {
+  ticket: {
+    nombreComercial: 'MATERIALES TRONCOSO',
+    direccion1: 'Francisco del Paso 943',
+    direccion2: 'Iztacalco, CDMX',
+    tel1: '5555906802',
+    tel2: '5591800148',
+    mensajeCierre: '¡Gracias por su compra!',
+    logoBase64: ''
+  },
+  nv_jmg: {
+    nombreComercial: 'MATERIALES TRONCOSO',
+    direccion: 'Francisco del Paso y Troncoso 943, Los Reyes, Iztacalco, CDMX',
+    tel1: '5555906802', tel2: '5591800148',
+    email: 'pedidostroncoso@gmail.com',
+    rfc: 'GACM860923FB3',
+    mensajePie: 'TODOS NUESTROS PEDIDOS Y MATERIALES SE ENTREGAN A PIE DE CARRO',
+    logoBase64: ''
+  },
+  nv_izz: {
+    nombreComercial: 'MATERIALES TRONCOSO',
+    direccion: 'Francisco del Paso y Troncoso 943, Los Reyes, Iztacalco, CDMX',
+    tel1: '5555906802', tel2: '5591800148',
+    email: '',
+    rfc: 'IEZI860901AW2',
+    mensajePie: 'TODOS NUESTROS PEDIDOS Y MATERIALES SE ENTREGAN A PIE DE CARRO',
+    logoBase64: ''
+  },
+  nv_cem: {
+    nombreComercial: 'MATERIALES TRONCOSO',
+    direccion: 'Francisco del Paso y Troncoso 943, Los Reyes, Iztacalco, CDMX',
+    tel1: '5555906802', tel2: '5591800148',
+    email: '',
+    rfc: 'ACE230216MR0',
+    mensajePie: 'TODOS NUESTROS PEDIDOS Y MATERIALES SE ENTREGAN A PIE DE CARRO',
+    logoBase64: ''
+  }
+};
+
+function cargarConfigImpresion(cb) {
+  configImpresionCache = JSON.parse(JSON.stringify(CONFIG_IMPRESION_SEED));
+  if(!db) { if(cb) cb(); return; }
+  db.collection('config_impresion').get().then(function(snap){
+    snap.forEach(function(doc){
+      configImpresionCache[doc.id] = Object.assign({}, configImpresionCache[doc.id] || {}, doc.data());
+    });
+    if(cb) cb();
+  }).catch(function(e){
+    console.log('Error cargando config_impresion, usando datos locales:', e);
+    if(cb) cb();
+  });
+}
+
+function getConfigImpresion(docId) {
+  return Object.assign({}, CONFIG_IMPRESION_SEED[docId] || {}, configImpresionCache[docId] || {});
+}
+
+var CAMPOS_CONFIG_IMPRESION_TICKET = ['nombreComercial','direccion1','direccion2','tel1','tel2','mensajeCierre'];
+var CAMPOS_CONFIG_IMPRESION_NV = ['nombreComercial','direccion','tel1','tel2','email','rfc','mensajePie'];
+
+function campoConfigImpresion(docId, campo, label, valor, tipo) {
+  var val = (valor === undefined || valor === null) ? '' : String(valor).replace(/"/g,'&quot;');
+  return '<div class="field">' +
+    '<label>' + label + '</label>' +
+    '<input type="' + (tipo || 'text') + '" id="cfg-' + docId + '-' + campo + '" value="' + val + '">' +
+    '</div>';
+}
+
+function previsualizarLogoConfigImpresion(input, docId) {
+  var file = input.files && input.files[0];
+  if(!file) return;
+  if(!/^image\/(png|jpeg)$/.test(file.type)) { showToast('⚠️ Solo se aceptan imágenes PNG o JPG'); input.value = ''; return; }
+  if(file.size > 700000) { showToast('⚠️ Logo muy pesado (máx. ~700KB) — usa una imagen más ligera'); input.value = ''; return; }
+  var reader = new FileReader();
+  reader.onload = function(e){
+    window['_logoConfigImpresion_' + docId] = e.target.result;
+    showToast('✅ Logo cargado — pulsa Guardar para aplicarlo');
+  };
+  reader.readAsDataURL(file);
+}
+
+function cardConfigImpresionTicketHTML() {
+  var c = getConfigImpresion('ticket');
+  var logoPreview = c.logoBase64 ?
+    '<img src="' + c.logoBase64 + '" style="max-height:60px;max-width:160px;display:block;margin-top:6px;border:1px solid #F0EDE8;border-radius:6px;">' :
+    '<div style="font-size:11px;color:#999;margin-top:6px;">Sin logo — el ticket se imprime solo con texto</div>';
+  return '' +
+    '<div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-bottom:14px;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:10px;">🧾 Ticket (mostrador)</div>' +
+      '<div class="form-grid">' +
+        campoConfigImpresion('ticket','nombreComercial','Nombre comercial', c.nombreComercial) +
+        campoConfigImpresion('ticket','direccion1','Dirección línea 1', c.direccion1) +
+        campoConfigImpresion('ticket','direccion2','Dirección línea 2', c.direccion2) +
+        campoConfigImpresion('ticket','tel1','Teléfono 1', c.tel1) +
+        campoConfigImpresion('ticket','tel2','Teléfono 2', c.tel2) +
+        campoConfigImpresion('ticket','mensajeCierre','Mensaje de cierre', c.mensajeCierre) +
+      '</div>' +
+      '<div style="margin:10px 0;">' +
+        '<label style="font-size:10px;color:var(--suave);">Logo (PNG/JPG)</label><br>' +
+        '<input type="file" accept="image/png,image/jpeg" onchange="previsualizarLogoConfigImpresion(this,\'ticket\')">' +
+        logoPreview +
+      '</div>' +
+      '<button class="btn btn-naranja" onclick="guardarConfigImpresion(\'ticket\')" style="font-size:11px;padding:7px 14px;">💾 Guardar</button>' +
+    '</div>';
+}
+
+function cardConfigImpresionNVHTML(codigo) {
+  var docId = 'nv_' + codigo.toLowerCase();
+  var c = getConfigImpresion(docId);
+  var logoPreview = c.logoBase64 ?
+    '<img src="' + c.logoBase64 + '" style="max-height:60px;max-width:160px;display:block;margin-top:6px;border:1px solid #F0EDE8;border-radius:6px;">' :
+    '<div style="font-size:11px;color:#999;margin-top:6px;">Sin logo — se imprime solo con texto</div>';
+  return '' +
+    '<div style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-bottom:14px;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:10px;">📋 Nota de Venta — ' + codigo + '</div>' +
+      '<div class="form-grid">' +
+        campoConfigImpresion(docId,'nombreComercial','Nombre comercial', c.nombreComercial) +
+        campoConfigImpresion(docId,'direccion','Dirección', c.direccion) +
+        campoConfigImpresion(docId,'tel1','Teléfono 1', c.tel1) +
+        campoConfigImpresion(docId,'tel2','Teléfono 2', c.tel2) +
+        campoConfigImpresion(docId,'email','Email (opcional)', c.email) +
+        campoConfigImpresion(docId,'rfc','RFC', c.rfc) +
+        campoConfigImpresion(docId,'mensajePie','Mensaje del pie', c.mensajePie) +
+      '</div>' +
+      '<div style="margin:10px 0;">' +
+        '<label style="font-size:10px;color:var(--suave);">Logo (PNG/JPG)</label><br>' +
+        '<input type="file" accept="image/png,image/jpeg" onchange="previsualizarLogoConfigImpresion(this,\'' + docId + '\')">' +
+        logoPreview +
+      '</div>' +
+      '<button class="btn btn-naranja" onclick="guardarConfigImpresion(\'' + docId + '\')" style="font-size:11px;padding:7px 14px;">💾 Guardar</button>' +
+    '</div>';
+}
+
+function renderConfigImpresion() {
+  var cont = document.getElementById('config-impresion-content');
+  if(!cont) return;
+  var html = cardConfigImpresionTicketHTML();
+  ['JMG','IZZ','CEM'].forEach(function(codigo){ html += cardConfigImpresionNVHTML(codigo); });
+  cont.innerHTML = html;
+}
+
+function guardarConfigImpresion(docId) {
+  if(!db) { showToast('⚠️ Sin conexión a Firebase'); return; }
+  var campos = docId === 'ticket' ? CAMPOS_CONFIG_IMPRESION_TICKET : CAMPOS_CONFIG_IMPRESION_NV;
+  var update = {};
+  campos.forEach(function(campo){
+    var el = document.getElementById('cfg-' + docId + '-' + campo);
+    if(el) update[campo] = el.value;
+  });
+  var logoNuevo = window['_logoConfigImpresion_' + docId];
+  if(logoNuevo) update.logoBase64 = logoNuevo;
+  db.collection('config_impresion').doc(docId).set(update, {merge:true}).then(function(){
+    configImpresionCache[docId] = Object.assign({}, configImpresionCache[docId] || {}, update);
+    window['_logoConfigImpresion_' + docId] = null;
+    showToast('✅ Configuración de impresión actualizada');
+    renderConfigImpresion();
+  }).catch(function(e){
+    console.log('Error guardando config_impresion:', e);
+    showToast('⚠️ Error al guardar la configuración de impresión');
+  });
 }
 
 // ════ PEDIDOS ════
@@ -11323,6 +11508,9 @@ function imprimirTicketVenta(ticket) {
     return '<tr><td>'+p.cant+' x '+p.desc+'</td><td style="text-align:right;">'+fmtMoney((p.cant||0)*(p.precio||0))+'</td></tr>';
   }).join('');
   var fecha = new Date(ticket.timestamp).toLocaleString('es-MX');
+  var cfg = getConfigImpresion('ticket');
+  var tels = 'Tel: ' + cfg.tel1 + (cfg.tel2 ? ' / ' + cfg.tel2 : '');
+  var logoHTML = cfg.logoBase64 ? '<img src="'+cfg.logoBase64+'" style="max-height:50px;max-width:150px;display:block;margin:0 auto 4px;">' : '';
   var w = window.open('', '_blank', 'width=320,height=600');
   if(!w) { showToast('⚠️ Habilita las ventanas emergentes para imprimir'); return; }
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+ticket.folio+'</title><style>' +
@@ -11335,14 +11523,16 @@ function imprimirTicketVenta(ticket) {
     '.footer{text-align:center;margin-top:10px;font-size:10px;}' +
     '@media print{@page{margin:0;}}' +
     '</style></head><body>' +
-    '<h2>MATERIALES TRONCOSO</h2>' +
-    '<p>Fco. del Paso y Troncoso #943<br>Iztacalco, CDMX · 5555906802</p>' +
+    logoHTML +
+    '<h2>'+cfg.nombreComercial+'</h2>' +
+    '<p>'+cfg.direccion1+'<br>'+cfg.direccion2+'</p>' +
+    '<p>'+tels+'</p>' +
     '<p>'+ticket.folio+' &nbsp;|&nbsp; '+fecha+'</p>' +
     '<p>Cliente: '+ticket.cliente+'</p>' +
     '<table>'+filas+'</table>' +
     '<div class="total">TOTAL: '+fmtMoney(ticket.total)+'</div>' +
     '<p style="text-align:left;margin-top:6px;">Pago: '+labelMetodoPago(ticket.metodoPago)+'</p>' +
-    '<div class="footer">¡Gracias por su compra!<br>5555906802</div>' +
+    '<div class="footer">'+cfg.mensajeCierre+'</div>' +
     '</body></html>');
   w.document.close();
   var imprimio = false;
@@ -12135,6 +12325,25 @@ function renderPedidosJM() {
 // ════ PEDIDOS — nuevo pedido manual: eliminado 2026-08-07, ver Cotización → 🎯 Nota de Venta ════
 
 // ════ PEDIDOS — generar Nota de Venta desde pedido ════
+// Aplica la Configuración de impresión (Fiscal) de la razón social al documento nota-content
+function aplicarConfigImpresionNota(rsCodigo) {
+  var docId = 'nv_' + (rsCodigo || 'JMG').toLowerCase();
+  var c = getConfigImpresion(docId);
+  document.getElementById('nota-nombre-comercial').textContent = c.nombreComercial;
+  document.getElementById('nota-direccion-linea').textContent = c.direccion;
+  document.getElementById('nota-tel-linea').textContent = '📱 ' + c.tel1 + (c.tel2 ? ' / ' + c.tel2 : '');
+  var emailLinea = document.getElementById('nota-email-linea');
+  emailLinea.textContent = c.email || '';
+  emailLinea.style.display = c.email ? '' : 'none';
+  var footerEmail = document.getElementById('nota-footer-email');
+  footerEmail.textContent = c.email || '';
+  footerEmail.style.display = c.email ? '' : 'none';
+  document.getElementById('nota-footer-wa').textContent = 'wa.me/52' + (c.tel1 || '').replace(/[^0-9]/g,'');
+  document.getElementById('nota-pie-msg').textContent = c.mensajePie;
+  var logoImg = document.getElementById('nota-logo-img');
+  if(c.logoBase64) { logoImg.src = c.logoBase64; logoImg.style.display = 'block'; } else { logoImg.style.display = 'none'; }
+}
+
 function generarNotaDesdePedido(docId) {
   var p = pedidosCache.find(function(x){ return x._docId === docId; });
   if(!p) return;
@@ -12169,6 +12378,7 @@ function pintarNotaDesdeCotizacionPedido(cot, p) {
   document.getElementById('nota-body').innerHTML = prods.map(function(pr){
     return '<tr><td class="text-right">'+pr.cant+'</td><td>'+pr.desc+'</td><td class="text-right">$'+pr.precio.toFixed(2)+'</td><td class="text-right">'+fmtMoney(pr.imp)+'</td></tr>';
   }).join('');
+  aplicarConfigImpresionNota(cot.rs);
   switchTab('nota', null);
 }
 
@@ -12187,6 +12397,7 @@ function pintarNotaDesdePedidoManual(p) {
   document.getElementById('nota-desc-val').textContent = '-' + fmtMoney(0);
   document.getElementById('nota-total-val').textContent = fmtMoney(total);
   document.getElementById('nota-body').innerHTML = '<tr><td class="text-right"><input type="text" value="1" style="width:40px;" id="nmp-cant"></td><td><input type="text" value="'+(p.p||'').replace(/"/g,'&quot;')+'" style="width:100%;" id="nmp-desc"></td><td class="text-right"><input type="text" value="'+total.toFixed(2)+'" style="width:70px;" id="nmp-precio" oninput="recalcNotaManual()"></td><td class="text-right" id="nmp-imp">'+fmtMoney(total)+'</td></tr>';
+  aplicarConfigImpresionNota(p.razonSocial);
   switchTab('nota', null);
 }
 function recalcNotaManual() {
