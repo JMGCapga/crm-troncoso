@@ -319,6 +319,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <label>Cliente</label>
             <input type="text" id="cot-cliente-input" placeholder="Buscar cliente..." oninput="buscarClienteCot()" autocomplete="off">
             <div id="cot-cliente-lista" style="border:1px solid var(--borde);border-radius:8px;max-height:150px;overflow-y:auto;display:none;position:absolute;background:#fff;z-index:100;width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+            <div id="cot-tel-publico-wrap" style="margin-top:8px;">
+              <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--suave);margin-bottom:4px;">📱 Teléfono para enviar cotización</label>
+              <input type="text" id="cot-tel-publico" placeholder="10 dígitos — solo para este envío, no se guarda como cliente" autocomplete="off">
+            </div>
             <a href="javascript:void(0)" onclick="toggleNuevoClienteCot()" style="display:inline-block;margin-top:6px;font-size:11px;color:var(--naranja);font-weight:700;">+ Nuevo Cliente</a>
             <div id="cot-nuevo-cliente-form" style="display:none;margin-top:8px;border:1.5px dashed var(--borde);border-radius:8px;padding:10px;background:#FAFAF8;">
               <input type="text" id="cot-nc-nombre" placeholder="Nombre del cliente" style="width:100%;border:1.5px solid var(--borde);border-radius:6px;padding:7px 9px;font-size:12px;margin-bottom:6px;">
@@ -3963,6 +3967,9 @@ function whatsappCliente() {
 function resetFormularioCotizacion() {
   clienteCotizacion = null;
   document.getElementById('cot-cliente-input').value = '';
+  var telPublico = document.getElementById('cot-tel-publico');
+  if(telPublico) telPublico.value = '';
+  actualizarVisibilidadTelPublicoCot();
   var listaCli = document.getElementById('cot-cliente-lista');
   listaCli.innerHTML = '';
   listaCli.style.display = 'none';
@@ -3995,12 +4002,14 @@ function nuevaCotizacionDesdeCliente() {
   resetFormularioCotizacion();
   clienteCotizacion = clienteSeleccionado;
   document.getElementById('cot-cliente-input').value = clienteSeleccionado.nombre;
+  actualizarVisibilidadTelPublicoCot();
   switchTab('cotizacion', document.getElementById('tab-ventas-btn'));
 }
 function nuevaNotaDesdeCliente() {
   resetFormularioCotizacion();
   clienteCotizacion = clienteSeleccionado;
   document.getElementById('cot-cliente-input').value = clienteSeleccionado.nombre;
+  actualizarVisibilidadTelPublicoCot();
   switchTab('cotizacion', document.getElementById('tab-ventas-btn'));
 }
 
@@ -4116,9 +4125,21 @@ function subirConstanciaFiscalCliente(id, inputEl) {
 }
 
 // ════ COTIZACIÓN ════
+// Cotización a Público General (sin cliente seleccionado) — el teléfono
+// capturado aquí solo viaja en esta cotización (cot.clienteTel), nunca crea
+// ni actualiza un registro de cliente. Con eso los botones de WhatsApp que
+// ya existían (mostrarBtnEnviarCotizacionWA, botonCotizacionCompletaWA,
+// waFollow) funcionan igual que con un cliente real, sin tocar su condición
+// rs === 'JMG'.
+function actualizarVisibilidadTelPublicoCot() {
+  var wrap = document.getElementById('cot-tel-publico-wrap');
+  if(!wrap) return;
+  wrap.style.display = clienteCotizacion ? 'none' : 'block';
+}
 function buscarClienteCot() {
   const q = normalizar(document.getElementById('cot-cliente-input').value);
   const lista = document.getElementById('cot-cliente-lista');
+  actualizarVisibilidadTelPublicoCot();
   if(q.length < 2) { lista.style.display = 'none'; return; }
   const res = clientesCache.filter(c => c.activo !== false && (normalizar(c.nombre).includes(q) || (c.telefono||'').includes(q))).slice(0, 8);
   lista.style.display = res.length ? 'block' : 'none';
@@ -4134,6 +4155,7 @@ function elegirClienteCot(id) {
   clienteCotizacion = c;
   document.getElementById('cot-cliente-input').value = c.nombre;
   document.getElementById('cot-cliente-lista').style.display = 'none';
+  actualizarVisibilidadTelPublicoCot();
   poblarSelectorDireccionCot(c);
   actualizarTodasLasFilasProducto();
 }
@@ -4209,6 +4231,7 @@ function guardarNuevoClienteCot() {
   clienteCotizacion = cliente;
   poblarSelectorDireccionCot(cliente);
   document.getElementById('cot-cliente-input').value = cliente.nombre;
+  actualizarVisibilidadTelPublicoCot();
   toggleNuevoClienteCot();
   actualizarTodasLasFilasProducto();
 }
@@ -4398,7 +4421,7 @@ function compartirDatosPagoCotizacion() {
   var rs = document.getElementById('cot-rs').value;
   var total = parseFloat((document.getElementById('cot-total').textContent||'0').replace(/[^0-9.]/g,'')) || 0;
   var clienteNombre = clienteCotizacion ? clienteCotizacion.nombre : (document.getElementById('cot-cliente-input').value || 'Público General');
-  var clienteTel = clienteCotizacion ? (clienteCotizacion.telefono||'') : '';
+  var clienteTel = clienteCotizacion ? (clienteCotizacion.telefono||'') : (document.getElementById('cot-tel-publico')?.value.trim() || '');
   var folio = 'COT-' + String(folioActual).padStart(3,'0');
   compartirDatosPago(rs, folio, clienteNombre, clienteTel, total);
 }
@@ -4423,7 +4446,7 @@ function construirCotizacionDesdeForm(prods, sub, desc, total) {
     timestamp: Date.now(),
     cliente: clienteCotizacion ? clienteCotizacion.nombre : (document.getElementById('cot-cliente-input').value || 'Público General'),
     clienteId: clienteCotizacion?.id || null,
-    clienteTel: clienteCotizacion?.telefono || '',
+    clienteTel: clienteCotizacion?.telefono || (document.getElementById('cot-tel-publico')?.value.trim() || ''),
     clienteDom: clienteCotizacion?.domicilio || '',
     rs: rs, rsNombre: RAZONES[rs].nombre, rsRFC: RAZONES[rs].rfc,
     pago: document.getElementById('cot-pago').value,
@@ -11645,7 +11668,7 @@ function mostrarBtnCompartirPagoTicket(ticket) {
 
 function imprimirTicketVenta(ticket) {
   var filas = ticket.productos.map(function(p){
-    return '<tr><td>'+p.cant+' x '+p.desc+'</td><td style="text-align:right;">'+fmtMoney((p.cant||0)*(p.precio||0))+'</td></tr>';
+    return '<tr><td>'+(p.cant||0)+'</td><td>'+p.desc+'</td><td style="text-align:right;">'+fmtMoney(p.precio||0)+'</td><td style="text-align:right;">'+fmtMoney((p.cant||0)*(p.precio||0))+'</td></tr>';
   }).join('');
   var fecha = new Date(ticket.timestamp).toLocaleString('es-MX');
   var cfg = getConfigImpresion('ticket');
@@ -11658,7 +11681,8 @@ function imprimirTicketVenta(ticket) {
     'h2{font-size:14px;text-align:center;margin:0 0 2px;}' +
     'p{text-align:center;margin:2px 0;font-size:10px;}' +
     'table{width:100%;border-collapse:collapse;margin-top:8px;}' +
-    'td{padding:2px 0;font-size:11px;}' +
+    'th{padding:2px 4px 4px 0;font-size:10px;text-align:left;border-bottom:1px dashed #000;}' +
+    'td{padding:2px 4px 2px 0;font-size:11px;}' +
     '.total{font-weight:bold;font-size:14px;border-top:1px dashed #000;margin-top:6px;padding-top:6px;text-align:right;}' +
     '.footer{text-align:center;margin-top:10px;font-size:10px;}' +
     '@media print{@page{margin:0;}}' +
@@ -11669,7 +11693,7 @@ function imprimirTicketVenta(ticket) {
     '<p>'+tels+'</p>' +
     '<p>'+ticket.folio+' &nbsp;|&nbsp; '+fecha+'</p>' +
     '<p>Cliente: '+ticket.cliente+'</p>' +
-    '<table>'+filas+'</table>' +
+    '<table><thead><tr><th>Cant</th><th>Descripción</th><th style="text-align:right;">P.Unit</th><th style="text-align:right;">Importe</th></tr></thead><tbody>'+filas+'</tbody></table>' +
     '<div class="total">TOTAL: '+fmtMoney(ticket.total)+'</div>' +
     '<p style="text-align:left;margin-top:6px;">Pago: '+labelMetodoPago(ticket.metodoPago)+'</p>' +
     '<div class="footer">'+cfg.mensajeCierre+'</div>' +
