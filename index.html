@@ -94,7 +94,45 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 .cot-list-item .cot-cliente{font-size:13px;font-weight:700;}
 .cot-list-item .cot-meta{font-size:11px;color:var(--suave);margin-top:3px;}
 .cot-list-item .cot-total{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--naranja);letter-spacing:1px;}
-@media print{.no-print{display:none!important;} body{background:#fff;} .nota-paper{box-shadow:none!important;}}
+@media print{.no-print{display:none!important;} body{background:#fff;} .nota-paper{box-shadow:none!important;} .hdr{display:none!important;} #nota-content{display:none!important;} #nota-print-wrapper{display:block!important;} @page{size:letter portrait;margin:5mm;} .nota-venta-wrapper{page-break-after:always;} .nota-venta-wrapper:last-child{page-break-after:auto;}}
+/* ════ NV — impresión media carta, 2 copias por hoja ════
+   Reglas planas (no solo dentro de @media print): el sandbox de medición
+   (#nota-print-sandbox) usa las mismas clases para calcular en pantalla, ANTES
+   de imprimir, si el contenido cabe a 10pt o hay que reducir hasta 7pt / paginar.
+   Todo en em relativo a font-size en .nota-venta-copia para que un solo cambio
+   de tamaño escale proporcionalmente header/tabla/totales (los de .nota-paper
+   normal son px fijos y no se tocan — esta es una hoja de estilos aparte). */
+#nota-print-wrapper{display:none;}
+#nota-print-sandbox{position:fixed;top:0;left:-9999px;visibility:hidden;}
+.nota-venta-wrapper{display:flex;flex-direction:column;height:100vh;width:205.9mm;box-sizing:border-box;}
+.nota-venta-copia{height:48%;overflow:hidden;box-sizing:border-box;padding:5mm 7mm;}
+.nota-venta-copia .copia-leyenda{text-align:center;font-size:0.75em;letter-spacing:1.5px;color:#999;font-weight:700;text-transform:uppercase;margin-bottom:0.5em;}
+.nota-venta-copia .nota-hoja-num{text-align:right;font-size:0.6em;color:#BBB;margin-bottom:0.2em;}
+.nota-venta-copia .nota-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.9em;padding-bottom:0.6em;border-bottom:2px solid var(--naranja);}
+.nota-venta-copia .nota-logo-area img{max-height:3.2em;max-width:11em;margin-bottom:0.3em;}
+.nota-venta-copia .nota-logo-area h2{font-family:'Bebas Neue',sans-serif;font-size:1.9em;color:var(--naranja);letter-spacing:1.5px;margin:0;}
+.nota-venta-copia .nota-logo-area p{font-size:0.85em;color:#666;line-height:1.3;margin:0.15em 0 0;}
+.nota-venta-copia .nota-folio{text-align:right;}
+.nota-venta-copia .nota-folio .folio-num{font-family:'Bebas Neue',sans-serif;font-size:1.7em;letter-spacing:1.5px;}
+.nota-venta-copia .nota-folio .folio-label{font-size:0.75em;text-transform:uppercase;color:var(--suave);}
+.nota-venta-copia .nota-rs{background:#FFF0E8;border:1px solid #FFD8C0;border-radius:5px;padding:0.45em 0.7em;margin-bottom:0.7em;font-size:0.9em;}
+.nota-venta-copia .nota-rs strong{color:var(--naranja);}
+.nota-venta-copia .nota-cliente-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.5em;margin-bottom:0.7em;padding:0.5em;background:#F8F8F6;border-radius:5px;}
+.nota-venta-copia .nota-cliente-grid div label{font-size:0.7em;font-weight:700;text-transform:uppercase;color:#999;display:block;}
+.nota-venta-copia .nota-cliente-grid div span{font-size:0.95em;}
+.nota-venta-copia .nota-table{width:100%;border-collapse:collapse;margin-bottom:0.7em;}
+.nota-venta-copia .nota-table th{background:var(--gris-oscuro);color:#fff;padding:0.35em 0.5em;font-size:0.85em;text-transform:uppercase;}
+.nota-venta-copia .nota-table td{padding:0.35em 0.5em;border-bottom:1px solid #EEE;font-size:0.9em;}
+.nota-venta-copia .text-right{text-align:right;}
+.nota-venta-copia .nota-totales{display:flex;justify-content:flex-end;margin-bottom:0.8em;}
+.nota-venta-copia .nota-totales-box{width:14em;}
+.nota-venta-copia .nota-totales-box .row{display:flex;justify-content:space-between;padding:0.2em 0;font-size:0.95em;}
+.nota-venta-copia .nota-totales-box .row.total{font-family:'Bebas Neue',sans-serif;font-size:1.35em;color:var(--naranja);border-top:2px solid var(--naranja);margin-top:0.3em;padding-top:0.4em;}
+.nota-venta-copia .nota-pie{text-align:center;padding:0.45em;background:#F8F8F6;border-radius:5px;font-size:0.85em;color:#888;margin-bottom:0.7em;}
+.nota-venta-copia .nota-footer{display:flex;justify-content:space-between;align-items:flex-end;padding-top:0.7em;border-top:1px solid #EEE;font-size:0.8em;color:#888;}
+.nota-venta-copia .nota-print-continua{text-align:center;font-size:0.85em;color:#999;font-style:italic;padding:0.6em 0;}
+.linea-corte{border-top:1px dashed #999;text-align:center;font-size:7pt;color:#999;margin:2mm 0;position:relative;flex-shrink:0;}
+.linea-corte::after{content:"✂ LÍNEA DE CORTE";background:#fff;padding:0 3mm;position:relative;top:-1.9mm;}
 .nota-paper{background:#fff;border-radius:8px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,0.1);font-size:12px;max-width:750px;margin:0 auto;}
 .nota-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--naranja);}
 .nota-logo-area h2{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--naranja);letter-spacing:2px;}
@@ -381,7 +419,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 
     <div class="panel" id="panel-nota">
       <div style="margin-bottom:12px;display:flex;gap:8px;" class="no-print">
-        <button class="btn btn-naranja" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn btn-naranja" onclick="imprimirNotaVenta()">🖨 Imprimir</button>
         <button class="btn btn-gris" onclick="switchTab('cotizacion',document.getElementById('tab-ventas-btn'))">← Volver</button>
       </div>
       <div class="nota-paper" id="nota-content">
@@ -425,6 +463,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <div style="text-align:right;"><div style="margin-bottom:20px;">Firma de recibido:</div><div style="border-top:1px solid #CCC;padding-top:4px;width:120px;margin-left:auto;">_______________</div></div>
         </div>
       </div>
+      <div id="nota-print-wrapper"></div>
     </div>
 
     <div class="panel" id="panel-ticket">
@@ -12509,6 +12548,128 @@ function recalcNotaManual() {
   document.getElementById('nmp-imp').textContent = fmtMoney(precio);
   document.getElementById('nota-subtotal').textContent = fmtMoney(precio);
   document.getElementById('nota-total-val').textContent = fmtMoney(precio);
+}
+
+// ════ NV — impresión media carta, 2 copias por hoja ════
+// "🖨 Imprimir" ya no llama window.print() directo: arma #nota-print-wrapper
+// con 2 copias (ORIGINAL/COPIA + línea de corte) por hoja carta, midiendo en
+// un sandbox oculto (#nota-print-sandbox) si el contenido cabe a 10pt; si no,
+// reduce hasta 7pt; si ni a 7pt cabe con todos los productos, pagina por filas
+// completas (nunca corta una fila), repitiendo el mismo esquema de 2 copias
+// en cada hoja adicional.
+var NOTA_IMPRESION_ANCHO_MM = 205.9; // carta (215.9mm) menos 5mm de margen por lado
+var NOTA_IMPRESION_ALTO_COPIA_MM = 125; // ~48% de (279.4-10mm), con margen de seguridad
+var NOTA_IMPRESION_FUENTES_PT = [10, 9.5, 9, 8.5, 8, 7.5, 7];
+
+function extraerFragmentoNota(selector) {
+  var el = document.querySelector('#nota-content ' + selector);
+  return el ? el.outerHTML : '';
+}
+
+function extraerFilasNota() {
+  return Array.from(document.querySelectorAll('#nota-content .nota-table tbody tr')).map(function(tr){ return tr.outerHTML; });
+}
+
+function construirCopiaNotaHTML(leyenda, headerHTML, rsHTML, clienteHTML, theadHTML, filasHTML, cierreHTML, hojaLabel) {
+  return '<div class="nota-venta-copia">' +
+    '<div class="copia-leyenda">' + leyenda + '</div>' +
+    (hojaLabel ? '<div class="nota-hoja-num">' + hojaLabel + '</div>' : '') +
+    headerHTML + rsHTML + clienteHTML +
+    '<table class="nota-table">' + theadHTML + '<tbody>' + filasHTML.join('') + '</tbody></table>' +
+    cierreHTML +
+    '</div>';
+}
+
+function obtenerSandboxImpresionNota() {
+  var sandbox = document.getElementById('nota-print-sandbox');
+  if(!sandbox) {
+    sandbox = document.createElement('div');
+    sandbox.id = 'nota-print-sandbox';
+    document.body.appendChild(sandbox);
+  }
+  return sandbox;
+}
+
+// Mide en el sandbox oculto la altura real (mm) que ocuparía una copia con
+// estas filas y este tamaño de fuente — height:auto para no recortar, así
+// se ve si excede el cupo de media carta (NOTA_IMPRESION_ALTO_COPIA_MM).
+function medirAlturaNotaMM(headerHTML, rsHTML, clienteHTML, theadHTML, filasHTML, cierreHTML, fontSizePt) {
+  var sandbox = obtenerSandboxImpresionNota();
+  sandbox.style.width = NOTA_IMPRESION_ANCHO_MM + 'mm';
+  sandbox.innerHTML = '<div class="nota-venta-copia" style="height:auto;overflow:visible;font-size:' + fontSizePt + 'pt;">' +
+    '<div class="copia-leyenda">ORIGINAL — CLIENTE</div>' +
+    headerHTML + rsHTML + clienteHTML +
+    '<table class="nota-table">' + theadHTML + '<tbody>' + filasHTML.join('') + '</tbody></table>' +
+    cierreHTML +
+    '</div>';
+  var alturaPx = sandbox.firstElementChild.getBoundingClientRect().height;
+  return alturaPx / 3.7795275591; // px → mm a 96dpi
+}
+
+// Cuántas filas (desde el inicio de filasDisponibles) caben en una media
+// carta a fontSizePt con el cierre indicado — nunca corta una fila, se queda
+// con la última cantidad que sí cupo completa.
+function calcularCapacidadFilas(headerHTML, rsHTML, clienteHTML, theadHTML, cierreHTML, fontSizePt, filasDisponibles) {
+  var maxFilas = 0;
+  for(var n = 1; n <= filasDisponibles.length; n++) {
+    var alturaMM = medirAlturaNotaMM(headerHTML, rsHTML, clienteHTML, theadHTML, filasDisponibles.slice(0, n), cierreHTML, fontSizePt);
+    if(alturaMM <= NOTA_IMPRESION_ALTO_COPIA_MM) { maxFilas = n; } else { break; }
+  }
+  return maxFilas;
+}
+
+function imprimirNotaVenta() {
+  var headerHTML = extraerFragmentoNota('.nota-header');
+  var rsHTML = extraerFragmentoNota('.nota-rs');
+  var clienteHTML = extraerFragmentoNota('.nota-cliente-grid');
+  var theadEl = document.querySelector('#nota-content .nota-table thead');
+  var theadHTML = theadEl ? theadEl.outerHTML : '';
+  var cierreCompletoHTML = extraerFragmentoNota('.nota-totales') + extraerFragmentoNota('.nota-pie') + extraerFragmentoNota('.nota-footer');
+  var cierreContinuaHTML = '<div class="nota-print-continua">· · · continúa en la hoja siguiente · · ·</div>';
+  var todasLasFilas = extraerFilasNota();
+
+  if(!todasLasFilas.length) { showToast('⚠️ La nota no tiene productos que imprimir'); return; }
+
+  var fontElegida = null;
+  for(var i = 0; i < NOTA_IMPRESION_FUENTES_PT.length; i++) {
+    var f = NOTA_IMPRESION_FUENTES_PT[i];
+    var alturaMM = medirAlturaNotaMM(headerHTML, rsHTML, clienteHTML, theadHTML, todasLasFilas, cierreCompletoHTML, f);
+    if(alturaMM <= NOTA_IMPRESION_ALTO_COPIA_MM) { fontElegida = f; break; }
+  }
+
+  var hojasHTML = '';
+  if(fontElegida) {
+    // Todos los productos caben en una sola media carta — sin paginar
+    var copia1 = construirCopiaNotaHTML('ORIGINAL — CLIENTE', headerHTML, rsHTML, clienteHTML, theadHTML, todasLasFilas, cierreCompletoHTML, null);
+    var copia2 = construirCopiaNotaHTML('COPIA — ARCHIVO', headerHTML, rsHTML, clienteHTML, theadHTML, todasLasFilas, cierreCompletoHTML, null);
+    hojasHTML = '<div class="nota-venta-wrapper" style="font-size:' + fontElegida + 'pt;">' + copia1 + '<div class="linea-corte"></div>' + copia2 + '</div>';
+  } else {
+    // Ni a 7pt caben todos los productos en una media carta — paginar por
+    // filas completas, repitiendo el esquema de 2 copias en cada hoja.
+    var fPag = 7;
+    var paginas = [];
+    var restantes = todasLasFilas.slice();
+    while(restantes.length > 0) {
+      var alturaSiEsFinal = medirAlturaNotaMM(headerHTML, rsHTML, clienteHTML, theadHTML, restantes, cierreCompletoHTML, fPag);
+      if(alturaSiEsFinal <= NOTA_IMPRESION_ALTO_COPIA_MM) {
+        paginas.push({ filas: restantes, esUltima: true });
+        break;
+      }
+      var capacidad = Math.max(1, calcularCapacidadFilas(headerHTML, rsHTML, clienteHTML, theadHTML, cierreContinuaHTML, fPag, restantes));
+      paginas.push({ filas: restantes.splice(0, capacidad), esUltima: false });
+    }
+    paginas.forEach(function(pag, idx) {
+      var cierre = pag.esUltima ? cierreCompletoHTML : cierreContinuaHTML;
+      var hojaLabel = 'Hoja ' + (idx + 1) + ' de ' + paginas.length;
+      var copia1 = construirCopiaNotaHTML('ORIGINAL — CLIENTE', headerHTML, rsHTML, clienteHTML, theadHTML, pag.filas, cierre, hojaLabel);
+      var copia2 = construirCopiaNotaHTML('COPIA — ARCHIVO', headerHTML, rsHTML, clienteHTML, theadHTML, pag.filas, cierre, hojaLabel);
+      hojasHTML += '<div class="nota-venta-wrapper" style="font-size:' + fPag + 'pt;">' + copia1 + '<div class="linea-corte"></div>' + copia2 + '</div>';
+    });
+  }
+
+  document.getElementById('nota-print-wrapper').innerHTML = hojasHTML;
+  obtenerSandboxImpresionNota().innerHTML = '';
+  setTimeout(function(){ window.print(); }, 50);
 }
 
 // ════ FLOTA (FlotaManager integrado) ════
