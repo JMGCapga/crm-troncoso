@@ -119,10 +119,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 .nota-venta-copia .nota-rs strong{color:var(--naranja);}
 .nota-venta-copia .nota-cliente-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.3em;margin-bottom:0.35em;padding:0.3em;background:#F8F8F6;border-radius:5px;}
 .nota-venta-copia .nota-cliente-grid div label{font-size:0.7em;font-weight:700;text-transform:uppercase;color:#999;display:block;}
-.nota-venta-copia .nota-cliente-grid div span{font-size:0.95em;}
+.nota-venta-copia .nota-cliente-grid div span{font-size:1.1em;font-weight:700;}
 .nota-venta-copia .nota-table{width:100%;border-collapse:collapse;margin-bottom:0.35em;}
 .nota-venta-copia .nota-table th{background:var(--gris-oscuro);color:#fff;padding:0.15em 0.35em;font-size:0.85em;text-transform:uppercase;}
-.nota-venta-copia .nota-table td{padding:0.12em 0.35em;border-bottom:1px solid #EEE;font-size:0.9em;}
+.nota-venta-copia .nota-table td{padding:0.14em 0.35em;border-bottom:1px solid #EEE;font-size:1.05em;font-weight:600;}
 .nota-venta-copia .text-right{text-align:right;}
 .nota-venta-copia .nota-totales{display:flex;justify-content:flex-end;margin-bottom:0.3em;}
 .nota-venta-copia .nota-totales-box{width:14em;}
@@ -12474,7 +12474,9 @@ function aplicarConfigImpresionNota(rsCodigo) {
   var c = getConfigImpresion(docId);
   document.getElementById('nota-nombre-comercial').textContent = c.nombreComercial;
   document.getElementById('nota-direccion-linea').textContent = c.direccion + ' · 📱 ' + c.tel1 + (c.tel2 ? ' / ' + c.tel2 : '');
-  document.getElementById('nota-footer-wa').textContent = 'wa.me/52' + (c.tel1 || '').replace(/[^0-9]/g,'');
+  var wa1 = 'wa.me/52' + (c.tel1 || '').replace(/[^0-9]/g,'');
+  var wa2 = c.tel2 ? ('wa.me/52' + c.tel2.replace(/[^0-9]/g,'')) : '';
+  document.getElementById('nota-footer-wa').textContent = wa2 ? (wa1 + ' · ' + wa2) : wa1;
   document.getElementById('nota-pie-msg').textContent = c.mensajePie;
   var logoImg = document.getElementById('nota-logo-img');
   if(c.logoBase64) { logoImg.src = c.logoBase64; logoImg.style.display = 'block'; } else { logoImg.style.display = 'none'; }
