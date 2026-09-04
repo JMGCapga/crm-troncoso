@@ -228,11 +228,22 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         <div class="cli-count" id="cli-count">Ingresa un nombre o teléfono para buscar</div>
         <div class="cli-list" id="cli-list"></div>
         <div class="cli-detalle" id="cli-detalle">
-          <h3 id="det-nombre"></h3>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <h3 id="det-nombre" style="margin-bottom:0;"></h3>
+            <button class="btn btn-gris" id="det-btn-editar" onclick="activarEdicionClienteInfo()" style="font-size:11px;padding:6px 12px;display:none;">✏️ Editar</button>
+          </div>
           <div id="det-saldo-favor"></div>
-          <div class="cli-info">
+          <div class="cli-info" id="det-info-vista">
             <div class="cli-info-item"><label>Teléfono</label><span id="det-tel"></span></div>
             <div class="cli-info-item"><label>ID Cliente</label><span id="det-id"></span></div>
+          </div>
+          <div class="form-grid" id="det-info-edicion" style="display:none;margin-top:8px;">
+            <div class="field"><label>Nombre</label><input type="text" id="det-edit-nombre"></div>
+            <div class="field"><label>Teléfono</label><input type="text" id="det-edit-tel"></div>
+            <div style="grid-column:1/-1;display:flex;gap:8px;">
+              <button class="btn btn-naranja" type="button" onclick="guardarDatosBasicosCliente()" style="font-size:11px;padding:7px 14px;">💾 Guardar cambios</button>
+              <button class="btn btn-gris" type="button" onclick="cancelarEdicionClienteInfo()" style="font-size:11px;padding:7px 14px;">✕ Cancelar</button>
+            </div>
           </div>
           <div style="margin-top:10px;">
             <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--suave);margin-bottom:6px;">Direcciones de entrega</label>
@@ -3656,6 +3667,8 @@ function seleccionarCliente(id) {
   document.getElementById('det-nombre').textContent = c.nombre;
   document.getElementById('det-tel').textContent = c.telefono || 'No registrado';
   document.getElementById('det-id').textContent = '#' + c.id;
+  document.getElementById('det-btn-editar').style.display = puedeEditarClienteInfo() ? 'inline-block' : 'none';
+  cancelarEdicionClienteInfo();
   renderDireccionesCliente(c);
   var canalWrap = document.getElementById('det-canal-wrap');
   if(puedeVerCanalCliente()) {
@@ -3762,6 +3775,53 @@ function eliminarCliente(id) {
   }).catch(function(e){ console.log('Error verificando pendientes del cliente:', e); showToast('⚠️ Error al verificar pendientes'); });
 }
 
+// ════ Editar datos básicos del cliente (nombre/teléfono) — Ventas/Compras/Gerencia/Director ════
+function puedeEditarClienteInfo() {
+  return !!(currentUser && ['Ventas','Compras','Gerencia','Director'].indexOf(currentUser.role) !== -1);
+}
+function metaEdicionCliente() {
+  return {
+    editadoPor: currentUser ? currentUser.name : '',
+    fechaEdicion: new Date().toLocaleDateString('es-MX'),
+    timestamp: Date.now()
+  };
+}
+function activarEdicionClienteInfo() {
+  if(!clienteSeleccionado || !puedeEditarClienteInfo()) return;
+  document.getElementById('det-edit-nombre').value = clienteSeleccionado.nombre || '';
+  document.getElementById('det-edit-tel').value = clienteSeleccionado.telefono || '';
+  document.getElementById('det-info-vista').style.display = 'none';
+  document.getElementById('det-info-edicion').style.display = '';
+  document.getElementById('det-btn-editar').style.display = 'none';
+}
+function cancelarEdicionClienteInfo() {
+  document.getElementById('det-info-vista').style.display = '';
+  document.getElementById('det-info-edicion').style.display = 'none';
+  if(clienteSeleccionado && puedeEditarClienteInfo()) document.getElementById('det-btn-editar').style.display = 'inline-block';
+}
+function guardarDatosBasicosCliente() {
+  if(!clienteSeleccionado || !puedeEditarClienteInfo()) return;
+  if(!db) { showToast('⚠️ Sin conexión a Firebase'); return; }
+  var nombre = document.getElementById('det-edit-nombre').value.trim();
+  var telefono = document.getElementById('det-edit-tel').value.trim();
+  if(!nombre) { showToast('⚠️ El nombre no puede quedar vacío'); return; }
+  if(!confirm('¿Guardar cambios de ' + nombre + '?')) return;
+  var update = Object.assign({ nombre: nombre, telefono: telefono }, metaEdicionCliente());
+  db.collection('clientes').doc(clienteSeleccionado.id).set(update, {merge:true}).then(function(){
+    Object.assign(clienteSeleccionado, update);
+    var idx = clientesCache.findIndex(function(x){ return x.id === clienteSeleccionado.id; });
+    if(idx !== -1) Object.assign(clientesCache[idx], update);
+    document.getElementById('det-nombre').textContent = nombre;
+    document.getElementById('det-tel').textContent = telefono || 'No registrado';
+    cancelarEdicionClienteInfo();
+    showToast('✅ Cliente actualizado');
+    buscarCliente();
+  }).catch(function(e){
+    console.log('Error actualizando datos básicos de cliente:', e);
+    showToast('⚠️ Error al guardar cambios');
+  });
+}
+
 // ════ Direcciones de entrega (hasta 3 por cliente) ════
 function direccionesDeCliente(c) {
   if(Array.isArray(c.direcciones) && c.direcciones.length) return c.direcciones;
@@ -3799,7 +3859,8 @@ function renderDireccionesCliente(c) {
 
 function guardarDireccionesCliente(clienteId, direcciones) {
   if(!db) return;
-  db.collection('clientes').doc(clienteId).update({ direcciones: direcciones }).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar dirección'); });
+  var update = Object.assign({ direcciones: direcciones }, metaEdicionCliente());
+  db.collection('clientes').doc(clienteId).update(update).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar dirección'); });
 }
 
 function agregarDireccionCliente() {
@@ -3842,15 +3903,16 @@ function eliminarDireccionCliente(clienteId, dirId) {
   renderDireccionesCliente(clienteSeleccionado);
 }
 
-// ════ Canal de precio (Director/Gerencia) ════
+// ════ Canal de precio (Ventas/Compras/Gerencia/Director) ════
 function puedeVerCanalCliente() {
-  return currentUser && (currentUser.role === 'Director' || currentUser.role === 'Gerencia');
+  return puedeEditarClienteInfo();
 }
 function guardarCanalCliente() {
   if(!clienteSeleccionado || !puedeVerCanalCliente()) return;
   var canal = document.getElementById('det-canal').value;
   clienteSeleccionado.canal = canal;
-  if(db) db.collection('clientes').doc(clienteSeleccionado.id).update({ canal: canal }).then(function(){
+  var update = Object.assign({ canal: canal }, metaEdicionCliente());
+  if(db) db.collection('clientes').doc(clienteSeleccionado.id).update(update).then(function(){
     showToast('✅ Canal actualizado');
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al guardar canal'); });
 }
@@ -3969,6 +4031,7 @@ function guardarDatosFiscalesCliente(id) {
     if(!el) return;
     update[campo] = el.value.trim();
   });
+  Object.assign(update, metaEdicionCliente());
   db.collection('clientes').doc(id).set(update, {merge:true}).then(function(){
     var c = clientesCache.find(function(x){ return x.id === id; });
     if(c) {
