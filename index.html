@@ -12551,14 +12551,17 @@ function recalcNotaManual() {
 }
 
 // ════ NV — impresión media carta, 2 copias por hoja ════
-// "🖨 Imprimir" ya no llama window.print() directo: arma #nota-print-wrapper
-// con 2 copias (ORIGINAL/COPIA + línea de corte) por hoja carta, midiendo en
-// un sandbox oculto (#nota-print-sandbox) si el contenido cabe a 10pt; si no,
-// reduce hasta 7pt; si ni a 7pt cabe con todos los productos, pagina por filas
-// completas (nunca corta una fila), repitiendo el mismo esquema de 2 copias
-// en cada hoja adicional.
+// "🖨 Imprimir" ya no llama window.print() directo: arma #nota-print-wrapper.
+// Caso normal (pocos productos): 2 copias (ORIGINAL/COPIA + línea de corte)
+// en UNA sola hoja carta, cada una a media carta, midiendo en un sandbox
+// oculto si cabe de 10pt a 7pt. Si ni a 7pt caben todos los productos en
+// media carta, ya no se fuerza el empaque de 2 copias por hoja (José Manuel:
+// "si hay muchos productos no tengo tema en que salgan de 2 o 3 hojas de uno
+// solo") — cada copia (ORIGINAL y COPIA) imprime por separado en página(s)
+// carta completa(s), tantas como haga falta, nunca cortando una fila.
 var NOTA_IMPRESION_ANCHO_MM = 205.9; // carta (215.9mm) menos 5mm de margen por lado
 var NOTA_IMPRESION_ALTO_COPIA_MM = 125; // ~48% de (279.4-10mm), con margen de seguridad
+var NOTA_IMPRESION_ALTO_PAGINA_MM = 258; // hoja carta completa (279.4-10mm), con margen de seguridad
 var NOTA_IMPRESION_FUENTES_PT = [10, 9.5, 9, 8.5, 8, 7.5, 7];
 
 function extraerFragmentoNota(selector) {
@@ -12570,8 +12573,8 @@ function extraerFilasNota() {
   return Array.from(document.querySelectorAll('#nota-content .nota-table tbody tr')).map(function(tr){ return tr.outerHTML; });
 }
 
-function construirCopiaNotaHTML(leyenda, headerHTML, rsHTML, clienteHTML, theadHTML, filasHTML, cierreHTML, hojaLabel) {
-  return '<div class="nota-venta-copia">' +
+function construirCopiaNotaHTML(leyenda, headerHTML, rsHTML, clienteHTML, theadHTML, filasHTML, cierreHTML, hojaLabel, estiloAltura) {
+  return '<div class="nota-venta-copia"' + (estiloAltura ? ' style="' + estiloAltura + '"' : '') + '>' +
     '<div class="copia-leyenda">' + leyenda + '</div>' +
     (hojaLabel ? '<div class="nota-hoja-num">' + hojaLabel + '</div>' : '') +
     headerHTML + rsHTML + clienteHTML +
@@ -12591,8 +12594,7 @@ function obtenerSandboxImpresionNota() {
 }
 
 // Mide en el sandbox oculto la altura real (mm) que ocuparía una copia con
-// estas filas y este tamaño de fuente — height:auto para no recortar, así
-// se ve si excede el cupo de media carta (NOTA_IMPRESION_ALTO_COPIA_MM).
+// estas filas y este tamaño de fuente — height:auto para no recortar.
 function medirAlturaNotaMM(headerHTML, rsHTML, clienteHTML, theadHTML, filasHTML, cierreHTML, fontSizePt) {
   var sandbox = obtenerSandboxImpresionNota();
   sandbox.style.width = NOTA_IMPRESION_ANCHO_MM + 'mm';
@@ -12606,16 +12608,54 @@ function medirAlturaNotaMM(headerHTML, rsHTML, clienteHTML, theadHTML, filasHTML
   return alturaPx / 3.7795275591; // px → mm a 96dpi
 }
 
-// Cuántas filas (desde el inicio de filasDisponibles) caben en una media
-// carta a fontSizePt con el cierre indicado — nunca corta una fila, se queda
-// con la última cantidad que sí cupo completa.
-function calcularCapacidadFilas(headerHTML, rsHTML, clienteHTML, theadHTML, cierreHTML, fontSizePt, filasDisponibles) {
+// Cuántas filas (desde el inicio de filasDisponibles) caben en presupuestoMM
+// a fontSizePt con el cierre indicado — nunca corta una fila, se queda con
+// la última cantidad que sí cupo completa.
+function calcularCapacidadFilas(headerHTML, rsHTML, clienteHTML, theadHTML, cierreHTML, fontSizePt, filasDisponibles, presupuestoMM) {
   var maxFilas = 0;
   for(var n = 1; n <= filasDisponibles.length; n++) {
     var alturaMM = medirAlturaNotaMM(headerHTML, rsHTML, clienteHTML, theadHTML, filasDisponibles.slice(0, n), cierreHTML, fontSizePt);
-    if(alturaMM <= NOTA_IMPRESION_ALTO_COPIA_MM) { maxFilas = n; } else { break; }
+    if(alturaMM <= presupuestoMM) { maxFilas = n; } else { break; }
   }
   return maxFilas;
+}
+
+// De 10pt a 7pt, el mayor tamaño con el que TODAS las filas caben en
+// presupuestoMM. null si ni a 7pt caben todas.
+function buscarFontQueQuepa(headerHTML, rsHTML, clienteHTML, theadHTML, filas, cierreHTML, presupuestoMM) {
+  for(var i = 0; i < NOTA_IMPRESION_FUENTES_PT.length; i++) {
+    var f = NOTA_IMPRESION_FUENTES_PT[i];
+    var alturaMM = medirAlturaNotaMM(headerHTML, rsHTML, clienteHTML, theadHTML, filas, cierreHTML, f);
+    if(alturaMM <= presupuestoMM) { return f; }
+  }
+  return null;
+}
+
+// Pagina UNA sola copia (ORIGINAL o COPIA) en página(s) carta completa(s) —
+// se usa cuando ni a 7pt caben todos los productos en media carta: ya no se
+// empacan las 2 copias en una sola hoja, cada una imprime sus propias hojas
+// completas, tantas como haga falta, sin cortar ninguna fila.
+function construirCopiaPaginadaCompleta(leyenda, headerHTML, rsHTML, clienteHTML, theadHTML, cierreCompletoHTML, cierreContinuaHTML, todasLasFilas) {
+  var fontPagina = buscarFontQueQuepa(headerHTML, rsHTML, clienteHTML, theadHTML, todasLasFilas, cierreCompletoHTML, NOTA_IMPRESION_ALTO_PAGINA_MM) || 7;
+  var paginas = [];
+  var restantes = todasLasFilas.slice();
+  while(restantes.length > 0) {
+    var alturaSiEsFinal = medirAlturaNotaMM(headerHTML, rsHTML, clienteHTML, theadHTML, restantes, cierreCompletoHTML, fontPagina);
+    if(alturaSiEsFinal <= NOTA_IMPRESION_ALTO_PAGINA_MM) {
+      paginas.push({ filas: restantes, esUltima: true });
+      break;
+    }
+    var capacidad = Math.max(1, calcularCapacidadFilas(headerHTML, rsHTML, clienteHTML, theadHTML, cierreContinuaHTML, fontPagina, restantes, NOTA_IMPRESION_ALTO_PAGINA_MM));
+    paginas.push({ filas: restantes.splice(0, capacidad), esUltima: false });
+  }
+  var html = '';
+  paginas.forEach(function(pag, idx) {
+    var cierre = pag.esUltima ? cierreCompletoHTML : cierreContinuaHTML;
+    var hojaLabel = paginas.length > 1 ? ('Hoja ' + (idx + 1) + ' de ' + paginas.length) : null;
+    var copia = construirCopiaNotaHTML(leyenda, headerHTML, rsHTML, clienteHTML, theadHTML, pag.filas, cierre, hojaLabel, 'height:auto;overflow:visible;');
+    html += '<div class="nota-venta-wrapper" style="font-size:' + fontPagina + 'pt;">' + copia + '</div>';
+  });
+  return html;
 }
 
 function imprimirNotaVenta() {
@@ -12630,41 +12670,18 @@ function imprimirNotaVenta() {
 
   if(!todasLasFilas.length) { showToast('⚠️ La nota no tiene productos que imprimir'); return; }
 
-  var fontElegida = null;
-  for(var i = 0; i < NOTA_IMPRESION_FUENTES_PT.length; i++) {
-    var f = NOTA_IMPRESION_FUENTES_PT[i];
-    var alturaMM = medirAlturaNotaMM(headerHTML, rsHTML, clienteHTML, theadHTML, todasLasFilas, cierreCompletoHTML, f);
-    if(alturaMM <= NOTA_IMPRESION_ALTO_COPIA_MM) { fontElegida = f; break; }
-  }
-
   var hojasHTML = '';
-  if(fontElegida) {
-    // Todos los productos caben en una sola media carta — sin paginar
-    var copia1 = construirCopiaNotaHTML('ORIGINAL — CLIENTE', headerHTML, rsHTML, clienteHTML, theadHTML, todasLasFilas, cierreCompletoHTML, null);
-    var copia2 = construirCopiaNotaHTML('COPIA — ARCHIVO', headerHTML, rsHTML, clienteHTML, theadHTML, todasLasFilas, cierreCompletoHTML, null);
-    hojasHTML = '<div class="nota-venta-wrapper" style="font-size:' + fontElegida + 'pt;">' + copia1 + '<div class="linea-corte"></div>' + copia2 + '</div>';
+  var fontMediaCarta = buscarFontQueQuepa(headerHTML, rsHTML, clienteHTML, theadHTML, todasLasFilas, cierreCompletoHTML, NOTA_IMPRESION_ALTO_COPIA_MM);
+
+  if(fontMediaCarta) {
+    // Caso normal: todos los productos caben en media carta — 2 copias, 1 sola hoja
+    var copia1 = construirCopiaNotaHTML('ORIGINAL — CLIENTE', headerHTML, rsHTML, clienteHTML, theadHTML, todasLasFilas, cierreCompletoHTML, null, null);
+    var copia2 = construirCopiaNotaHTML('COPIA — ARCHIVO', headerHTML, rsHTML, clienteHTML, theadHTML, todasLasFilas, cierreCompletoHTML, null, null);
+    hojasHTML = '<div class="nota-venta-wrapper" style="font-size:' + fontMediaCarta + 'pt;">' + copia1 + '<div class="linea-corte"></div>' + copia2 + '</div>';
   } else {
-    // Ni a 7pt caben todos los productos en una media carta — paginar por
-    // filas completas, repitiendo el esquema de 2 copias en cada hoja.
-    var fPag = 7;
-    var paginas = [];
-    var restantes = todasLasFilas.slice();
-    while(restantes.length > 0) {
-      var alturaSiEsFinal = medirAlturaNotaMM(headerHTML, rsHTML, clienteHTML, theadHTML, restantes, cierreCompletoHTML, fPag);
-      if(alturaSiEsFinal <= NOTA_IMPRESION_ALTO_COPIA_MM) {
-        paginas.push({ filas: restantes, esUltima: true });
-        break;
-      }
-      var capacidad = Math.max(1, calcularCapacidadFilas(headerHTML, rsHTML, clienteHTML, theadHTML, cierreContinuaHTML, fPag, restantes));
-      paginas.push({ filas: restantes.splice(0, capacidad), esUltima: false });
-    }
-    paginas.forEach(function(pag, idx) {
-      var cierre = pag.esUltima ? cierreCompletoHTML : cierreContinuaHTML;
-      var hojaLabel = 'Hoja ' + (idx + 1) + ' de ' + paginas.length;
-      var copia1 = construirCopiaNotaHTML('ORIGINAL — CLIENTE', headerHTML, rsHTML, clienteHTML, theadHTML, pag.filas, cierre, hojaLabel);
-      var copia2 = construirCopiaNotaHTML('COPIA — ARCHIVO', headerHTML, rsHTML, clienteHTML, theadHTML, pag.filas, cierre, hojaLabel);
-      hojasHTML += '<div class="nota-venta-wrapper" style="font-size:' + fPag + 'pt;">' + copia1 + '<div class="linea-corte"></div>' + copia2 + '</div>';
-    });
+    // Muchos productos: cada copia imprime sus propias hojas carta completas
+    hojasHTML += construirCopiaPaginadaCompleta('ORIGINAL — CLIENTE', headerHTML, rsHTML, clienteHTML, theadHTML, cierreCompletoHTML, cierreContinuaHTML, todasLasFilas);
+    hojasHTML += construirCopiaPaginadaCompleta('COPIA — ARCHIVO', headerHTML, rsHTML, clienteHTML, theadHTML, cierreCompletoHTML, cierreContinuaHTML, todasLasFilas);
   }
 
   document.getElementById('nota-print-wrapper').innerHTML = hojasHTML;
