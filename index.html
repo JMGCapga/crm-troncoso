@@ -132,7 +132,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 .nota-venta-copia .nota-footer{display:flex;justify-content:space-between;align-items:flex-end;padding-top:0.2em;border-top:1px solid #EEE;font-size:0.8em;color:#888;}
 .nota-venta-copia .nota-print-continua{text-align:center;font-size:0.85em;color:#999;font-style:italic;padding:0.3em 0;}
 .linea-corte{border-top:1px dashed #999;text-align:center;font-size:7pt;color:#999;margin:0.8mm 0;position:relative;flex-shrink:0;}
-.linea-corte::after{content:"ORIGINAL — CLIENTE   ✂   LÍNEA DE CORTE";background:#fff;padding:0 3mm;position:relative;top:-1.9mm;}
+.linea-corte::after{content:"ORIGINAL — CLIENTE   ✂   LÍNEA DE CORTE   ✂   COPIA — ARCHIVO";background:#fff;padding:0 3mm;position:relative;top:-1.9mm;}
 .nota-paper{background:#fff;border-radius:8px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,0.1);font-size:12px;max-width:750px;margin:0 auto;}
 .nota-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--naranja);}
 .nota-logo-area h2{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--naranja);letter-spacing:2px;}
@@ -12595,7 +12595,6 @@ function medirAlturaNotaMM(headerHTML, rsHTML, clienteHTML, theadHTML, filasHTML
   var sandbox = obtenerSandboxImpresionNota();
   sandbox.style.width = NOTA_IMPRESION_ANCHO_MM + 'mm';
   sandbox.innerHTML = '<div class="nota-venta-copia" style="height:auto;overflow:visible;font-size:' + fontSizePt + 'pt;">' +
-    '<div class="copia-leyenda">ORIGINAL — CLIENTE</div>' +
     headerHTML + rsHTML + clienteHTML +
     '<table class="nota-table">' + theadHTML + '<tbody>' + filasHTML.join('') + '</tbody></table>' +
     cierreHTML +
@@ -12641,7 +12640,7 @@ function imprimirNotaVenta() {
     var hojaLabel = paginas.length > 1 ? ('Hoja ' + (idx + 1) + ' de ' + paginas.length) : null;
     var fontElegida = buscarFontQueQuepa(headerHTML, rsHTML, clienteHTML, theadHTML, filasPagina, cierre);
     var copia1 = construirCopiaNotaHTML(null, headerHTML, rsHTML, clienteHTML, theadHTML, filasPagina, cierre, hojaLabel);
-    var copia2 = construirCopiaNotaHTML('COPIA — ARCHIVO', headerHTML, rsHTML, clienteHTML, theadHTML, filasPagina, cierre, hojaLabel);
+    var copia2 = construirCopiaNotaHTML(null, headerHTML, rsHTML, clienteHTML, theadHTML, filasPagina, cierre, hojaLabel);
     hojasHTML += '<div class="nota-venta-wrapper" style="font-size:' + fontElegida + 'pt;">' + copia1 + '<div class="linea-corte"></div>' + copia2 + '</div>';
   });
 
