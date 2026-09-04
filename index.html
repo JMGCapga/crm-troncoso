@@ -108,13 +108,13 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 .nota-venta-copia{height:48%;overflow:hidden;box-sizing:border-box;padding:5mm 7mm;}
 .nota-venta-copia .copia-leyenda{text-align:center;font-size:0.75em;letter-spacing:1.5px;color:#999;font-weight:700;text-transform:uppercase;margin-bottom:0.5em;}
 .nota-venta-copia .nota-hoja-num{text-align:right;font-size:0.6em;color:#BBB;margin-bottom:0.2em;}
-.nota-venta-copia .nota-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.9em;padding-bottom:0.6em;border-bottom:2px solid var(--naranja);}
+.nota-venta-copia .nota-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.6em;padding-bottom:0.4em;border-bottom:2px solid var(--naranja);}
 .nota-venta-copia .nota-logo-area img{max-height:3.2em;max-width:11em;margin-bottom:0.3em;}
 .nota-venta-copia .nota-logo-area h2{font-family:'Bebas Neue',sans-serif;font-size:1.9em;color:var(--naranja);letter-spacing:1.5px;margin:0;}
 .nota-venta-copia .nota-logo-area p{font-size:0.85em;color:#666;line-height:1.3;margin:0.15em 0 0;}
-.nota-venta-copia .nota-folio{text-align:right;}
-.nota-venta-copia .nota-folio .folio-num{font-family:'Bebas Neue',sans-serif;font-size:1.7em;letter-spacing:1.5px;}
-.nota-venta-copia .nota-folio .folio-label{font-size:0.75em;text-transform:uppercase;color:var(--suave);}
+.nota-venta-copia .nota-folio-linea{font-size:0.8em;color:var(--suave);margin-top:0;}
+.nota-venta-copia .nota-folio-linea .folio-linea-label{text-transform:uppercase;letter-spacing:0.5px;}
+.nota-venta-copia .nota-folio-linea .folio-linea-num{font-family:'Bebas Neue',sans-serif;font-size:1.2em;letter-spacing:1px;margin:0 0.3em;}
 .nota-venta-copia .nota-rs{background:#FFF0E8;border:1px solid #FFD8C0;border-radius:5px;padding:0.45em 0.7em;margin-bottom:0.7em;font-size:0.9em;}
 .nota-venta-copia .nota-rs strong{color:var(--naranja);}
 .nota-venta-copia .nota-cliente-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.5em;margin-bottom:0.7em;padding:0.5em;background:#F8F8F6;border-radius:5px;}
@@ -137,6 +137,9 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 .nota-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--naranja);}
 .nota-logo-area h2{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--naranja);letter-spacing:2px;}
 .nota-logo-area p{font-size:11px;color:#666;line-height:1.4;}
+.nota-folio-linea{font-size:11px;color:var(--suave);margin-top:2px;}
+.nota-folio-linea .folio-linea-label{text-transform:uppercase;letter-spacing:0.5px;}
+.nota-folio-linea .folio-linea-num{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;margin:0 4px;}
 .nota-folio{text-align:right;}
 .nota-folio .folio-num{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;}
 .nota-folio .folio-label{font-size:10px;text-transform:uppercase;color:var(--suave);}
@@ -428,11 +431,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <img id="nota-logo-img" src="" style="display:none;max-height:50px;max-width:160px;margin-bottom:6px;">
             <h2 id="nota-nombre-comercial">MATERIALES TRONCOSO</h2>
             <p id="nota-direccion-linea">Fco. del Paso y Troncoso #943 Col. Los Reyes, Iztacalco, C.P. 08620, CDMX · 📱 5555906802 / 5591800148</p>
-          </div>
-          <div class="nota-folio">
-            <div class="folio-label">Nota de Remisión</div>
-            <div class="folio-num" id="nota-folio-num" style="color:var(--gris-oscuro);">#0001</div>
-            <div style="font-size:11px;color:var(--suave);margin-top:4px;" id="nota-fecha"></div>
+            <p class="nota-folio-linea"><span class="folio-linea-label">Nota de Remisión</span> <span class="folio-linea-num" id="nota-folio-num" style="color:var(--gris-oscuro);">#0001</span> · <span id="nota-fecha"></span></p>
           </div>
         </div>
         <div class="nota-rs" id="nota-rs-info">
