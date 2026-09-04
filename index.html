@@ -10481,7 +10481,8 @@ const CONFIG_IMPRESION_SEED = {
     tel1: '5555906802',
     tel2: '5591800148',
     mensajeCierre: '¡Gracias por su compra!',
-    logoBase64: ''
+    logoBase64: '',
+    imprimirAutomatico: true
   },
   nv_jmg: {
     nombreComercial: 'MATERIALES TRONCOSO',
@@ -10575,6 +10576,10 @@ function cardConfigImpresionTicketHTML() {
         '<input type="file" accept="image/png,image/jpeg" onchange="previsualizarLogoConfigImpresion(this,\'ticket\')">' +
         logoPreview +
       '</div>' +
+      '<div style="margin:10px 0;">' +
+        '<label style="font-size:11px;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="cfg-ticket-imprimirAutomatico"' + (c.imprimirAutomatico !== false ? ' checked' : '') + '> Imprimir ticket automáticamente al guardar</label>' +
+        '<div style="font-size:10px;color:var(--suave);margin-top:2px;">Requiere Chrome con impresora térmica configurada como predeterminada. Si lo desactivas, el botón manual "🖨️ Imprimir ticket" sigue disponible en cada ticket.</div>' +
+      '</div>' +
       '<button class="btn btn-naranja" onclick="guardarConfigImpresion(\'ticket\')" style="font-size:11px;padding:7px 14px;">💾 Guardar</button>' +
     '</div>';
 }
@@ -10622,6 +10627,10 @@ function guardarConfigImpresion(docId) {
     var el = document.getElementById('cfg-' + docId + '-' + campo);
     if(el) update[campo] = el.value;
   });
+  if(docId === 'ticket') {
+    var chkAuto = document.getElementById('cfg-ticket-imprimirAutomatico');
+    if(chkAuto) update.imprimirAutomatico = chkAuto.checked;
+  }
   var logoNuevo = window['_logoConfigImpresion_' + docId];
   if(logoNuevo) update.logoBase64 = logoNuevo;
   db.collection('config_impresion').doc(docId).set(update, {merge:true}).then(function(){
@@ -11631,7 +11640,7 @@ function guardarTicket() {
       var modal = document.getElementById('modal-nuevo-ticket');
       if(modal) modal.remove();
       if(metodo === 'transferencia') mostrarBtnCompartirPagoTicket(ticket);
-      imprimirTicketVenta(ticket);
+      if(getConfigImpresion('ticket').imprimirAutomatico !== false) imprimirTicketVenta(ticket);
       renderListaTickets();
       creandoTicket = false;
     }).catch(function(e){ console.log(e); showToast('⚠️ Error al crear ticket'); creandoTicket = false; });
@@ -11666,38 +11675,63 @@ function mostrarBtnCompartirPagoTicket(ticket) {
   document.body.appendChild(container);
 }
 
+// Rollo térmico 80mm × 80mm, área imprimible ~72mm — antes el body pedía
+// 78mm de ancho y el sobrante se recortaba en la impresora física (columnas
+// truncadas: "ant", "Import", "ago:"). Ahora el ancho lo da @page (80mm) y
+// el contenido va en #ticket-print con su propio padding, nunca más ancho
+// que la hoja. También se refresca config_impresion/ticket justo antes de
+// imprimir (no solo la copia cargada al iniciar sesión) para que un logo
+// subido en otra sesión/dispositivo sí aparezca sin tener que recargar.
 function imprimirTicketVenta(ticket) {
+  if(!db) { construirEImprimirTicket(ticket, getConfigImpresion('ticket')); return; }
+  db.collection('config_impresion').doc('ticket').get().then(function(doc){
+    if(doc.exists) configImpresionCache.ticket = Object.assign({}, configImpresionCache.ticket || {}, doc.data());
+    construirEImprimirTicket(ticket, getConfigImpresion('ticket'));
+  }).catch(function(e){
+    console.log('Error refrescando config_impresion/ticket antes de imprimir:', e);
+    construirEImprimirTicket(ticket, getConfigImpresion('ticket'));
+  });
+}
+
+function construirEImprimirTicket(ticket, cfg) {
   var filas = ticket.productos.map(function(p){
-    return '<tr><td>'+(p.cant||0)+'</td><td>'+p.desc+'</td><td style="text-align:right;">'+fmtMoney(p.precio||0)+'</td><td style="text-align:right;">'+fmtMoney((p.cant||0)*(p.precio||0))+'</td></tr>';
+    return '<tr><td>'+(p.cant||0)+'</td><td>'+p.desc+'</td><td>'+fmtMoney(p.precio||0)+'</td><td>'+fmtMoney((p.cant||0)*(p.precio||0))+'</td></tr>';
   }).join('');
   var fecha = new Date(ticket.timestamp).toLocaleString('es-MX');
-  var cfg = getConfigImpresion('ticket');
   var tels = 'Tel: ' + cfg.tel1 + (cfg.tel2 ? ' / ' + cfg.tel2 : '');
-  var logoHTML = cfg.logoBase64 ? '<img src="'+cfg.logoBase64+'" style="max-height:50px;max-width:150px;display:block;margin:0 auto 4px;">' : '';
+  var logoHTML = cfg.logoBase64 ? '<img src="'+cfg.logoBase64+'" style="width:25mm;display:block;margin:0 auto 2mm auto;">' : '';
   var w = window.open('', '_blank', 'width=320,height=600');
   if(!w) { showToast('⚠️ Habilita las ventanas emergentes para imprimir'); return; }
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+ticket.folio+'</title><style>' +
-    'body{font-family:monospace;width:78mm;margin:0;padding:8px;font-size:11px;}' +
-    'h2{font-size:14px;text-align:center;margin:0 0 2px;}' +
-    'p{text-align:center;margin:2px 0;font-size:10px;}' +
-    'table{width:100%;border-collapse:collapse;margin-top:8px;}' +
-    'th{padding:2px 4px 4px 0;font-size:10px;text-align:left;border-bottom:1px dashed #000;}' +
-    'td{padding:2px 4px 2px 0;font-size:11px;}' +
-    '.total{font-weight:bold;font-size:14px;border-top:1px dashed #000;margin-top:6px;padding-top:6px;text-align:right;}' +
-    '.footer{text-align:center;margin-top:10px;font-size:10px;}' +
-    '@media print{@page{margin:0;}}' +
-    '</style></head><body>' +
+    '@page{size:80mm auto;margin:0mm;}' +
+    'body{font-family:monospace;margin:0;padding:0;}' +
+    '#ticket-print{padding:2mm 3mm;margin:0;}' +
+    '.ticket-nombre{font-size:13pt;font-weight:900;text-align:center;margin:0 0 2px;}' +
+    '.ticket-direccion{font-size:8pt;font-weight:600;text-align:center;margin:2px 0;}' +
+    '.ticket-folio{font-size:9pt;font-weight:700;text-align:center;margin:4px 0 0;}' +
+    '.ticket-cliente{font-size:9pt;font-weight:600;text-align:center;margin:2px 0 4px;}' +
+    'table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:9pt;font-weight:bold;margin-top:4px;}' +
+    'th:nth-child(1),td:nth-child(1){width:10%;text-align:center;}' +
+    'th:nth-child(2),td:nth-child(2){width:38%;text-align:left;word-wrap:break-word;padding-left:1.5mm;}' +
+    'th:nth-child(3),td:nth-child(3){width:26%;text-align:right;}' +
+    'th:nth-child(4),td:nth-child(4){width:26%;text-align:right;padding-left:1mm;}' +
+    'th,td{font-size:9pt;font-weight:700;padding:2px 1px;}' +
+    '.ticket-total{font-size:14pt;font-weight:900;text-align:right;border-top:1px dashed #000;margin-top:6px;padding-top:6px;}' +
+    '.ticket-pago{font-size:9pt;font-weight:700;text-align:left;margin-top:6px;}' +
+    '.footer{text-align:center;margin-top:8px;font-size:8pt;}' +
+    '@media print{@page{size:80mm auto;margin:0mm;} body{margin:0;padding:0;}}' +
+    '</style></head><body><div id="ticket-print">' +
     logoHTML +
-    '<h2>'+cfg.nombreComercial+'</h2>' +
-    '<p>'+cfg.direccion1+'<br>'+cfg.direccion2+'</p>' +
-    '<p>'+tels+'</p>' +
-    '<p>'+ticket.folio+' &nbsp;|&nbsp; '+fecha+'</p>' +
-    '<p>Cliente: '+ticket.cliente+'</p>' +
-    '<table><thead><tr><th>Cant</th><th>Descripción</th><th style="text-align:right;">P.Unit</th><th style="text-align:right;">Importe</th></tr></thead><tbody>'+filas+'</tbody></table>' +
-    '<div class="total">TOTAL: '+fmtMoney(ticket.total)+'</div>' +
-    '<p style="text-align:left;margin-top:6px;">Pago: '+labelMetodoPago(ticket.metodoPago)+'</p>' +
+    '<div class="ticket-nombre">'+cfg.nombreComercial+'</div>' +
+    '<div class="ticket-direccion">'+cfg.direccion1+'<br>'+cfg.direccion2+'</div>' +
+    '<div class="ticket-direccion">'+tels+'</div>' +
+    '<div class="ticket-folio">'+ticket.folio+' &nbsp;|&nbsp; '+fecha+'</div>' +
+    '<div class="ticket-cliente">Cliente: '+ticket.cliente+'</div>' +
+    '<table><thead><tr><th>CANT</th><th>DESCRIPCIÓN</th><th>P.UNIT</th><th>IMPORTE</th></tr></thead><tbody>'+filas+'</tbody></table>' +
+    '<div class="ticket-total">TOTAL: '+fmtMoney(ticket.total)+'</div>' +
+    '<div class="ticket-pago">Pago: '+labelMetodoPago(ticket.metodoPago)+'</div>' +
     '<div class="footer">'+cfg.mensajeCierre+'</div>' +
-    '</body></html>');
+    '</div></body></html>');
   w.document.close();
   var imprimio = false;
   var doPrint = function(){ if(imprimio) return; imprimio = true; w.focus(); w.print(); };
