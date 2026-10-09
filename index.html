@@ -1241,6 +1241,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;color:#1A1A1A;">💳 Pago y Documentos</div>
             <div class="form-grid">
               <div class="field">
+                <label>Fecha de la compra</label>
+                <input type="date" id="cmp-fecha">
+              </div>
+              <div class="field">
                 <label>Forma de pago</label>
                 <select id="cmp-forma-pago" onchange="cambiarFormaPago()">
                   <option value="efectivo">💵 Efectivo</option>
@@ -7215,6 +7219,10 @@ function puedeRegistrarCompra() {
   return currentUser && (currentUser.role === 'Ventas' || currentUser.role === 'Compras' || currentUser.role === 'Gerencia' || currentUser.role === 'Director');
 }
 
+function puedeEditarFechaCompra() {
+  return currentUser && (currentUser.role === 'Director' || currentUser.role === 'Gerencia' || currentUser.role === 'Compras' || currentUser.role === 'Ventas');
+}
+
 function iniciarCompras() {
   var role = currentUser ? currentUser.role : '';
   document.getElementById('compras-erika').style.display = 'none';
@@ -7225,6 +7233,13 @@ function iniciarCompras() {
   var hoy = new Date();
   document.getElementById('compras-fecha-hoy').textContent =
     hoy.toLocaleDateString('es-MX', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  var cmpFechaEl = document.getElementById('cmp-fecha');
+  if(cmpFechaEl) {
+    cmpFechaEl.max = fechaISOLocal();
+    cmpFechaEl.value = fechaISOLocal();
+    cmpFechaEl.disabled = !puedeEditarFechaCompra();
+  }
 
   // Viridiana maneja la caja y debe poder registrar cualquier compra (incluida en
   // efectivo) sin restricción — antes solo Erika (role Compras) veía este formulario.
@@ -7423,7 +7438,7 @@ function verDetalleCompra(docId) {
     '</div>' +
     '<div style="font-size:13px;color:#666;margin-bottom:14px;">' +
       '<div><strong>Proveedor:</strong> ' + (c.proveedor||'Sin nombre') + ' (' + (c.rsNombre||c.razonSocial||'') + ')</div>' +
-      '<div><strong>Fecha:</strong> ' + c.fecha + '</div>' +
+      '<div><strong>' + (c.fechaRegistro && c.fechaRegistro !== c.fecha ? 'Fecha compra:</strong> ' + fechaCortaHistorial(c.fecha) + ' | <strong>Registrado:</strong> ' + fechaCortaHistorial(c.fechaRegistro) : 'Fecha:</strong> ' + c.fecha) + '</div>' +
       '<div><strong>Método de pago:</strong> ' + labelFormaPagoCompra(c.formaPago) + '</div>' +
       (c.noFactura ? '<div><strong>No. factura:</strong> ' + c.noFactura + '</div>' : '') +
       (c.notas ? '<div><strong>Notas:</strong> ' + c.notas + '</div>' : '') +
@@ -8092,9 +8107,13 @@ function guardarCompra() {
     }
     var folio = 'CMP-' + String(nextNum).padStart(3,'0');
 
+    var fechaCapturada = document.getElementById('cmp-fecha').value || fechaISOLocal();
+    if(fechaCapturada > fechaISOLocal()) fechaCapturada = fechaISOLocal();
+
     var compra = {
       folio: folio,
-      fecha: fechaISOLocal(),
+      fecha: fechaCapturada,
+      fechaRegistro: fechaISOLocal(),
       timestamp: Date.now(),
       proveedor: comprasProveedorSelec.nombre,
       proveedorId: comprasProveedorSelec.id,
@@ -8205,6 +8224,7 @@ function guardarCompra() {
       ['cmp-no-factura','cmp-no-remision','cmp-notas'].forEach(function(id) {
         var el = document.getElementById(id); if(el) el.value = '';
       });
+      document.getElementById('cmp-fecha').value = fechaISOLocal();
       document.getElementById('cmp-forma-pago').value = 'efectivo';
       cambiarFormaPago();
       cargarComprasErika();
@@ -11465,12 +11485,45 @@ function quitarProductoTicket(idx) {
 }
 function abrirBuscadorProductoTicket(idx) {
   abrirSelectorProducto(function(p){
+    // Si el precio anterior vino del autollenado (no lo tecleó la persona) pertenece
+    // al producto que se está reemplazando — se descarta para no cobrar el precio equivocado.
+    if(ticketProductos[idx].precioAuto) { ticketProductos[idx].precio = 0; ticketProductos[idx].precioAuto = false; }
     ticketProductos[idx].clave = p.clave;
     ticketProductos[idx].desc = p.descripcion;
     ticketProductos[idx].stockHTML = '';
+    ticketProductos[idx].ultimoPrecioHTML = '';
     renderProductosTicket();
     actualizarStockTicket(idx, p.clave);
+    sugerirUltimoPrecioTicket(idx, p.clave);
   });
+}
+
+// Último precio de venta: primero el de este cliente (si hay uno elegido y ya le
+// vendimos ese producto), si no el último de mostrador (Público General).
+// Se autollena solo si el precio sigue en 0 — nunca pisa lo que ya se tecleó.
+function sugerirUltimoPrecioTicket(idx, clave) {
+  if(!clave || !db) return;
+  var ids = [];
+  if(ticketClienteSel && ticketClienteSel.id) ids.push({ id: ticketClienteSel.id + '_' + clave, deCliente: true });
+  ids.push({ id: 'PUBLICO_' + clave, deCliente: false });
+  var buscar = function(i) {
+    if(i >= ids.length) return Promise.resolve(null);
+    return db.collection('precios_cliente').doc(ids[i].id).get().then(function(doc){
+      return doc.exists ? { datos: doc.data(), deCliente: ids[i].deCliente } : buscar(i + 1);
+    });
+  };
+  buscar(0).then(function(r){
+    var fila = ticketProductos[idx];
+    if(!r || !fila || fila.clave !== clave) return;
+    var precio = parseFloat(r.datos.ultimoPrecio) || 0;
+    if(precio <= 0) return;
+    fila.ultimoPrecioHTML =
+      '<div style="font-size:10px;font-weight:700;color:#1D7A4F;margin:2px 0 0 2px;">💡 Último precio' +
+      (r.deCliente ? ' a este cliente' : '') + ': $' + precio.toFixed(2) +
+      ' (' + (r.datos.pedidoId || '') + ', ' + (r.datos.fecha || '') + ')</div>';
+    if(!fila.precio) { fila.precio = precio; fila.precioAuto = true; }
+    renderProductosTicket();
+  }).catch(function(e){ console.log('Error buscando último precio:', e); });
 }
 function actualizarStockTicket(idx, clave) {
   if(!clave || !db) return;
@@ -11489,9 +11542,9 @@ function renderProductosTicket() {
       '<input type="text" value="'+(p.desc||'').replace(/"/g,'&quot;')+'" placeholder="Descripción" style="flex:2;border:1.5px solid var(--borde);border-radius:8px;padding:7px 9px;font-size:12px;" onchange="ticketProductos['+idx+'].desc=this.value;ticketProductos['+idx+'].clave=\'\';">' +
       '<button type="button" class="btn btn-gris" onclick="abrirBuscadorProductoTicket('+idx+')" style="padding:6px 8px;font-size:11px;" title="Buscar en catálogo">🔍</button>' +
       '<input type="number" value="'+p.cant+'" min="0" step="0.01" style="width:55px;border:1.5px solid var(--borde);border-radius:8px;padding:7px;font-size:12px;" onchange="ticketProductos['+idx+'].cant=parseFloat(this.value)||0;actualizarTotalTicket();">' +
-      '<input type="number" value="'+p.precio+'" min="0" step="0.01" style="width:70px;border:1.5px solid var(--borde);border-radius:8px;padding:7px;font-size:12px;" onchange="ticketProductos['+idx+'].precio=parseFloat(this.value)||0;actualizarTotalTicket();">' +
+      '<input type="number" value="'+p.precio+'" min="0" step="0.01" style="width:70px;border:1.5px solid var(--borde);border-radius:8px;padding:7px;font-size:12px;" onchange="ticketProductos['+idx+'].precio=parseFloat(this.value)||0;ticketProductos['+idx+'].precioAuto=false;actualizarTotalTicket();">' +
       '<button type="button" class="btn-del" onclick="quitarProductoTicket('+idx+')">✕</button>' +
-      '</div>' + (p.stockHTML||'') +
+      '</div>' + (p.stockHTML||'') + (p.ultimoPrecioHTML||'') +
     '</div>';
   }).join('');
   actualizarTotalTicket();
@@ -11624,6 +11677,10 @@ function guardarTicket() {
         }).catch(function(e){ console.log('Error registrando caja_apartada:', e); });
       }
       guardarPreciosClienteDesdeVenta(ticket.clienteId, productosValidos, ticketClienteSel ? ticketClienteSel.canal : 'publico', ticket.fecha, folio);
+      // Venta a Público General: queda como "último precio de mostrador". A propósito NO se
+      // actualiza cuando la venta es a un cliente registrado, para que un precio negociado
+      // con un constructor no se sugiera después al público.
+      if(!ticket.clienteId) guardarPreciosClienteDesdeVenta('PUBLICO', productosValidos, 'publico', ticket.fecha, folio);
       if(saldoFavorMonto > 0 && ticket.clienteId) {
         db.collection('saldos_favor').doc(ticket.clienteId).set({
           saldo: firebase.firestore.FieldValue.increment(-saldoFavorMonto)
