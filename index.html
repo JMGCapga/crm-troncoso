@@ -2839,15 +2839,16 @@ function renderInventarioLista() {
       (puedeAjustar ? '<button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:4px;" onclick="abrirAjusteExistencia(\'' + p.clave + '\')">✏️ Ajustar</button>' : '') +
       (esSuper ? ' <button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:4px;" onclick="abrirEditarProducto(\'' + p.clave + '\')">⚙️ Editar</button>' : '') +
       (puedeBorrar ? ' <button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:4px;" onclick="cambiarActivoProducto(\'' + p.clave + '\',' + (inactivo ? 'true' : 'false') + ')">' + (inactivo ? '♻️ Reactivar' : '🗑 Desactivar') + '</button>' : '') +
+      (puedeBorrar && ex === 0 ? ' <button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:4px;color:#DC2626;" onclick="eliminarProducto(\'' + p.clave + '\')">❌ Eliminar</button>' : '') +
       (puedeHistorial ? ' <button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:4px;" onclick="abrirHistorialProducto(\'' + p.clave + '\')">📋 Historial</button>' : '') +
       '</div></div>';
   });
   document.getElementById('inv-lista').innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">Sin resultados</div>';
 }
 
-// "Borrar" un código = desactivarlo: deja de salir en los buscadores de venta y compra, pero
-// el historial de ventas/compras que lo usa se conserva y se puede reactivar. Solo pide el
-// permiso "Borrar/desactivar" (no necesita "Editar", que da acceso a tipo, insumo y apartado).
+// Desactivar un código: deja de salir en los buscadores de venta y compra, pero el historial
+// de ventas/compras que lo usa se conserva y se puede reactivar. Solo pide el permiso
+// "Borrar/desactivar" (no necesita "Editar", que da acceso a tipo, insumo y apartado).
 function cambiarActivoProducto(clave, activar) {
   if(!puedeBorrarProducto()) { showToast('⚠️ Sin permisos'); return; }
   var p = productosIndex[clave];
@@ -2857,11 +2858,62 @@ function cambiarActivoProducto(clave, activar) {
     if((p.existencia || 0) > 0) aviso += '\n\n⚠️ Todavía tiene existencia: ' + p.existencia;
     if(!confirm(aviso)) return;
   }
+  guardarActivoProducto(clave, activar);
+}
+
+function guardarActivoProducto(clave, activar) {
+  var p = productosIndex[clave];
+  if(!p || !db) return;
   db.collection('productos').doc(clave).update({ activo: !!activar }).then(function(){
     p.activo = !!activar;
     showToast(activar ? '♻️ Producto reactivado' : '🗑 Producto desactivado');
     renderInventarioLista();
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al actualizar producto'); });
+}
+
+// Eliminar de verdad un código — pensado para duplicados o altas por error. Solo si tiene
+// existencia 0 y nunca se vendió ni se compró: cancelar una venta o una compra vieja actualiza
+// el documento del producto (devuelve piezas), y si el documento ya no existe esa cancelación
+// falla. Los ajustes manuales de existencia no bloquean (nada los revierte después).
+// Si tiene ventas o compras no se borra; se ofrece desactivarlo.
+var eliminandoProducto = false;
+function eliminarProducto(clave) {
+  if(eliminandoProducto) return;
+  if(!puedeBorrarProducto()) { showToast('⚠️ Sin permisos'); return; }
+  var p = productosIndex[clave];
+  if(!p || !db) return;
+  if((p.existencia || 0) !== 0) { showToast('⚠️ Solo se elimina un código con existencia 0'); return; }
+  var esInsumoDe = productos.filter(function(x){ return x.insumoClave === clave; })[0];
+  if(esInsumoDe) { showToast('⚠️ ' + esInsumoDe.clave + ' descuenta este código como insumo — no se puede eliminar'); return; }
+  eliminandoProducto = true;
+  showToast('Revisando historial...');
+  var campoDeltas = new firebase.firestore.FieldPath('inventarioDeltas', clave);
+  Promise.all([
+    db.collection('movimientos_inventario').where('clave','==',clave).limit(200).get(),
+    db.collection('pedidos').where(campoDeltas,'>',0).limit(1).get(),
+    db.collection('tickets').where(campoDeltas,'>',0).limit(1).get()
+  ]).then(function(res){
+    var tuvoCompras = res[0].docs.some(function(d){ var t = d.data().tipo; return t === 'compra' || t === 'cancelacion_compra'; }) || res[0].size >= 200;
+    if(tuvoCompras || !res[1].empty || !res[2].empty) {
+      eliminandoProducto = false;
+      var motivo = (!res[1].empty || !res[2].empty) ? 'ya tuvo ventas' : 'ya tuvo compras';
+      if(p.activo !== false && confirm('Este código ' + motivo + ', así que no se puede eliminar sin romper esas operaciones.\n\n¿Desactivarlo en su lugar?')) guardarActivoProducto(clave, false);
+      else if(p.activo === false) showToast('⚠️ Este código ' + motivo + ' — no se puede eliminar (ya está desactivado)');
+      return;
+    }
+    if(!confirm('¿ELIMINAR ' + clave + ' · ' + p.descripcion + '?\n\nNo tiene existencia, ventas ni compras. Se borra por completo y no se puede deshacer.')) { eliminandoProducto = false; return; }
+    return db.collection('productos').doc(clave).delete().then(function(){
+      productos = productos.filter(function(x){ return x.clave !== clave; });
+      reindexProductos();
+      renderInventarioLista();
+      showToast('🗑 Código ' + clave + ' eliminado');
+      eliminandoProducto = false;
+    });
+  }).catch(function(e){
+    console.log('Error eliminando producto:', e);
+    showToast('⚠️ No se pudo eliminar — no se borró nada');
+    eliminandoProducto = false;
+  });
 }
 
 // ════ INVENTARIO — modal Ajustar existencia ════
