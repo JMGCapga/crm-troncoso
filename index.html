@@ -548,167 +548,39 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <!-- ===== CORTE DE CAJA ===== -->
     <div class="panel" id="panel-corte">
 
-      <!-- VISTA IVETTE — captura el corte -->
-      <div id="corte-ivette">
+      <!-- CIERRE DEL DÍA AUTOMÁTICO — Gerencia/Director. Todo se calcula solo desde Firestore;
+           lo único que se escribe a mano son las observaciones. -->
+      <div id="corte-auto" style="display:none;">
         <div class="card">
-          <div class="card-title">📊 Ventas del Día (sistema)</div>
-          <div style="font-size:11px;color:var(--suave);margin-bottom:12px;">Suma automática de Notas de Venta cerradas + Tickets de hoy. Úsalo para cuadrar contra lo contado abajo.</div>
-          <div id="corte-ventas-sistema"></div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">💰 Corte de Caja del Día</div>
-          <div style="font-size:12px;color:var(--suave);margin-bottom:16px;" id="corte-fecha-hoy"></div>
-
-          <!-- EFECTIVO -->
-          <div style="background:#F5F2EE;border-radius:10px;padding:16px;margin-bottom:12px;">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;color:#1A1A1A;">💵 EFECTIVO</div>
-            <div class="form-grid">
-              <div class="field">
-                <label>Efectivo en caja al cierre</label>
-                <input type="number" id="c-efectivo" placeholder="0.00" min="0" step="0.01" oninput="calcCorte()">
-                <div class="ct-unit">Billetes y monedas contados</div>
-              </div>
-              <div class="field">
-                <label>Retiros durante el día</label>
-                <input type="number" id="c-retiros" placeholder="0.00" min="0" step="0.01" oninput="calcCorte()">
-                <div class="ct-unit">Fondos retirados antes del cierre</div>
-              </div>
-            </div>
-            <div style="font-size:11px;color:var(--suave);margin-top:4px;">
-              Motivo de retiros: <input type="text" id="c-retiro-motivo" placeholder="ej: depósito banco, gastos operativos..." style="border:1px solid var(--borde);border-radius:6px;padding:5px 8px;font-size:11px;width:60%;">
-            </div>
+          <div class="card-title">💰 Cierre del Día</div>
+          <div style="font-size:12px;color:var(--suave);margin-bottom:12px;" id="corte-fecha-hoy"></div>
+          <div id="corte-cierre-estado"></div>
+          <div id="corte-auto-detalle"><div style="padding:14px;color:var(--suave);font-size:12px;">Calculando...</div></div>
+          <div class="field" style="margin:14px 0;">
+            <label>📝 Observaciones del día</label>
+            <textarea id="corte-observaciones" placeholder="Opcional: incidencias, comentarios del día..." style="min-height:60px;"></textarea>
           </div>
-
-          <!-- RETIROS PARCIALES — Gerencia/Director pueden retirar efectivo en cualquier
-               momento del día, sin esperar al cierre. El botón se muestra/oculta por rol
-               desde iniciarCorte(); el resumen es visible para quien vea el corte. -->
-          <div style="background:#FFF4E5;border-radius:10px;padding:16px;margin-bottom:12px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-              <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:#8A4B00;">💰 RETIROS PARCIALES DEL DÍA</div>
-              <button class="btn btn-naranja" id="btn-retiro-parcial" onclick="abrirRetiroParcial()" style="display:none;font-size:11px;padding:8px 14px;">💰 Retiro parcial</button>
-            </div>
-            <div id="resumen-retiros-parciales" style="font-size:12px;color:var(--suave);">Sin retiros parciales hoy</div>
-          </div>
-
-          <!-- TPV BBVA IZZ -->
-          <div style="background:#F3F0FF;border-radius:10px;padding:16px;margin-bottom:12px;">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;color:#5B21B6;">💳 TPV BBVA — ITZAYANA ILLESCA</div>
-            <div class="form-grid">
-              <div class="field">
-                <label>Total TPV BBVA IZZ</label>
-                <input type="number" id="c-tpv-izz" placeholder="0.00" min="0" step="0.01" oninput="calcCorte()">
-                <div class="ct-unit">Según cierre de terminal — mejor tasa, mandar aquí los cobros grandes</div>
-              </div>
-              <div class="field">
-                <label>No. de operaciones</label>
-                <input type="number" id="c-tpv-izz-ops" placeholder="0" min="0" step="1">
-                <div class="ct-unit">Número de transacciones</div>
-              </div>
-            </div>
-            <div class="ct-unit" id="c-tpv-izz-neto" style="margin-top:6px;font-weight:700;"></div>
-          </div>
-
-          <!-- TPV BBVA CEMCOYA -->
-          <div style="background:#EBF4FF;border-radius:10px;padding:16px;margin-bottom:12px;">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;color:#1864AB;">💳 TPV BBVA — ABASTECEDORA CEMCOYA</div>
-            <div class="form-grid">
-              <div class="field">
-                <label>Total TPV BBVA Cemcoya</label>
-                <input type="number" id="c-tpv-cemcoya" placeholder="0.00" min="0" step="0.01" oninput="calcCorte()">
-                <div class="ct-unit">Según cierre de terminal</div>
-              </div>
-              <div class="field">
-                <label>No. de operaciones</label>
-                <input type="number" id="c-tpv-cemcoya-ops" placeholder="0" min="0" step="1">
-                <div class="ct-unit">Número de transacciones</div>
-              </div>
-            </div>
-            <div class="ct-unit" id="c-tpv-cemcoya-neto" style="margin-top:6px;font-weight:700;"></div>
-          </div>
-
-          <!-- TPV MERCADO PAGO -->
-          <div style="background:#F0FFF4;border-radius:10px;padding:16px;margin-bottom:12px;">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;color:#1D7A4F;">💳 MERCADO PAGO — ITZAYANA ILLESCA</div>
-            <div class="form-grid">
-              <div class="field">
-                <label>Total Mercado Pago</label>
-                <input type="number" id="c-mp" placeholder="0.00" min="0" step="0.01" oninput="calcCorte()">
-                <div class="ct-unit">Según reporte de la app</div>
-              </div>
-              <div class="field">
-                <label>No. de operaciones</label>
-                <input type="number" id="c-mp-ops" placeholder="0" min="0" step="1">
-                <div class="ct-unit">Número de transacciones</div>
-              </div>
-            </div>
-            <div class="ct-unit" id="c-mp-neto" style="margin-top:6px;font-weight:700;"></div>
-          </div>
-
-          <!-- TRANSFERENCIAS -->
-          <div style="background:#FFF8F5;border-radius:10px;padding:16px;margin-bottom:16px;">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;margin-bottom:12px;color:#E8500A;">📲 TRANSFERENCIAS</div>
-            <div class="form-grid">
-              <div class="field">
-                <label>Total transferencias</label>
-                <input type="number" id="c-transfer-total" placeholder="0.00" min="0" step="0.01" oninput="calcCorte()">
-                <div class="ct-unit">Autollenado con las confirmadas del día — ajusta si falta alguna. Detalle por cliente: Cuentas por Cobrar.</div>
-              </div>
-              <div class="field">
-                <label>No. de operaciones</label>
-                <input type="number" id="c-transfer-ops" placeholder="0" min="0" step="1" oninput="calcCorte()">
-                <div class="ct-unit">Número de transferencias</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- RESUMEN TOTAL -->
-          <div style="background:#1A1A1A;border-radius:10px;padding:16px;margin-bottom:16px;">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:#AAA;margin-bottom:12px;">📊 RESUMEN DEL DÍA</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <div style="background:rgba(255,255,255,0.07);border-radius:8px;padding:12px;">
-                <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Efectivo total</div>
-                <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#fff;" id="res-efectivo-total">$0.00</div>
-              </div>
-              <div style="background:rgba(255,255,255,0.07);border-radius:8px;padding:12px;">
-                <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">TPV + Mercado Pago</div>
-                <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#fff;" id="res-tpv-total">$0.00</div>
-              </div>
-              <div style="background:rgba(255,255,255,0.07);border-radius:8px;padding:12px;">
-                <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Transferencias</div>
-                <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#fff;" id="res-transfer-total">$0.00</div>
-              </div>
-              <div style="background:rgba(232,80,10,0.2);border-radius:8px;padding:12px;border:1px solid var(--naranja);">
-                <div style="font-size:10px;color:#E8500A;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">TOTAL DEL DÍA</div>
-                <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--naranja);" id="res-gran-total">$0.00</div>
-              </div>
-              <div style="background:rgba(255,255,255,0.07);border-radius:8px;padding:12px;">
-                <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">💵 Efectivo Operativo</div>
-                <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#fff;" id="res-efectivo-operativo">$0.00</div>
-              </div>
-              <div style="background:rgba(255,255,255,0.07);border-radius:8px;padding:12px;">
-                <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">🔒 Efectivo Apartado</div>
-                <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#fff;" id="res-efectivo-apartado">$0.00</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="field" style="margin-bottom:14px;">
-            <label>Notas del corte</label>
-            <textarea id="c-notas" placeholder="Observaciones, incidencias, comentarios del día..." style="min-height:60px;"></textarea>
-          </div>
-
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-naranja" id="btn-enviar-corte" onclick="enviarCorte()" style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;padding:14px;">
-              ✅ ENVIAR CORTE A VIRIDIANA
-            </button>
-            <button class="btn btn-gris" onclick="imprimirCorte()" style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;padding:14px;">
-              🖨 IMPRIMIR
-            </button>
-            <button class="btn btn-verde" onclick="enviarCorteWhatsApp()" style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;padding:14px;">
-              📱 ENVIAR POR WHATSAPP
-            </button>
+            <button class="btn btn-gris" id="btn-recalcular-corte" onclick="recalcularCorteAuto()" style="font-size:12px;padding:12px 16px;">🔄 Recalcular</button>
+            <button class="btn btn-naranja" id="btn-retiro-parcial" onclick="abrirRetiroParcial()" style="font-size:12px;padding:12px 16px;">💰 Retiro parcial</button>
+            <button class="btn btn-gris" onclick="imprimirCierreDia()" style="font-size:12px;padding:12px 16px;">🖨 Imprimir</button>
+            <button class="btn btn-naranja" id="btn-cerrar-dia" onclick="cerrarDia()" style="flex:1;min-width:160px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;padding:14px;">✅ Cerrar día</button>
           </div>
+          <div id="corte-whatsapp-respaldo"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📋 Cierres anteriores</div>
+          <div id="cierres-dia-historial"></div>
+        </div>
+      </div>
+
+      <!-- CERRAR MI TURNO — solo Ventas (Ivette) y Compras (Erika). Gerencia/Director tienen el corte completo arriba. -->
+      <div id="corte-turno" style="display:none;">
+        <div class="card">
+          <div class="card-title">📤 Cerrar mi turno</div>
+          <div style="font-size:12px;color:var(--suave);margin-bottom:14px;" id="corte-turno-fecha"></div>
+          <div style="font-size:13px;margin-bottom:16px;">El sistema suma solo lo que tú cobraste en este turno (tickets, notas de venta y abonos). Revisa que cuadre y envíalo a Viridiana.</div>
+          <button class="btn btn-naranja" onclick="abrirCierreTurno()" style="width:100%;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;padding:16px;">📤 Cerrar mi turno</button>
         </div>
       </div>
 
@@ -1982,6 +1854,23 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           </div>
         </div>
 
+        <!-- HISTÓRICO DE VENTAS — Director y Gerencia. Lee tickets + pedidos (NV) por fecha. -->
+        <div id="dash-historico-section" style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-top:16px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;margin-bottom:12px;letter-spacing:1px;">📊 HISTÓRICO DE VENTAS</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+            <select id="hist-periodo" onchange="cambiarPeriodoHistorico()" style="border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Barlow',sans-serif;background:#fff;">
+              <option value="mes">Este mes</option>
+              <option value="mes-anterior">Mes anterior</option>
+              <option value="mes-libre">Elegir mes…</option>
+              <option value="anio">Este año</option>
+              <option value="anio-libre">Elegir año…</option>
+            </select>
+            <select id="hist-mes-libre" onchange="cargarHistoricoVentas()" style="display:none;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Barlow',sans-serif;background:#fff;"></select>
+            <select id="hist-anio-libre" onchange="cargarHistoricoVentas()" style="display:none;border:1.5px solid var(--borde);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Barlow',sans-serif;background:#fff;"></select>
+          </div>
+          <div id="hist-contenido"><div style="padding:14px;color:#888;font-size:12px;">Cargando...</div></div>
+        </div>
+
         <!-- EVALUACIONES DE SERVICIO — Solo para José Manuel -->
         <div id="dash-evaluaciones-section" style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-top:16px;display:none;">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;margin-bottom:12px;letter-spacing:1px;">⭐ EVALUACIONES DE SERVICIO — Este mes</div>
@@ -2922,6 +2811,7 @@ function renderInventarioLista() {
   var familia = document.getElementById('inv-filtro-familia').value;
   var puedeAjustar = puedeAjustarInventario();
   var esSuper = esSuperAdminInventario();
+  var puedeBorrar = puedeBorrarProducto();
   var puedeHistorial = puedeVerHistorialInventario();
 
   var lista = inventarioCache.filter(function(p){
@@ -2936,8 +2826,10 @@ function renderInventarioLista() {
   var html = '';
   lista.forEach(function(p){
     var ex = p.existencia || 0;
-    var bg = ex <= 0 ? '#EF4444' : (ex <= (p.min||0) ? '#FFF2CC' : '');
+    var inactivo = p.activo === false;
+    var bg = inactivo ? '#E5E5E5' : (ex <= 0 ? '#EF4444' : (ex <= (p.min||0) ? '#FFF2CC' : ''));
     var badge = p.insumoClave ? ' <span title="Descuenta insumo ' + p.insumoClave + '" style="cursor:help;">📦</span>' : '';
+    if(inactivo) badge += ' <span style="color:#DC2626;font-size:10px;font-weight:700;">· INACTIVO</span>';
     html += '<div class="cli-item" style="' + (bg ? 'background:' + bg + ';' : '') + 'display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
       '<div><div class="cli-nombre">' + p.clave + ' · ' + p.descripcion + badge + '</div>' +
       '<div class="cli-tel">' + p.familia + ' · ' + (p.ubicacion || 'Sin ubicación') + '</div></div>' +
@@ -2946,10 +2838,30 @@ function renderInventarioLista() {
       '<div style="font-size:10px;color:var(--suave);">min ' + (p.min||0) + ' · max ' + (p.max||0) + '</div>' +
       (puedeAjustar ? '<button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:4px;" onclick="abrirAjusteExistencia(\'' + p.clave + '\')">✏️ Ajustar</button>' : '') +
       (esSuper ? ' <button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:4px;" onclick="abrirEditarProducto(\'' + p.clave + '\')">⚙️ Editar</button>' : '') +
+      (puedeBorrar ? ' <button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:4px;" onclick="cambiarActivoProducto(\'' + p.clave + '\',' + (inactivo ? 'true' : 'false') + ')">' + (inactivo ? '♻️ Reactivar' : '🗑 Desactivar') + '</button>' : '') +
       (puedeHistorial ? ' <button class="btn btn-gris" style="font-size:10px;padding:4px 8px;margin-top:4px;" onclick="abrirHistorialProducto(\'' + p.clave + '\')">📋 Historial</button>' : '') +
       '</div></div>';
   });
   document.getElementById('inv-lista').innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">Sin resultados</div>';
+}
+
+// "Borrar" un código = desactivarlo: deja de salir en los buscadores de venta y compra, pero
+// el historial de ventas/compras que lo usa se conserva y se puede reactivar. Solo pide el
+// permiso "Borrar/desactivar" (no necesita "Editar", que da acceso a tipo, insumo y apartado).
+function cambiarActivoProducto(clave, activar) {
+  if(!puedeBorrarProducto()) { showToast('⚠️ Sin permisos'); return; }
+  var p = productosIndex[clave];
+  if(!p || !db) return;
+  if(!activar) {
+    var aviso = '¿Desactivar ' + clave + ' · ' + p.descripcion + '?\n\nYa no saldrá en los buscadores de venta y compra. El historial se conserva y se puede reactivar.';
+    if((p.existencia || 0) > 0) aviso += '\n\n⚠️ Todavía tiene existencia: ' + p.existencia;
+    if(!confirm(aviso)) return;
+  }
+  db.collection('productos').doc(clave).update({ activo: !!activar }).then(function(){
+    p.activo = !!activar;
+    showToast(activar ? '♻️ Producto reactivado' : '🗑 Producto desactivado');
+    renderInventarioLista();
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al actualizar producto'); });
 }
 
 // ════ INVENTARIO — modal Ajustar existencia ════
@@ -5171,71 +5083,31 @@ function fechaISOLocal() {
 }
 
 // ════ CAJA APARTADA — efectivo separado por ventas de productos apartable ════
-var apartadoHoy = 0;
 var saldoApartadoAcumulado = 0;
 
 function cargarApartadoCaja() {
   if(!db) return;
-  var hoy = fechaISOLocal();
   Promise.all([
     db.collection('caja_apartada').get(),
     db.collection('movimientos_apartado').get()
   ]).then(function(results){
     var depositosSnap = results[0], retirosSnap = results[1];
-    var totalDepositos = 0, depositosHoy = 0, totalRetiros = 0;
+    var totalDepositos = 0, totalRetiros = 0;
     depositosSnap.forEach(function(doc){
-      var d = doc.data();
-      totalDepositos += d.monto || 0;
-      if(d.fecha === hoy) depositosHoy += d.monto || 0;
+      totalDepositos += doc.data().monto || 0;
     });
     retirosSnap.forEach(function(doc){
       totalRetiros += doc.data().monto || 0;
     });
-    apartadoHoy = depositosHoy;
     saldoApartadoAcumulado = totalDepositos - totalRetiros;
-    calcCorte();
     verificarSaldoApartado();
   }).catch(function(e){ console.log('Error cargando caja apartada:', e); });
 }
 
 // ════ RETIROS PARCIALES — Gerencia/Director retiran efectivo en cualquier momento
 // del día, sin esperar al cierre. No hay límite de retiros ni requieren autorización
-// del Director. Se guardan sueltos en 'retiros_parciales' y se descuentan del
-// efectivo operativo del corte del día. ════
-var retirosParcialesHoy = 0;
-var retirosParcialesHoyDetalle = [];
-
-function cargarRetirosParciales() {
-  if(!db) return;
-  var hoy = fechaISOLocal();
-  db.collection('retiros_parciales').where('fecha','==',hoy).get().then(function(snap){
-    var total = 0;
-    var detalle = [];
-    snap.forEach(function(doc){
-      var d = doc.data();
-      total += d.monto || 0;
-      detalle.push(d);
-    });
-    detalle.sort(function(a,b){ return (a.timestamp||0) - (b.timestamp||0); });
-    retirosParcialesHoy = total;
-    retirosParcialesHoyDetalle = detalle;
-    renderRetirosParciales();
-    calcCorte();
-  }).catch(function(e){ console.log('Error cargando retiros parciales:', e); });
-}
-
-function renderRetirosParciales() {
-  var cont = document.getElementById('resumen-retiros-parciales');
-  if(!cont) return;
-  if(!retirosParcialesHoyDetalle.length) { cont.innerHTML = 'Sin retiros parciales hoy'; return; }
-  var n = retirosParcialesHoyDetalle.length;
-  var html = '<div style="font-weight:700;margin-bottom:6px;">Retiros parciales del día: '+fmtMoney(retirosParcialesHoy)+' ('+n+' retiro'+(n===1?'':'s')+')</div>';
-  retirosParcialesHoyDetalle.forEach(function(r){
-    html += '<div style="padding:4px 0;border-top:1px solid #F0E4D0;">'+(r.hora||'')+' — '+fmtMoney(r.monto)+' — '+(r.motivo||'Sin motivo')+' <span style="color:#B08040;">('+(r.usuario||'')+')</span></div>';
-  });
-  cont.innerHTML = html;
-}
-
+// del Director. Se guardan sueltos en 'retiros_parciales' y el Cierre del día los
+// descuenta del efectivo en caja (ver calcularCorteDelDia). ════
 function abrirRetiroParcial() {
   if(!currentUser || (currentUser.role !== 'Gerencia' && currentUser.role !== 'Director')) { showToast('⚠️ Sin permisos'); return; }
   var existente = document.getElementById('modal-retiro-parcial');
@@ -5277,206 +5149,229 @@ function guardarRetiroParcial() {
     showToast('✅ Retiro parcial registrado');
     var modal = document.getElementById('modal-retiro-parcial');
     if(modal) modal.remove();
-    cargarRetirosParciales();
+    recalcularCorteAuto();
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar retiro'); });
 }
 
-// ════ CORTE — Ventas del día (Notas de Venta + Tickets) por método de pago ════
-function cargarVentasDelDiaCorte() {
-  var cont = document.getElementById('corte-ventas-sistema');
-  if(!cont) return;
-  if(!db) { cont.innerHTML = '<div style="color:var(--suave);font-size:12px;">Sin conexión</div>'; return; }
-  var hoy = fechaISOLocal();
-  Promise.all([
-    db.collection('pedidos').where('fecha','==',hoy).get(),
-    db.collection('tickets').where('fecha','==',hoy).get(),
-    db.collection('salidas').where('fecha','==',hoy).get(),
-    db.collection('cobros_cuentas_cobrar').where('fecha','==',hoy).get(),
-    db.collection('retiros_parciales').where('fecha','==',hoy).get()
-  ]).then(function(results){
-    var pedidosSnap = results[0], ticketsSnap = results[1], salidasSnap = results[2], cobrosCxCSnap = results[3], retirosSnap = results[4];
-    // Débito y crédito cobran igual en las 3 terminales — ya no se separan,
-    // solo se cuenta el total y las operaciones por terminal.
-    var buckets = { efectivo:0, tarjeta:0, tarjetaOps:0, transferencia:0, transferenciaOps:0 };
-    var comisiones = 0, ivaComisiones = 0;
-    var terminales = {
-      'IZZ-BBVA':          { monto:0, comision:0 },
-      'CEM-BBVA':          { monto:0, comision:0 },
-      'IZZ-MERCADO PAGO':  { monto:0, comision:0 }
-    };
+// ════ CORTE AUTOMÁTICO ════
+// Todo sale de Firestore: tickets, pedidos (NV), abonos a CxC, salidas, retiros
+// parciales, caja apartada y cuentas por cobrar. Nadie captura montos a mano
+// — lo único manual son las observaciones del día.
+var corteAutoActual = null;
+var cerrandoDia = false;
+var cerrandoTurno = false;
+var cierreTurnoActual = null;
 
-    function registrarTarjeta(terminalKey, monto, comisionConIva) {
-      var t = terminales[terminalKey];
-      if(!t) return;
-      t.monto += monto;
-      t.comision += comisionConIva;
+var TERMINALES_CORTE = [
+  { key:'IZZ-BBVA',         label:'Tarjeta IZZ-BBVA' },
+  { key:'CEM-BBVA',         label:'Tarjeta CEM-BBVA' },
+  { key:'IZZ-MERCADO PAGO', label:'Mercado Pago' }
+];
+
+function corteNum(v) {
+  var n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
+}
+
+// "-$X" para restas; si es cero queda "$0.00" (no "-$0.00")
+function fmtResta(n) {
+  return n > 0.004 ? '-' + fmtMoney(n) : fmtMoney(0);
+}
+
+function cortesDocs(snap) {
+  var arr = [];
+  snap.forEach(function(doc){ arr.push(doc.data()); });
+  return arr;
+}
+
+// Suma lo COBRADO por método de pago a partir de los documentos ya leídos.
+// Lo usan el Cierre del día (todo el día) y Cerrar mi turno (solo lo de una persona).
+// Una NV cobra "total − saldo a crédito − saldo a favor aplicado": una venta
+// híbrida (parte hoy, resto a crédito) no mete a la caja el total completo.
+function sumarCobrosPorMetodo(pedidos, tickets, abonos) {
+  var r = { efectivo:0, tarjeta:0, tarjetaOps:0, transferencia:0, transferenciaOps:0, comision:0, terminales:{} };
+  TERMINALES_CORTE.forEach(function(t){ r.terminales[t.key] = { monto:0, comision:0 }; });
+
+  function registrarCobro(metodo, monto, terminal, tipoTarjeta) {
+    if(!(monto > 0)) return;
+    if(metodo === 'efectivo') {
+      r.efectivo += monto;
+    } else if(metodo === 'transferencia') {
+      r.transferencia += monto;
+      r.transferenciaOps++;
+    } else if(metodo === 'tpv') {
+      var com = 0;
+      if(terminal) {
+        var partes = terminal.split('-');
+        var n = netoTerminal(monto, partes[0], partes.slice(1).join('-'), tipoTarjeta || 'debito');
+        com = n.comision + n.ivaCom;
+      }
+      registrarTarjeta(terminal, monto, com);
     }
+    // metodo 'credito' = cuenta por cobrar: no es dinero cobrado hoy
+  }
+  function registrarTarjeta(terminal, monto, comisionConIva) {
+    r.tarjeta += monto;
+    r.tarjetaOps++;
+    r.comision += comisionConIva;
+    var t = terminal ? r.terminales[terminal] : null;
+    if(t) { t.monto += monto; t.comision += comisionConIva; }
+  }
 
-    pedidosSnap.forEach(function(doc){
-      var p = doc.data();
-      if(p.s === 'cancelado') return;
-      var monto = p.m || 0;
-      if(p.pago === 'efectivo') buckets.efectivo += monto;
-      else if(p.pago === 'transferencia') { buckets.transferencia += monto; buckets.transferenciaOps++; }
-      else if(p.pago === 'tpv' && p.terminal) {
-        var t = p.terminal.split('-');
-        var rs = t[0], banco = t.slice(1).join('-');
-        var n = netoTerminal(monto, rs, banco, p.tipoTarjeta || 'debito');
-        buckets.tarjeta += monto; buckets.tarjetaOps++;
-        comisiones += n.comision; ivaComisiones += n.ivaCom;
-        registrarTarjeta(p.terminal, monto, n.comision + n.ivaCom);
-      }
-      else if(p.pago === 'mixto' && p.pagos) {
-        // Pago mixto: cada método entra al corte con su propio monto, no el
-        // total de la NV — así el efectivo, la transferencia y la tarjeta de
-        // una misma venta se contabilizan en su categoría real.
-        p.pagos.forEach(function(sub){
-          var m = sub.monto || 0;
-          if(sub.metodo === 'efectivo') buckets.efectivo += m;
-          else if(sub.metodo === 'transferencia') { buckets.transferencia += m; buckets.transferenciaOps++; }
-          else if(sub.metodo === 'tpv' && sub.terminal) {
-            var ts = sub.terminal.split('-');
-            var nsub = netoTerminal(m, ts[0], ts.slice(1).join('-'), sub.tipoTarjeta || 'debito');
-            buckets.tarjeta += m; buckets.tarjetaOps++;
-            comisiones += nsub.comision; ivaComisiones += nsub.ivaCom;
-            registrarTarjeta(sub.terminal, m, nsub.comision + nsub.ivaCom);
-          }
-        });
-      }
-      // pago === 'credito' (cuenta por cobrar / crédito a cliente) no se cuenta como cobrado hoy
-    });
-
-    ticketsSnap.forEach(function(doc){
-      var t = doc.data();
-      if(t.status === 'cancelado') return;
-      var monto = t.total || 0;
-      if(t.metodoPago === 'efectivo') buckets.efectivo += monto;
-      else if(t.metodoPago === 'transferencia') { buckets.transferencia += monto; buckets.transferenciaOps++; }
-      else if(t.metodoPago === 'debito' || t.metodoPago === 'credito') {
-        buckets.tarjeta += monto; buckets.tarjetaOps++;
-        var com = t.comision || 0;
-        // El comision guardado en el ticket ya incluye IVA (ver guardarTicket/netoTerminal);
-        // se reparte proporcional solo para el desglose informativo comisión/IVA.
-        var comSinIva = com / 1.16, ivaDeCom = com - comSinIva;
-        comisiones += comSinIva; ivaComisiones += ivaDeCom;
-        registrarTarjeta(t.razonSocial, monto, com);
-      }
-    });
-
-    // Abonos a Cuentas por Cobrar (cliente que llega después a pagar lo
-    // que debía) — no tienen terminal propia, solo se suman al total del
-    // método; no afectan el desglose de comisión por terminal.
-    cobrosCxCSnap.forEach(function(doc){
-      var c = doc.data();
-      var monto = c.monto || 0;
-      if(c.metodoPago === 'efectivo') buckets.efectivo += monto;
-      else if(c.metodoPago === 'transferencia') { buckets.transferencia += monto; buckets.transferenciaOps++; }
-      else if(c.metodoPago === 'tpv') { buckets.tarjeta += monto; buckets.tarjetaOps++; }
-    });
-
-    var totalComisionConIva = comisiones + ivaComisiones;
-    var totalVentas = buckets.efectivo + buckets.tarjeta + buckets.transferencia;
-    var neto = totalVentas - totalComisionConIva;
-
-    var izzBbva = terminales['IZZ-BBVA'], cemBbva = terminales['CEM-BBVA'], izzMp = terminales['IZZ-MERCADO PAGO'];
-    var totalNetoTarjetas = (izzBbva.monto - izzBbva.comision) + (cemBbva.monto - cemBbva.comision) + (izzMp.monto - izzMp.comision);
-    function filaTarjeta(label, monto, comision) {
-      return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>'+label+'</span><span>'+fmtMoney(monto)+' → -'+fmtMoney(comision)+' → <strong>'+fmtMoney(monto-comision)+'</strong></span></div>';
+  (pedidos || []).forEach(function(p){
+    if(p.s === 'cancelado') return;
+    if(p.pago === 'mixto' && p.pagos) {
+      p.pagos.forEach(function(sub){ registrarCobro(sub.metodo, corteNum(sub.monto), sub.terminal, sub.tipoTarjeta); });
+      return;
     }
-    var htmlTerminales =
-      '<div style="background:#F5F2EE;border-radius:10px;padding:14px;margin-bottom:10px;">' +
-        '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">TARJETAS POR TERMINAL</div>' +
-        filaTarjeta('IZZ — BBVA (0.85%)', izzBbva.monto, izzBbva.comision) +
-        filaTarjeta('CEM — BBVA (1.54%)', cemBbva.monto, cemBbva.comision) +
-        filaTarjeta('IZZ — Mercado Pago (3.50%)', izzMp.monto, izzMp.comision) +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;padding:6px 0 2px;border-top:1px solid #E0DBD3;margin-top:8px;color:#DC2626;"><span>TOTAL COMISIONES DEL DÍA</span><span>-'+fmtMoney(totalComisionConIva)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:4px 0;color:var(--naranja);"><span>TOTAL NETO TARJETAS</span><span>'+fmtMoney(totalNetoTarjetas)+'</span></div>' +
-      '</div>';
+    var cobrado = Math.max(0, corteNum(p.m) - corteNum(p.saldoPendiente) - corteNum(p.saldoFavorAplicado));
+    registrarCobro(p.pago, cobrado, p.terminal, p.tipoTarjeta);
+  });
 
-    var salidasPorCategoria = {};
-    var totalSalidasCategorias = 0;
-    salidasSnap.forEach(function(doc){
-      var s = doc.data();
+  (tickets || []).forEach(function(t){
+    if(t.status === 'cancelado') return;
+    var monto = (t.montoCobrado !== undefined && t.montoCobrado !== null) ? corteNum(t.montoCobrado) : corteNum(t.total);
+    if(!(monto > 0)) return;
+    if(t.metodoPago === 'efectivo') r.efectivo += monto;
+    else if(t.metodoPago === 'transferencia') { r.transferencia += monto; r.transferenciaOps++; }
+    else if(t.metodoPago === 'debito' || t.metodoPago === 'credito') registrarTarjeta(t.razonSocial, monto, corteNum(t.comision));
+  });
+
+  // Abonos a Cuentas por Cobrar: no tienen terminal, solo suman al método.
+  (abonos || []).forEach(function(c){ registrarCobro(c.metodoPago, corteNum(c.monto), null, 'debito'); });
+
+  r.totalVentas = r.efectivo + r.tarjeta + r.transferencia;
+  r.neto = r.totalVentas - r.comision;
+  var enTerminales = 0;
+  TERMINALES_CORTE.forEach(function(t){ enTerminales += r.terminales[t.key].monto; });
+  r.tarjetaSinTerminal = Math.max(0, r.tarjeta - enTerminales);
+  return r;
+}
+
+function calcularCorteDelDia(fecha) {
+  return Promise.all([
+    db.collection('pedidos').where('fecha','==',fecha).get(),
+    db.collection('tickets').where('fecha','==',fecha).get(),
+    db.collection('cobros_cuentas_cobrar').where('fecha','==',fecha).get(),
+    db.collection('salidas').where('fecha','==',fecha).get(),
+    db.collection('retiros_parciales').where('fecha','==',fecha).get(),
+    db.collection('caja_apartada').where('fecha','==',fecha).get(),
+    db.collection('cuentas_cobrar').where('estado','==','pendiente').get(),
+    db.collection('transferencias').where('fecha','==',fecha).where('confirmada','==',true).get()
+  ]).then(function(res){
+    var d = sumarCobrosPorMetodo(cortesDocs(res[0]), cortesDocs(res[1]), cortesDocs(res[2]));
+    d.fecha = fecha;
+
+    d.salidasPorCategoria = {};
+    d.totalSalidasCategorias = 0;
+    cortesDocs(res[3]).forEach(function(s){
+      if(s.status === 'rechazado') return;
       var cat = s.categoria || s.tipoLabel || 'Otro';
-      salidasPorCategoria[cat] = (salidasPorCategoria[cat] || 0) + (s.monto || 0);
-      totalSalidasCategorias += s.monto || 0;
+      var m = corteNum(s.monto);
+      d.salidasPorCategoria[cat] = (d.salidasPorCategoria[cat] || 0) + m;
+      d.totalSalidasCategorias += m;
     });
 
-    // Retiros parciales — colección aparte de 'salidas' (ver abrirRetiroParcial),
-    // por eso hay que sumarlos aquí a mano antes de calcular el efectivo final.
-    var totalRetiros = 0;
-    var retirosDetalle = [];
-    retirosSnap.forEach(function(doc){
-      var r = doc.data();
-      totalRetiros += r.monto || 0;
-      retirosDetalle.push(r);
+    // Retiros parciales viven en su propia colección (ver abrirRetiroParcial)
+    d.retirosDetalle = cortesDocs(res[4]).sort(function(a,b){ return (a.timestamp||0) - (b.timestamp||0); });
+    d.totalRetiros = 0;
+    d.retirosDetalle.forEach(function(r){ d.totalRetiros += corteNum(r.monto); });
+    d.totalSalidas = d.totalSalidasCategorias + d.totalRetiros;
+
+    d.efectivoCaja = d.efectivo - d.totalSalidas;
+    d.efectivoApartado = 0;
+    cortesDocs(res[5]).forEach(function(a){ d.efectivoApartado += corteNum(a.monto); });
+    d.efectivoOperativo = d.efectivoCaja - d.efectivoApartado;
+
+    d.cartera = 0;
+    d.carteraCuentas = 0;
+    cortesDocs(res[6]).forEach(function(c){ d.cartera += corteNum(c.saldo); d.carteraCuentas++; });
+
+    d.transferConfirmadas = 0;
+    d.transferConfirmadasOps = 0;
+    cortesDocs(res[7]).forEach(function(t){ d.transferConfirmadas += corteNum(t.monto); d.transferConfirmadasOps++; });
+    return d;
+  });
+}
+
+function filaCorte(label, valor, opts) {
+  opts = opts || {};
+  return '<div style="display:flex;justify-content:space-between;gap:10px;font-size:' + (opts.size || 12) + 'px;padding:3px 0;' +
+    (opts.bold ? 'font-weight:700;' : '') + (opts.color ? 'color:' + opts.color + ';' : '') +
+    (opts.borde ? 'border-top:1px solid #E0DBD3;margin-top:4px;padding-top:7px;' : '') + '">' +
+    '<span>' + label + '</span><span>' + valor + '</span></div>';
+}
+
+function renderCorteAuto(d) {
+  var html = '';
+
+  // VENTAS DEL DÍA
+  html += '<div style="background:#F5F2EE;border-radius:10px;padding:14px;margin-bottom:10px;">' +
+    '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">VENTAS DEL DÍA</div>' +
+    filaCorte('💵 Efectivo', fmtMoney(d.efectivo));
+  TERMINALES_CORTE.forEach(function(t){
+    html += filaCorte('💳 ' + t.label, fmtMoney(d.terminales[t.key].monto));
+  });
+  if(d.tarjetaSinTerminal > 0.005) html += filaCorte('💳 Tarjeta (abonos, sin terminal)', fmtMoney(d.tarjetaSinTerminal));
+  html += filaCorte('🏦 Transferencias <span style="font-size:10px;color:var(--suave);">(' + d.transferenciaOps + ' op.)</span>', fmtMoney(d.transferencia));
+  html += '<div style="font-size:10px;color:var(--suave);padding:0 0 2px 20px;">Confirmadas: ' + fmtMoney(d.transferConfirmadas) + ' (' + d.transferConfirmadasOps + ')</div>';
+  html += filaCorte('📊 TOTAL VENTAS', fmtMoney(d.totalVentas), { bold:true, borde:true, size:13 }) +
+    filaCorte('💸 Comisiones terminal', fmtResta(d.comision), { color:'#DC2626' }) +
+    filaCorte('📊 NETO', fmtMoney(d.neto), { bold:true, color:'var(--naranja)', size:13 }) +
+    '</div>';
+
+  // SALIDAS
+  html += '<div style="background:#F5F2EE;border-radius:10px;padding:14px;margin-bottom:10px;">' +
+    '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">SALIDAS</div>';
+  var cats = Object.keys(d.salidasPorCategoria);
+  cats.forEach(function(cat){ html += filaCorte(cat, fmtResta(d.salidasPorCategoria[cat])); });
+  var nRet = d.retirosDetalle.length;
+  if(nRet > 0) {
+    html += '<details style="padding:3px 0;font-size:12px;"><summary style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;">' +
+      '<span>💰 Retiros parciales (' + nRet + ' retiro' + (nRet === 1 ? '' : 's') + ') ▾</span><span>' + fmtResta(d.totalRetiros) + '</span></summary>';
+    d.retirosDetalle.forEach(function(r){
+      html += '<div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:2px 0 2px 14px;color:var(--suave);">' +
+        '<span>' + (r.hora || '') + ' — ' + (r.motivo || 'Sin motivo') + ' — ' + (r.usuario || '') + '</span><span>' + fmtResta(corteNum(r.monto)) + '</span></div>';
     });
-    retirosDetalle.sort(function(a,b){ return (a.timestamp||0) - (b.timestamp||0); });
-    var totalSalidas = totalSalidasCategorias + totalRetiros;
+    html += '</details>';
+  }
+  if(!cats.length && !nRet) html += '<div style="font-size:12px;color:var(--suave);">Sin salidas hoy</div>';
+  html += filaCorte('TOTAL SALIDAS', fmtResta(d.totalSalidas), { bold:true, borde:true }) + '</div>';
 
-    var filasSalidas = Object.keys(salidasPorCategoria).map(function(cat){
-      return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span>'+cat+'</span><span>-'+fmtMoney(salidasPorCategoria[cat])+'</span></div>';
-    }).join('');
-    if(totalRetiros > 0) {
-      var detalleRetiros = retirosDetalle.map(function(r){
-        return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:1px 0 1px 14px;color:var(--suave);"><span>'+(r.hora||'')+' — "'+(r.motivo||'Sin motivo')+'" — '+(r.usuario||'')+'</span><span>-'+fmtMoney(r.monto)+'</span></div>';
-      }).join('');
-      filasSalidas += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span>💰 Retiros parciales ('+retirosDetalle.length+')</span><span>-'+fmtMoney(totalRetiros)+'</span></div>' + detalleRetiros;
-    }
-    if(!filasSalidas) filasSalidas = '<div style="font-size:12px;color:var(--suave);">Sin salidas hoy</div>';
+  // CIERRE
+  html += '<div style="background:#1A1A1A;border-radius:10px;padding:14px;color:#fff;">' +
+    '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">CIERRE</div>' +
+    filaCorte('💵 Efectivo en caja', fmtMoney(d.efectivoCaja), { bold:true, size:16, color:'var(--naranja)' }) +
+    '<div style="font-size:10px;color:#999;padding:0 0 4px;">Cobros en efectivo − salidas − retiros parciales</div>' +
+    filaCorte('🔒 Efectivo apartado', fmtMoney(d.efectivoApartado), { color:'#ddd' }) +
+    '<div style="font-size:10px;color:#999;padding:0 0 4px;">Ya incluido en caja · operativo (caja − apartado): ' + fmtMoney(d.efectivoOperativo) + '</div>' +
+    filaCorte('📊 Cartera pendiente', fmtMoney(d.cartera) + ' <span style="font-size:10px;color:#999;">(' + d.carteraCuentas + ' cuenta' + (d.carteraCuentas === 1 ? '' : 's') + ')</span>', { color:'#ddd' }) +
+    '</div>';
+  return html;
+}
 
-    var efectivoFinal = buckets.efectivo - totalSalidasCategorias - totalRetiros;
-
-    cont.innerHTML =
-      '<div style="background:#F5F2EE;border-radius:10px;padding:14px;margin-bottom:10px;">' +
-        '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">VENTAS DEL DÍA</div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>💵 Efectivo</span><span>'+fmtMoney(buckets.efectivo)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>💳 Tarjeta</span><span>'+fmtMoney(buckets.tarjeta)+' ('+buckets.tarjetaOps+' operaciones)</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:11px;padding:0 0 2px;color:var(--suave);"><span>&nbsp;&nbsp;Comisión '+fmtMoney(comisiones)+' + IVA '+fmtMoney(ivaComisiones)+' = Descuento</span><span>-'+fmtMoney(totalComisionConIva)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:11px;padding:0 0 2px;color:var(--suave);"><span>&nbsp;&nbsp;Neto tarjeta</span><span>'+fmtMoney(buckets.tarjeta-totalComisionConIva)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>🏦 Transferencias</span><span>'+fmtMoney(buckets.transferencia)+' ('+buckets.transferenciaOps+' operaciones)</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;padding:6px 0 2px;border-top:1px solid #E0DBD3;margin-top:4px;"><span>📊 TOTAL VENTAS</span><span>'+fmtMoney(totalVentas)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#DC2626;"><span>💸 Comisiones terminal</span><span>-'+fmtMoney(totalComisionConIva)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:4px 0;color:var(--naranja);"><span>📊 NETO</span><span>'+fmtMoney(neto)+'</span></div>' +
-      '</div>' +
-      htmlTerminales +
-      '<div style="background:#F5F2EE;border-radius:10px;padding:14px;margin-bottom:10px;">' +
-        '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">SALIDAS EN EFECTIVO</div>' +
-        filasSalidas +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;padding:6px 0 2px;border-top:1px solid #E0DBD3;margin-top:4px;"><span>TOTAL SALIDAS'+(totalRetiros>0?' (incluyendo retiros)':'')+'</span><span>-'+fmtMoney(totalSalidas)+'</span></div>' +
-      '</div>' +
-      '<div style="background:#1A1A1A;border-radius:10px;padding:14px;">' +
-        '<div style="font-weight:700;font-size:12px;margin-bottom:8px;color:#fff;">EFECTIVO FINAL EN CAJA</div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#ccc;"><span>Total cobros efectivo</span><span>'+fmtMoney(buckets.efectivo)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#ccc;"><span>− Total salidas en efectivo</span><span>-'+fmtMoney(totalSalidasCategorias)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#ccc;"><span>− Total retiros parciales</span><span>-'+fmtMoney(totalRetiros)+'</span></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;padding:8px 0 2px;border-top:1px solid #444;margin-top:6px;color:var(--naranja);"><span>= EFECTIVO FINAL</span><span>'+fmtMoney(efectivoFinal)+'</span></div>' +
-        '<div style="font-size:10px;color:#888;margin-top:4px;">Lo que debe quedar físicamente en caja</div>' +
-      '</div>';
-  }).catch(function(e){ console.log('Error cargando ventas del día:', e); cont.innerHTML = '<div style="color:var(--suave);font-size:12px;">Error al cargar</div>'; });
+function fechaLargaCorte(fechaISO) {
+  var p = (fechaISO || '').split('-');
+  if(p.length !== 3) return fechaISO || '';
+  return new Date(parseInt(p[0],10), parseInt(p[1],10) - 1, parseInt(p[2],10)).toLocaleDateString('es-MX', {weekday:'long', day:'2-digit', month:'long', year:'numeric'});
 }
 
 function iniciarCorte() {
-  // Mostrar vista según rol
   var role = currentUser ? currentUser.role : '';
-  document.getElementById('corte-ivette').style.display = 'none';
-  document.getElementById('corte-viri').style.display = 'none';
-  document.getElementById('corte-director').style.display = 'none';
+  ['corte-auto','corte-turno','corte-viri','corte-director'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  });
 
-  // Gerencia y Director deben poder capturar el corte igual que Ivette/Erika (no solo
-  // validarlo o verlo de lejos) — Viridiana maneja el efectivo y a veces ella misma
-  // hace el conteo del día.
-  if(role === 'Ventas' || role === 'Compras' || role === 'Gerencia' || role === 'Director') {
-    document.getElementById('corte-ivette').style.display = 'block';
-    document.getElementById('corte-fecha-hoy').textContent = 'Fecha: ' + new Date().toLocaleDateString('es-MX', {weekday:'long', day:'2-digit', month:'long', year:'numeric'});
-    cargarTransferenciasConfirmadas();
-    cargarApartadoCaja();
-    cargarVentasDelDiaCorte();
-    cargarRetirosParciales();
-    var btnEnviar = document.getElementById('btn-enviar-corte');
-    var btnRetiro = document.getElementById('btn-retiro-parcial');
-    if(btnEnviar) btnEnviar.textContent = (role === 'Gerencia' || role === 'Director') ? '✅ CERRAR EL DÍA' : '✅ ENVIAR CORTE A VIRIDIANA';
-    if(btnRetiro) btnRetiro.style.display = (role === 'Gerencia' || role === 'Director') ? 'block' : 'none';
+  if(role === 'Gerencia' || role === 'Director') {
+    document.getElementById('corte-auto').style.display = 'block';
+    document.getElementById('corte-whatsapp-respaldo').innerHTML = '';
+    recalcularCorteAuto();
+    cargarCierresDiaHistorial();
+  }
+  if(role === 'Ventas' || role === 'Compras') {
+    document.getElementById('corte-turno').style.display = 'block';
+    document.getElementById('corte-turno-fecha').textContent = 'Fecha: ' + fechaLargaCorte(fechaISOLocal()) + ' · ' + (currentUser ? currentUser.name : '');
   }
   if(role === 'Gerencia') {
     document.getElementById('corte-viri').style.display = 'block';
@@ -5495,233 +5390,362 @@ switchTab = function(tab, btn) {
   if(tab === 'corte') iniciarCorte();
 };
 
-function calcCorte() {
-  var ef = parseFloat(document.getElementById('c-efectivo').value||0);
-  var ret = parseFloat(document.getElementById('c-retiros').value||0);
-  var tpvIzz = parseFloat(document.getElementById('c-tpv-izz').value||0);
-  var tpvCem = parseFloat(document.getElementById('c-tpv-cemcoya').value||0);
-  var mp = parseFloat(document.getElementById('c-mp').value||0);
-  var totalTransfers = parseFloat(document.getElementById('c-transfer-total').value||0);
+// Recalcula todo desde Firestore y repinta. Devuelve {datos, cierre} (cierre = cierre
+// ya guardado de hoy, o null) — cerrarDia() lo usa para comparar contra lo que se estaba viendo.
+function recalcularCorteAuto() {
+  var cont = document.getElementById('corte-auto-detalle');
+  if(!cont) return Promise.resolve(null);
+  if(!db) { cont.innerHTML = '<div style="padding:14px;color:var(--suave);font-size:12px;">Sin conexión</div>'; return Promise.resolve(null); }
+  var fecha = fechaISOLocal();
+  var fechaEl = document.getElementById('corte-fecha-hoy');
+  if(fechaEl) fechaEl.textContent = 'Fecha: ' + fechaLargaCorte(fecha);
+  var btn = document.getElementById('btn-recalcular-corte');
+  if(btn) btn.disabled = true;
+  return Promise.all([
+    calcularCorteDelDia(fecha),
+    db.collection('cierres_dia').doc(fecha).get().then(function(doc){ return doc.exists ? doc.data() : null; }).catch(function(){ return null; })
+  ]).then(function(res){
+    corteAutoActual = res[0];
+    cont.innerHTML = renderCorteAuto(res[0]);
+    var estado = document.getElementById('corte-cierre-estado');
+    if(estado) {
+      estado.innerHTML = res[1]
+        ? '<div style="background:#DCFCE7;border:1.5px solid #22C55E;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;font-weight:700;color:#15803D;">✅ Día cerrado a las ' + (res[1].hora || '') + ' por ' + (res[1].cerradoPor || '') + '. Si cambió algo puedes cerrarlo de nuevo.</div>'
+        : '';
+    }
+    if(btn) btn.disabled = false;
+    return { datos: res[0], cierre: res[1] };
+  }).catch(function(e){
+    console.log('Error calculando corte:', e);
+    cont.innerHTML = '<div style="padding:14px;color:#DC2626;font-size:12px;">⚠️ No se pudo calcular el corte. Toca Recalcular.</div>';
+    if(btn) btn.disabled = false;
+    return null;
+  });
+}
 
-  var efTotal = ef + ret;
-  var tpvTotal = tpvIzz + tpvCem + mp;
-  var granTotal = ef + ret + tpvIzz + tpvCem + mp + totalTransfers;
+function corteCambio(a, b) {
+  if(!a || !b || a.fecha !== b.fecha) return true;
+  return ['totalVentas','totalSalidas','efectivoCaja','efectivoApartado','cartera'].some(function(k){
+    return Math.abs(corteNum(a[k]) - corteNum(b[k])) > 0.005;
+  });
+}
 
-  document.getElementById('res-efectivo-total').textContent = fmtMoney(efTotal);
-  document.getElementById('res-tpv-total').textContent = fmtMoney(tpvTotal);
-  document.getElementById('res-transfer-total').textContent = fmtMoney(totalTransfers);
-  document.getElementById('res-gran-total').textContent = fmtMoney(granTotal);
+function construirCierreDia(d, observaciones) {
+  var ahora = new Date();
+  return {
+    fecha: d.fecha,
+    hora: ahora.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'}),
+    totalVentas: d.totalVentas,
+    totalEfectivo: d.efectivo,
+    totalTarjeta: d.tarjeta,
+    totalTransferencia: d.transferencia,
+    comisiones: d.comision,
+    neto: d.neto,
+    totalSalidas: d.totalSalidas,
+    salidasPorCategoria: d.salidasPorCategoria,
+    retiros: d.totalRetiros,
+    efectivoCaja: d.efectivoCaja,
+    efectivoApartado: d.efectivoApartado,
+    cartera: d.cartera,
+    terminales: d.terminales,
+    observaciones: observaciones || '',
+    cerradoPor: currentUser ? currentUser.name : 'Desconocido',
+    timestamp: Date.now()
+  };
+}
 
-  var elOperativo = document.getElementById('res-efectivo-operativo');
-  if(elOperativo) elOperativo.textContent = fmtMoney(efTotal - apartadoHoy - retirosParcialesHoy);
-  var elApartado = document.getElementById('res-efectivo-apartado');
-  if(elApartado) elApartado.textContent = fmtMoney(apartadoHoy) + ' (saldo acumulado: ' + fmtMoney(saldoApartadoAcumulado) + ')';
+function mensajeCierreDia(c) {
+  var fecha = fechaLargaCorte(c.fecha).replace(/^[^,]+,\s*/, '');
+  var msg =
+    '📊 *CORTE DEL DÍA — ' + fecha + '*\n\n' +
+    '💵 Efectivo:        ' + fmtMoney(c.totalEfectivo) + '\n' +
+    '💳 Tarjeta:         ' + fmtMoney(c.totalTarjeta) + '\n' +
+    '🏦 Transferencias:  ' + fmtMoney(c.totalTransferencia) + '\n' +
+    '─────────────────────\n' +
+    '📊 TOTAL VENTAS:    ' + fmtMoney(c.totalVentas) + '\n' +
+    '💸 Comisiones:      ' + fmtResta(c.comisiones) + '\n' +
+    '📊 NETO:            ' + fmtMoney(c.neto) + '\n\n' +
+    'SALIDAS:\n';
+  var cats = Object.keys(c.salidasPorCategoria || {});
+  cats.forEach(function(cat){ msg += cat + ': ' + fmtMoney(c.salidasPorCategoria[cat]) + '\n'; });
+  msg += 'Retiros:     ' + fmtMoney(c.retiros) + '\n' +
+    '─────────────\n' +
+    'TOTAL SALIDAS: ' + fmtMoney(c.totalSalidas) + '\n\n' +
+    '💵 Efectivo en caja:  ' + fmtMoney(c.efectivoCaja) + '\n' +
+    '🔒 Efectivo apartado: ' + fmtMoney(c.efectivoApartado) + '\n' +
+    '📊 Cartera pendiente: ' + fmtMoney(c.cartera) + '\n';
+  if(c.observaciones) msg += '\n📝 ' + c.observaciones + '\n';
+  msg += '\nCerrado por: ' + c.cerradoPor;
+  return msg;
+}
 
-  // Débito y crédito cobran la misma tasa en las 3 terminales (puro contrato,
-  // no hay diferencia real) — ya no se captura el tipo de tarjeta, se usa
-  // 'debito' fijo nada más para satisfacer la firma de netoTerminal().
-  var netoIzzEl = document.getElementById('c-tpv-izz-neto');
-  var netoCemEl = document.getElementById('c-tpv-cemcoya-neto');
-  var netoMpEl = document.getElementById('c-mp-neto');
-  if(netoIzzEl) {
-    var ni = netoTerminal(tpvIzz, 'IZZ', 'BBVA', 'debito');
-    netoIzzEl.textContent = tpvIzz > 0 ? ('Comisión ' + fmtMoney(ni.comision) + ' + IVA ' + fmtMoney(ni.ivaCom) + ' = Descuento ' + fmtMoney(ni.comision + ni.ivaCom) + ' · Neto ' + fmtMoney(ni.neto)) : '';
-  }
-  if(netoCemEl) {
-    var nc = netoTerminal(tpvCem, 'CEM', 'BBVA', 'debito');
-    netoCemEl.textContent = tpvCem > 0 ? ('Comisión ' + fmtMoney(nc.comision) + ' + IVA ' + fmtMoney(nc.ivaCom) + ' = Descuento ' + fmtMoney(nc.comision + nc.ivaCom) + ' · Neto ' + fmtMoney(nc.neto)) : '';
-  }
-  if(netoMpEl) {
-    var nm = netoTerminal(mp, 'IZZ', 'MERCADO PAGO', 'debito');
-    netoMpEl.textContent = mp > 0 ? ('Comisión ' + fmtMoney(nm.comision) + ' + IVA ' + fmtMoney(nm.ivaCom) + ' = Descuento ' + fmtMoney(nm.comision + nm.ivaCom) + ' · Neto ' + fmtMoney(nm.neto)) : '';
+// Siempre se mandan los dos mensajes (Viridiana y José Manuel), cierre quien cierre.
+// Los navegadores suelen bloquear la segunda ventana emergente, por eso además se
+// deja a la vista un botón por destinatario.
+function enviarCierreWhatsApp(c) {
+  var enc = encodeURIComponent(mensajeCierreDia(c));
+  var urlViri = 'https://wa.me/' + VIRIDIANA_WHATSAPP + '?text=' + enc;
+  var urlJose = 'https://wa.me/' + JOSE_MANUEL_WHATSAPP + '?text=' + enc;
+  setTimeout(function(){ window.open(urlViri, '_blank'); }, 0);
+  setTimeout(function(){ window.open(urlJose, '_blank'); }, 1500);
+  var cont = document.getElementById('corte-whatsapp-respaldo');
+  if(cont) {
+    cont.innerHTML =
+      '<div style="margin-top:14px;padding:12px;background:#F0FFF4;border:1.5px solid #22C55E;border-radius:8px;">' +
+        '<div style="font-size:12px;font-weight:700;margin-bottom:8px;">📱 Mensajes del cierre — si alguno no se abrió, tócalo:</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<a class="btn btn-verde" href="' + urlViri + '" target="_blank" style="text-decoration:none;font-size:12px;padding:10px 14px;">Viridiana</a>' +
+          '<a class="btn btn-verde" href="' + urlJose + '" target="_blank" style="text-decoration:none;font-size:12px;padding:10px 14px;">José Manuel</a>' +
+        '</div>' +
+      '</div>';
   }
 }
 
-function imprimirCorte() {
-  var ef = parseFloat(document.getElementById('c-efectivo').value||0);
-  var ret = parseFloat(document.getElementById('c-retiros').value||0);
-  var tpvIzz = parseFloat(document.getElementById('c-tpv-izz').value||0);
-  var tpvIzzOps = document.getElementById('c-tpv-izz-ops').value||0;
-  var tpvCem = parseFloat(document.getElementById('c-tpv-cemcoya').value||0);
-  var tpvCemOps = document.getElementById('c-tpv-cemcoya-ops').value||0;
-  var mp = parseFloat(document.getElementById('c-mp').value||0);
-  var mpOps = document.getElementById('c-mp-ops').value||0;
-  var totalTransfers = parseFloat(document.getElementById('c-transfer-total').value||0);
-  var transferOps = document.getElementById('c-transfer-ops').value||0;
-  var granTotal = ef + ret + tpvIzz + tpvCem + mp + totalTransfers;
-  var fecha = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-  var hora = new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-  var quien = currentUser ? currentUser.name : 'Ventas';
-  var netoIzz = netoTerminal(tpvIzz, 'IZZ', 'BBVA', 'debito');
-  var netoCem = netoTerminal(tpvCem, 'CEM', 'BBVA', 'debito');
-  var netoMp = netoTerminal(mp, 'IZZ', 'MERCADO PAGO', 'debito');
-  var descIzz = netoIzz.comision + netoIzz.ivaCom, descCem = netoCem.comision + netoCem.ivaCom, descMp = netoMp.comision + netoMp.ivaCom;
-  var descTotal = descIzz + descCem + descMp;
-  var notas = document.getElementById('c-notas').value;
-  var w = window.open('','_blank','width=420,height=750');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Corte de Caja</title><style>body{font-family:Arial,sans-serif;margin:0;padding:16px;font-size:12px;}.header{text-align:center;border-bottom:2px solid #E8500A;padding-bottom:12px;margin-bottom:12px;}.logo{font-size:20px;font-weight:900;letter-spacing:2px;color:#E8500A;}.sub{font-size:10px;color:#666;}.seccion{margin-bottom:10px;border:1px solid #DDD;border-radius:6px;overflow:hidden;}.sec-title{background:#1A1A1A;color:#fff;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;}table{width:100%;border-collapse:collapse;}td{padding:5px 10px;border-bottom:1px solid #F0EDE8;}.subtotal td{font-weight:700;background:#F5F2EE;}.total-row{background:#E8500A;color:#fff;}.total-row td{font-weight:700;font-size:14px;padding:8px 10px;}.footer{text-align:center;margin-top:16px;font-size:10px;color:#888;border-top:1px dashed #CCC;padding-top:10px;}.firma{margin-top:30px;display:flex;justify-content:space-around;}.firma-line{text-align:center;width:140px;}.firma-line hr{border:none;border-top:1px solid #333;margin-bottom:4px;}.firma-line p{font-size:10px;color:#666;margin:0;}@media print{body{margin:0;padding:8px;}}</style></head><body>');
-  w.document.write('<div class="header"><div class="logo">MATERIALES TRONCOSO</div><div class="sub">Fco. del Paso y Troncoso #943 · Iztacalco, CDMX</div><div class="sub">Tel: 5555906802 / 5591800148</div><div style="margin-top:6px;font-size:11px;"><strong>CORTE DE CAJA</strong></div><div class="sub">'+fecha+' · '+hora+' · Elaboró: '+quien+'</div></div>');
-  w.document.write('<div class="seccion"><div class="sec-title">💵 Efectivo</div><table><tr><td>Efectivo en caja</td><td style="text-align:right;">'+fmtMoney(ef)+'</td></tr><tr><td>Retiros del día</td><td style="text-align:right;">'+fmtMoney(ret)+'</td></tr><tr class="subtotal"><td>Subtotal efectivo</td><td style="text-align:right;">'+fmtMoney(ef+ret)+'</td></tr></table></div>');
-  w.document.write('<div class="seccion"><div class="sec-title">💳 Terminales</div><table><tr><td>TPV BBVA Itzayana ('+tpvIzzOps+' ops)</td><td style="text-align:right;">'+fmtMoney(tpvIzz)+'</td></tr><tr><td style="font-size:10px;color:#888;">&nbsp;&nbsp;Comisión '+fmtMoney(netoIzz.comision)+' + IVA '+fmtMoney(netoIzz.ivaCom)+' = Descuento</td><td style="text-align:right;font-size:10px;color:#888;">-'+fmtMoney(descIzz)+'</td></tr><tr><td>TPV BBVA Cemcoya ('+tpvCemOps+' ops)</td><td style="text-align:right;">'+fmtMoney(tpvCem)+'</td></tr><tr><td style="font-size:10px;color:#888;">&nbsp;&nbsp;Comisión '+fmtMoney(netoCem.comision)+' + IVA '+fmtMoney(netoCem.ivaCom)+' = Descuento</td><td style="text-align:right;font-size:10px;color:#888;">-'+fmtMoney(descCem)+'</td></tr><tr><td>Mercado Pago Itzayana ('+mpOps+' ops)</td><td style="text-align:right;">'+fmtMoney(mp)+'</td></tr><tr><td style="font-size:10px;color:#888;">&nbsp;&nbsp;Comisión '+fmtMoney(netoMp.comision)+' + IVA '+fmtMoney(netoMp.ivaCom)+' = Descuento</td><td style="text-align:right;font-size:10px;color:#888;">-'+fmtMoney(descMp)+'</td></tr><tr class="subtotal"><td>Subtotal terminales</td><td style="text-align:right;">'+fmtMoney(tpvIzz+tpvCem+mp)+'</td></tr><tr><td>Descuento total (comisión + IVA)</td><td style="text-align:right;">-'+fmtMoney(descTotal)+'</td></tr><tr class="subtotal"><td>Neto terminales</td><td style="text-align:right;">'+fmtMoney(tpvIzz+tpvCem+mp-descTotal)+'</td></tr></table></div>');
-  w.document.write('<div class="seccion"><div class="sec-title">📲 Transferencias</div><table><tr><td>Transferencias ('+transferOps+' ops)</td><td style="text-align:right;">'+fmtMoney(totalTransfers)+'</td></tr></table></div>');
-  w.document.write('<table style="margin-top:8px;"><tr class="total-row"><td>TOTAL DEL DÍA</td><td style="text-align:right;font-size:18px;">'+fmtMoney(granTotal)+'</td></tr></table>');
-  if(notas) w.document.write('<div style="margin-top:10px;font-size:10px;padding:8px;background:#F5F2EE;border-radius:4px;"><strong>Notas:</strong> '+notas+'</div>');
-  w.document.write('<div class="firma"><div class="firma-line"><hr><p>Elaboró: '+quien+'</p></div><div class="firma-line"><hr><p>Validó: Viridiana</p></div></div>');
-  w.document.write('<div class="footer">Materiales Troncoso · materialestroncoso.com · Uso interno</div>');
+function cerrarDia() {
+  if(cerrandoDia) return;
+  if(!currentUser || (currentUser.role !== 'Gerencia' && currentUser.role !== 'Director')) { showToast('⚠️ Sin permisos'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+  if(!corteAutoActual) { showToast('⚠️ Espera a que termine de calcular'); return; }
+  var vistos = corteAutoActual;
+  var btn = document.getElementById('btn-cerrar-dia');
+  cerrandoDia = true;
+  if(btn) btn.disabled = true;
+  function liberar() { cerrandoDia = false; if(btn) btn.disabled = false; }
+
+  // Se recalcula justo antes de guardar: el snapshot nunca lleva números que
+  // Viridiana no haya visto. Si entró algo mientras revisaba, se muestra y se pide confirmar de nuevo.
+  recalcularCorteAuto().then(function(r){
+    if(!r) { showToast('⚠️ No se pudo calcular — intenta de nuevo'); liberar(); return; }
+    if(corteCambio(vistos, r.datos)) {
+      showToast('⚠️ Entró un movimiento nuevo — revisa los números y toca Cerrar día otra vez');
+      liberar();
+      return;
+    }
+    if(r.cierre && !confirm('El día ya se cerró a las ' + (r.cierre.hora || '') + ' (' + (r.cierre.cerradoPor || '') + ').\n¿Cerrarlo de nuevo y reenviar los mensajes?')) { liberar(); return; }
+    var obs = (document.getElementById('corte-observaciones').value || '').trim();
+    var cierre = construirCierreDia(r.datos, obs);
+    return db.collection('cierres_dia').doc(cierre.fecha).set(cierre).then(function(){
+      showToast('✅ Día cerrado');
+      enviarCierreWhatsApp(cierre);
+      recalcularCorteAuto();
+      cargarCierresDiaHistorial();
+      liberar();
+    }, function(e){
+      console.log('Error guardando cierre del día:', e);
+      if(confirm('No se pudo guardar el cierre en el sistema.\n¿Enviar los mensajes de WhatsApp de todos modos?')) enviarCierreWhatsApp(cierre);
+      liberar();
+    });
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al cerrar el día'); liberar(); });
+}
+
+function cargarCierresDiaHistorial() {
+  var cont = document.getElementById('cierres-dia-historial');
+  if(!cont || !db) return;
+  cont.innerHTML = '<div style="padding:10px;color:var(--suave);font-size:12px;">Cargando...</div>';
+  db.collection('cierres_dia').orderBy('timestamp','desc').limit(10).get().then(function(snap){
+    if(snap.empty) { cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Aún no hay cierres guardados</div>'; return; }
+    var html = '';
+    snap.forEach(function(doc){
+      var c = doc.data();
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #F0EDE8;">' +
+        '<div><strong style="font-size:13px;">' + c.fecha + '</strong><br><span style="font-size:11px;color:var(--suave);">' + (c.cerradoPor || '') + ' · ' + (c.hora || '') + ' · Caja ' + fmtMoney(corteNum(c.efectivoCaja)) + '</span></div>' +
+        '<div style="text-align:right;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--naranja);">' + fmtMoney(corteNum(c.totalVentas)) + '</div>' +
+        '<span style="font-size:10px;color:var(--suave);">Salidas ' + fmtMoney(corteNum(c.totalSalidas)) + '</span></div></div>';
+    });
+    cont.innerHTML = html;
+  }).catch(function(e){ console.log(e); cont.innerHTML = '<div style="padding:12px;color:#DC2626;font-size:12px;">Error al cargar</div>'; });
+}
+
+function imprimirCierreDia() {
+  var d = corteAutoActual;
+  if(!d) { showToast('⚠️ Espera a que termine de calcular'); return; }
+  var obs = (document.getElementById('corte-observaciones').value || '').trim();
+  var hora = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
+  var quien = currentUser ? currentUser.name : '';
+  function fila(label, valor, cls) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + label + '</td><td style="text-align:right;">' + valor + '</td></tr>'; }
+  var ventas = fila('Efectivo', fmtMoney(d.efectivo));
+  TERMINALES_CORTE.forEach(function(t){ ventas += fila(t.label, fmtMoney(d.terminales[t.key].monto)); });
+  if(d.tarjetaSinTerminal > 0.005) ventas += fila('Tarjeta (abonos, sin terminal)', fmtMoney(d.tarjetaSinTerminal));
+  ventas += fila('Transferencias (' + d.transferenciaOps + ' op.)', fmtMoney(d.transferencia)) +
+    fila('TOTAL VENTAS', fmtMoney(d.totalVentas), 'subtotal') +
+    fila('Comisiones terminal', fmtResta(d.comision)) +
+    fila('NETO', fmtMoney(d.neto), 'subtotal');
+  var salidas = '';
+  Object.keys(d.salidasPorCategoria).forEach(function(cat){ salidas += fila(cat, fmtResta(d.salidasPorCategoria[cat])); });
+  if(d.retirosDetalle.length) salidas += fila('Retiros parciales (' + d.retirosDetalle.length + ')', fmtResta(d.totalRetiros));
+  if(!salidas) salidas = fila('Sin salidas', fmtMoney(0));
+  salidas += fila('TOTAL SALIDAS', fmtResta(d.totalSalidas), 'subtotal');
+  var cierre = fila('Efectivo en caja', fmtMoney(d.efectivoCaja), 'subtotal') + fila('Efectivo apartado', fmtMoney(d.efectivoApartado)) + fila('Cartera pendiente', fmtMoney(d.cartera));
+  var w = window.open('', '_blank', 'width=420,height=750');
+  if(!w) { showToast('⚠️ El navegador bloqueó la ventana de impresión'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cierre del Día</title><style>body{font-family:Arial,sans-serif;margin:0;padding:16px;font-size:12px;}.header{text-align:center;border-bottom:2px solid #E8500A;padding-bottom:12px;margin-bottom:12px;}.logo{font-size:20px;font-weight:900;letter-spacing:2px;color:#E8500A;}.sub{font-size:10px;color:#666;}.seccion{margin-bottom:10px;border:1px solid #DDD;border-radius:6px;overflow:hidden;}.sec-title{background:#1A1A1A;color:#fff;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;}table{width:100%;border-collapse:collapse;}td{padding:5px 10px;border-bottom:1px solid #F0EDE8;}.subtotal td{font-weight:700;background:#F5F2EE;}.firma{margin-top:30px;display:flex;justify-content:space-around;}.firma-line{text-align:center;width:140px;}.firma-line hr{border:none;border-top:1px solid #333;margin-bottom:4px;}.firma-line p{font-size:10px;color:#666;margin:0;}.footer{text-align:center;margin-top:16px;font-size:10px;color:#888;border-top:1px dashed #CCC;padding-top:10px;}@media print{body{margin:0;padding:8px;}}</style></head><body>');
+  w.document.write('<div class="header"><div class="logo">MATERIALES TRONCOSO</div><div class="sub">Fco. del Paso y Troncoso #943 · Iztacalco, CDMX</div><div style="margin-top:6px;font-size:11px;"><strong>CIERRE DEL DÍA</strong></div><div class="sub">' + fechaLargaCorte(d.fecha) + ' · ' + hora + ' · ' + quien + '</div></div>');
+  w.document.write('<div class="seccion"><div class="sec-title">Ventas del día</div><table>' + ventas + '</table></div>');
+  w.document.write('<div class="seccion"><div class="sec-title">Salidas</div><table>' + salidas + '</table></div>');
+  w.document.write('<div class="seccion"><div class="sec-title">Cierre</div><table>' + cierre + '</table></div>');
+  if(obs) w.document.write('<div style="margin-top:10px;font-size:10px;padding:8px;background:#F5F2EE;border-radius:4px;"><strong>Observaciones:</strong> ' + obs + '</div>');
+  w.document.write('<div class="firma"><div class="firma-line"><hr><p>Cerró: ' + quien + '</p></div><div class="firma-line"><hr><p>Revisó</p></div></div>');
+  w.document.write('<div class="footer">Materiales Troncoso · Uso interno</div>');
   w.document.write('<script>window.onload=function(){window.print();}<\/script></body></html>');
   w.document.close();
 }
 
-function enviarCorteWhatsApp() {
-  var ef = parseFloat(document.getElementById('c-efectivo').value||0);
-  var ret = parseFloat(document.getElementById('c-retiros').value||0);
-  var tpvIzz = parseFloat(document.getElementById('c-tpv-izz').value||0);
-  var tpvCem = parseFloat(document.getElementById('c-tpv-cemcoya').value||0);
-  var mp = parseFloat(document.getElementById('c-mp').value||0);
-  var totalTransfers = parseFloat(document.getElementById('c-transfer-total').value||0);
-  var transferOps = document.getElementById('c-transfer-ops').value||0;
-  var granTotal = ef + ret + tpvIzz + tpvCem + mp + totalTransfers;
-  var fecha = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
-  var quien = currentUser ? currentUser.name : 'Ventas';
-  var netoIzz = netoTerminal(tpvIzz, 'IZZ', 'BBVA', 'debito');
-  var netoCem = netoTerminal(tpvCem, 'CEM', 'BBVA', 'debito');
-  var netoMp = netoTerminal(mp, 'IZZ', 'MERCADO PAGO', 'debito');
-  var descTotal = (netoIzz.comision + netoIzz.ivaCom) + (netoCem.comision + netoCem.ivaCom) + (netoMp.comision + netoMp.ivaCom);
-  var notas = document.getElementById('c-notas').value;
-  var msg =
-    '🏗 *CORTE DE CAJA — MATERIALES TRONCOSO*\n'+
-    '📅 '+fecha+' · '+quien+'\n\n'+
-    '💵 *EFECTIVO*\n'+
-    '  En caja: '+fmtMoney(ef)+'\n'+
-    '  Retiros: '+fmtMoney(ret)+'\n'+
-    '  Subtotal: *'+fmtMoney(ef+ret)+'*\n\n'+
-    '💳 *TERMINALES*\n'+
-    '  TPV BBVA Itzayana: '+fmtMoney(tpvIzz)+' → comisión '+fmtMoney(netoIzz.comision)+' + IVA '+fmtMoney(netoIzz.ivaCom)+'\n'+
-    '  TPV BBVA Cemcoya: '+fmtMoney(tpvCem)+' → comisión '+fmtMoney(netoCem.comision)+' + IVA '+fmtMoney(netoCem.ivaCom)+'\n'+
-    '  Mercado Pago Itzayana: '+fmtMoney(mp)+' → comisión '+fmtMoney(netoMp.comision)+' + IVA '+fmtMoney(netoMp.ivaCom)+'\n'+
-    '  Subtotal: *'+fmtMoney(tpvIzz+tpvCem+mp)+'* · Descuento total: -'+fmtMoney(descTotal)+'\n\n'+
-    '📲 *TRANSFERENCIAS*\n'+
-    '  '+transferOps+' operaciones: *'+fmtMoney(totalTransfers)+'*\n\n'+
-    '━━━━━━━━━━━━━━━\n'+
-    '💰 *TOTAL DEL DÍA: '+fmtMoney(granTotal)+'*'+
-    (notas ? '\n\n📝 '+notas : '')+
-    '\n\nmaterialestroncoso.com';
-  var msgEnc = encodeURIComponent(msg);
-  // Enviar a Viridiana primero
-  window.open('https://wa.me/'+VIRIDIANA_WHATSAPP+'?text='+msgEnc,'_blank');
-  // Preguntar si también a José Manuel
-  setTimeout(function(){
-    if(confirm('¿Enviar también a José Manuel?')) {
-      window.open('https://wa.me/'+JOSE_MANUEL_WHATSAPP+'?text='+msgEnc,'_blank');
+// ════ CERRAR MI TURNO — mini corte de Ventas (Ivette) y Compras (Erika) ════
+// Solo cuenta lo que cobró esa persona (pedidos.a, tickets.usuario, abonos.usuario)
+// después de su último cierre de turno de hoy, así un segundo cierre no repite lo ya entregado.
+function puedeCerrarTurno() {
+  return !!(currentUser && (currentUser.role === 'Ventas' || currentUser.role === 'Compras'));
+}
+
+function calcularCierreTurno() {
+  var fecha = fechaISOLocal();
+  var nombre = currentUser.name;
+  return Promise.all([
+    db.collection('pedidos').where('fecha','==',fecha).get(),
+    db.collection('tickets').where('fecha','==',fecha).get(),
+    db.collection('cobros_cuentas_cobrar').where('fecha','==',fecha).get(),
+    db.collection('cierres_turno').where('fecha','==',fecha).where('usuario','==',nombre).get()
+  ]).then(function(res){
+    var desde = 0;
+    cortesDocs(res[3]).forEach(function(c){ if((c.hasta || 0) > desde) desde = c.hasta; });
+    function nuevos(docs, campoUsuario) {
+      return docs.filter(function(x){ return x[campoUsuario] === nombre && (x.timestamp || 0) > desde && x.s !== 'cancelado' && x.status !== 'cancelado'; });
     }
-  }, 800);
-  showToast('📱 Enviando por WhatsApp...');
+    var pedidos = nuevos(cortesDocs(res[0]), 'a');
+    var tickets = nuevos(cortesDocs(res[1]), 'usuario');
+    var abonos = nuevos(cortesDocs(res[2]), 'usuario');
+    var t = sumarCobrosPorMetodo(pedidos, tickets, abonos);
+    return {
+      fecha: fecha,
+      usuario: nombre,
+      efectivo: t.efectivo,
+      tarjeta: t.tarjeta,
+      transferencia: t.transferencia,
+      totalVendido: t.totalVentas,
+      efectivoAEntregar: t.efectivo,
+      desde: desde,
+      operaciones: pedidos.length + tickets.length + abonos.length
+    };
+  });
 }
 
-function cargarTransferenciasConfirmadas() {
-  // Autollena el total y las operaciones del día con las transferencias
-  // confirmadas en Firebase — el detalle de qué cliente pagó cuánto ya no
-  // se muestra aquí, se consulta en Cuentas por Cobrar si hace falta.
-  if(!db) return;
-  var hoy = fechaISOLocal();
-  db.collection('transferencias')
-    .where('fecha','==',hoy)
-    .where('confirmada','==',true)
-    .get().then(function(snap){
-      var total = 0, ops = 0;
-      snap.forEach(function(doc){
-        var t = doc.data();
-        total += t.monto || 0;
-        ops++;
-      });
-      var elTotal = document.getElementById('c-transfer-total');
-      var elOps = document.getElementById('c-transfer-ops');
-      if(elTotal) elTotal.value = total || '';
-      if(elOps) elOps.value = ops || '';
-      calcCorte();
-    }).catch(function(e){ console.log(e); });
+function renderCierreTurno(d) {
+  return '<div style="background:#F5F2EE;border-radius:10px;padding:14px;margin-bottom:12px;">' +
+      '<div style="font-weight:700;font-size:12px;margin-bottom:8px;">VENTAS DE MI TURNO <span style="font-weight:400;color:var(--suave);">(' + d.operaciones + ' operacion' + (d.operaciones === 1 ? '' : 'es') + ')</span></div>' +
+      filaCorte('💵 Efectivo cobrado', fmtMoney(d.efectivo)) +
+      filaCorte('💳 Tarjeta', fmtMoney(d.tarjeta)) +
+      filaCorte('🏦 Transferencias', fmtMoney(d.transferencia)) +
+      filaCorte('TOTAL VENDIDO', fmtMoney(d.totalVendido), { bold:true, borde:true, size:13 }) +
+    '</div>' +
+    '<div style="background:#1A1A1A;border-radius:10px;padding:14px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+      '<span style="font-weight:700;font-size:13px;">💵 EFECTIVO A ENTREGAR</span>' +
+      '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:var(--naranja);">' + fmtMoney(d.efectivoAEntregar) + '</span>' +
+    '</div>';
 }
 
-var enviandoCorte = false;
-function enviarCorte() {
-  if(enviandoCorte) return;
-  var ef = parseFloat(document.getElementById('c-efectivo').value||0);
-  var ret = parseFloat(document.getElementById('c-retiros').value||0);
-  var tpvIzz = parseFloat(document.getElementById('c-tpv-izz').value||0);
-  var tpvIzzOps = parseInt(document.getElementById('c-tpv-izz-ops').value||0);
-  var tpvCem = parseFloat(document.getElementById('c-tpv-cemcoya').value||0);
-  var tpvCemOps = parseInt(document.getElementById('c-tpv-cemcoya-ops').value||0);
-  var mp = parseFloat(document.getElementById('c-mp').value||0);
-  var mpOps = parseInt(document.getElementById('c-mp-ops').value||0);
-  var totalTransfers = parseFloat(document.getElementById('c-transfer-total').value||0);
-  var transferOps = parseInt(document.getElementById('c-transfer-ops').value||0);
-  var granTotal = ef + ret + tpvIzz + tpvCem + mp + totalTransfers;
+function abrirCierreTurno() {
+  if(!puedeCerrarTurno()) { showToast('⚠️ Solo Ventas y Compras cierran turno'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+  var existente = document.getElementById('modal-cierre-turno');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-cierre-turno';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:440px;width:100%;max-height:90vh;overflow-y:auto;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:4px;">📤 CERRAR MI TURNO</div>' +
+      '<div style="font-size:12px;color:var(--suave);margin-bottom:14px;">' + currentUser.name + ' · ' + fechaLargaCorte(fechaISOLocal()) + '</div>' +
+      '<div id="cierre-turno-detalle"><div style="padding:14px;color:var(--suave);font-size:12px;">Calculando...</div></div>' +
+      '<div id="cierre-turno-whatsapp"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:14px;">' +
+        '<button class="btn btn-naranja" id="btn-enviar-turno" style="flex:1;" onclick="enviarCierreTurno()" disabled>📤 Enviar resumen y cerrar turno</button>' +
+        '<button class="btn btn-gris" onclick="document.getElementById(\'modal-cierre-turno\').remove()">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  cierreTurnoActual = null;
+  calcularCierreTurno().then(function(d){
+    cierreTurnoActual = d;
+    var det = document.getElementById('cierre-turno-detalle');
+    var btn = document.getElementById('btn-enviar-turno');
+    if(!det) return;
+    det.innerHTML = d.operaciones ? renderCierreTurno(d) : '<div style="padding:14px;text-align:center;color:var(--suave);font-size:13px;">No tienes cobros nuevos en este turno.</div>';
+    if(btn) btn.disabled = !d.operaciones;
+  }).catch(function(e){
+    console.log('Error calculando turno:', e);
+    var det = document.getElementById('cierre-turno-detalle');
+    if(det) det.innerHTML = '<div style="padding:14px;color:#DC2626;font-size:12px;">⚠️ No se pudo calcular tu turno. Cierra y vuelve a intentar.</div>';
+  });
+}
 
-  if(granTotal === 0) { showToast('⚠️ Captura al menos un monto antes de enviar'); return; }
-  enviandoCorte = true;
+function mensajeCierreTurno(c) {
+  return '💰 *CIERRE DE TURNO — ' + c.usuario.toUpperCase() + '*\n' +
+    fechaLargaCorte(c.fecha).replace(/^[^,]+,\s*/, '') + ' ' + c.hora + '\n\n' +
+    '💵 Efectivo:       ' + fmtMoney(c.efectivo) + '\n' +
+    '💳 Tarjeta:        ' + fmtMoney(c.tarjeta) + '\n' +
+    '🏦 Transferencias: ' + fmtMoney(c.transferencias) + '\n' +
+    '──────────────────────\n' +
+    'TOTAL VENDIDO:     ' + fmtMoney(c.totalVendido) + '\n\n' +
+    '💵 Te entrego en efectivo: ' + fmtMoney(c.efectivoAEntregar);
+}
 
-  // Débito/crédito cobran igual en las 3 terminales — ya no se captura el
-  // tipo de tarjeta en el corte, se usa 'debito' fijo para netoTerminal().
-  var netoIzz = netoTerminal(tpvIzz, 'IZZ', 'BBVA', 'debito');
-  var netoCem = netoTerminal(tpvCem, 'CEM', 'BBVA', 'debito');
-  var netoMp = netoTerminal(mp, 'IZZ', 'MERCADO PAGO', 'debito');
-  var terminalesDetalle = [
-    {rs:'IZZ', banco:'BBVA', bruto:netoIzz.bruto, comision:netoIzz.comision, ivaCom:netoIzz.ivaCom, neto:netoIzz.neto},
-    {rs:'CEM', banco:'BBVA', bruto:netoCem.bruto, comision:netoCem.comision, ivaCom:netoCem.ivaCom, neto:netoCem.neto},
-    {rs:'IZZ', banco:'MERCADO PAGO', bruto:netoMp.bruto, comision:netoMp.comision, ivaCom:netoMp.ivaCom, neto:netoMp.neto}
-  ];
+function enviarCierreTurno() {
+  if(cerrandoTurno) return;
+  if(!puedeCerrarTurno()) { showToast('⚠️ Solo Ventas y Compras cierran turno'); return; }
+  if(!db || !cierreTurnoActual) return;
+  var vistos = cierreTurnoActual;
+  var btn = document.getElementById('btn-enviar-turno');
+  cerrandoTurno = true;
+  if(btn) btn.disabled = true;
+  function liberar() { cerrandoTurno = false; if(btn) btn.disabled = false; }
 
-  var corte = {
-    fecha: fechaISOLocal(),
-    timestamp: Date.now(),
-    creadoPor: currentUser ? currentUser.name : 'Ivette',
-    efectivo: ef,
-    retiros: ret,
-    retirosMotivo: document.getElementById('c-retiro-motivo').value,
-    tpvIzz: tpvIzz,
-    tpvIzzOps: tpvIzzOps,
-    tpvCemcoya: tpvCem,
-    tpvCemcoyaOps: tpvCemOps,
-    mercadoPago: mp,
-    mercadoPagoOps: mpOps,
-    totalTransferencias: totalTransfers,
-    transferenciasOps: transferOps,
-    totalEfectivo: ef + ret,
-    totalTpv: tpvIzz + tpvCem + mp,
-    granTotal: granTotal,
-    apartadoDelDia: apartadoHoy,
-    retirosParcialesDelDia: retirosParcialesHoy,
-    retirosParcialesDetalle: retirosParcialesHoyDetalle,
-    efectivoOperativo: (ef + ret) - apartadoHoy - retirosParcialesHoy,
-    saldoApartadoAcumulado: saldoApartadoAcumulado,
-    terminalesDetalle: terminalesDetalle,
-    netoTerminalesTotal: netoIzz.neto + netoCem.neto + netoMp.neto,
-    notas: document.getElementById('c-notas').value,
-    status: (currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director')) ? 'aprobado' : 'pendiente_validacion',
-    validadoPor: (currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director')) ? currentUser.name : null,
-    timestampValidacion: (currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director')) ? Date.now() : null
-  };
-
-  if(db) {
-    db.collection('cortes').add(corte).then(function(){
-      var esCierreDirecto = currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
-      showToast(esCierreDirecto ? '✅ Corte cerrado' : '✅ Corte enviado a Viridiana para validación');
-      // Limpiar formulario
-      ['c-efectivo','c-retiros','c-tpv-izz','c-tpv-izz-ops','c-tpv-cemcoya','c-tpv-cemcoya-ops','c-mp','c-mp-ops','c-transfer-total','c-transfer-ops','c-notas','c-retiro-motivo'].forEach(function(id){
-        var el = document.getElementById(id);
-        if(el) el.value = '';
-      });
-      calcCorte();
-      enviandoCorte = false;
-    }).catch(function(e){
-      console.log(e);
-      showToast('⚠️ Error al enviar — guardado local');
-      enviandoCorte = false;
+  // Se recalcula al enviar: si entró un cobro mientras revisaba, se muestra y se pide confirmar de nuevo.
+  calcularCierreTurno().then(function(d){
+    var cambio = Math.abs(d.efectivo - vistos.efectivo) > 0.005 || Math.abs(d.tarjeta - vistos.tarjeta) > 0.005 ||
+      Math.abs(d.transferencia - vistos.transferencia) > 0.005 || d.fecha !== vistos.fecha;
+    if(cambio) {
+      cierreTurnoActual = d;
+      var det = document.getElementById('cierre-turno-detalle');
+      if(det) det.innerHTML = d.operaciones ? renderCierreTurno(d) : '<div style="padding:14px;text-align:center;color:var(--suave);font-size:13px;">No tienes cobros nuevos en este turno.</div>';
+      showToast('⚠️ Cambió tu turno — revisa los números y vuelve a enviar');
+      cerrandoTurno = false;
+      if(btn) btn.disabled = !d.operaciones;
+      return;
+    }
+    var ahora = new Date();
+    var cierre = {
+      fecha: d.fecha,
+      hora: ahora.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'}),
+      usuario: d.usuario,
+      rol: currentUser.role,
+      efectivo: d.efectivo,
+      tarjeta: d.tarjeta,
+      transferencias: d.transferencia,
+      totalVendido: d.totalVendido,
+      efectivoAEntregar: d.efectivoAEntregar,
+      desde: d.desde,
+      hasta: ahora.getTime(),
+      timestamp: ahora.getTime()
+    };
+    function abrirWhatsApp() {
+      var url = 'https://wa.me/' + VIRIDIANA_WHATSAPP + '?text=' + encodeURIComponent(mensajeCierreTurno(cierre));
+      window.open(url, '_blank');
+      var cont = document.getElementById('cierre-turno-whatsapp');
+      if(cont) cont.innerHTML = '<div style="margin-top:12px;padding:12px;background:#F0FFF4;border:1.5px solid #22C55E;border-radius:8px;font-size:12px;font-weight:700;">📱 Si no se abrió WhatsApp, toca aquí: <a href="' + url + '" target="_blank" style="color:#15803D;">Enviar a Viridiana</a></div>';
+    }
+    return db.collection('cierres_turno').add(cierre).then(function(){
+      showToast('✅ Turno cerrado — resumen listo para Viridiana');
+      abrirWhatsApp();
+      var det = document.getElementById('cierre-turno-detalle');
+      if(det) det.innerHTML = '<div style="padding:14px;text-align:center;font-weight:700;color:#15803D;">✅ Turno cerrado a las ' + cierre.hora + '</div>';
+      cierreTurnoActual = null;
+      cerrandoTurno = false;
+    }, function(e){
+      console.log('Error guardando cierre de turno:', e);
+      if(confirm('No se pudo guardar el cierre en el sistema.\n¿Enviar el WhatsApp a Viridiana de todos modos?')) abrirWhatsApp();
+      liberar();
     });
-  } else {
-    showToast('✅ Corte registrado (modo local)');
-    enviandoCorte = false;
-  }
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al cerrar el turno'); liberar(); });
 }
 
 function cargarCortesPendientes() {
@@ -6389,9 +6413,8 @@ function guardarNC() {
   const tipo = document.getElementById('nc-tipo').value;
   const rs = document.getElementById('nc-rs').value;
   const folioStr = 'NC-' + String(folioNCActual).padStart(3,'0');
-  // Gerencia y Director se autoaprueban al guardar, igual que ya hace Corte
-  // de Caja (enviarCorte()) — no tiene caso que se manden a validar a sí
-  // mismos. Compras sigue quedando pendiente para que Gerencia la valide.
+  // Gerencia y Director se autoaprueban al guardar, igual que el Cierre del
+  // día — no tiene caso que se manden a validar a sí mismos. Compras sigue quedando pendiente para que Gerencia la valide.
   const autoAprobar = currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
 
   const nc = {
@@ -10162,6 +10185,7 @@ async function cargarDashboard() {
   if(!db) { showToast('⚠️ Sin conexión a Firebase'); return; }
 
   renderDashboardDirector();
+  iniciarHistoricoVentas();
 
   try {
     console.log('Iniciando carga de Dashboard...');
@@ -10311,6 +10335,283 @@ async function cargarDashboard() {
     console.error('Stack:', err.stack);
     showToast('⚠️ Error: ' + err.message);
   }
+}
+
+// ════════════════════════════════════════════
+//  DASHBOARD — Histórico de ventas (Director y Gerencia)
+//  Lee 'tickets' y 'pedidos' (NV) por fecha: así el mes anterior ya tiene datos
+//  desde el primer día, sin esperar a que se acumulen cierres. Venta = total del
+//  documento (incluye lo que quedó a crédito); las canceladas no cuentan.
+// ════════════════════════════════════════════
+var MESES_HISTORICO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+var histSolicitud = 0;
+var histInicializado = false;
+
+function histIso(anio, mes, dia) {
+  return anio + '-' + String(mes + 1).padStart(2,'0') + '-' + String(dia).padStart(2,'0');
+}
+
+// tipo: 'mes' (este mes) | 'mes-anterior' | 'mes-libre' (valor 'YYYY-MM') | 'anio' | 'anio-libre' (valor 'YYYY')
+function histRango(tipo, valor) {
+  var hoy = new Date();
+  var anio = hoy.getFullYear(), mes = hoy.getMonth();
+  if(tipo === 'mes-anterior') {
+    mes -= 1;
+    if(mes < 0) { mes = 11; anio -= 1; }
+    tipo = 'mes';
+  } else if(tipo === 'mes-libre') {
+    var p = (valor || '').split('-');
+    anio = parseInt(p[0], 10);
+    mes = parseInt(p[1], 10) - 1;
+    tipo = 'mes';
+  } else if(tipo === 'anio-libre') {
+    anio = parseInt(valor, 10);
+    tipo = 'anio';
+  }
+  if(tipo === 'mes') {
+    var dias = new Date(anio, mes + 1, 0).getDate();
+    return { tipo:'mes', anio:anio, mes:mes, dias:dias, ini:histIso(anio, mes, 1), fin:histIso(anio, mes, dias), etiqueta:MESES_HISTORICO[mes] + ' ' + anio };
+  }
+  return { tipo:'anio', anio:anio, ini:histIso(anio, 0, 1), fin:histIso(anio, 11, 31), etiqueta:String(anio) };
+}
+
+// Período contra el que se compara. Si el período sigue en curso se compara contra el
+// mismo tramo del anterior (días 1–9 contra días 1–9), no contra el mes completo.
+function histPeriodoAnterior(r) {
+  var hoy = new Date();
+  var hoyISO = fechaISOLocal();
+  var enCurso = r.ini <= hoyISO && hoyISO <= r.fin;
+  var prev, nota = '';
+  if(r.tipo === 'mes') {
+    var m = r.mes - 1, a = r.anio;
+    if(m < 0) { m = 11; a -= 1; }
+    prev = histRango('mes-libre', a + '-' + String(m + 1).padStart(2,'0'));
+    if(enCurso) {
+      var dia = Math.min(hoy.getDate(), prev.dias);
+      prev.fin = histIso(prev.anio, prev.mes, dia);
+      nota = ' (días 1 al ' + dia + ')';
+    }
+  } else {
+    prev = histRango('anio-libre', String(r.anio - 1));
+    if(enCurso) {
+      var diasMes = new Date(prev.anio, hoy.getMonth() + 1, 0).getDate();
+      var d2 = Math.min(hoy.getDate(), diasMes);
+      prev.fin = histIso(prev.anio, hoy.getMonth(), d2);
+      nota = ' (al ' + d2 + ' de ' + MESES_HISTORICO[hoy.getMonth()] + ')';
+    }
+  }
+  prev.nota = nota;
+  return prev;
+}
+
+function histSeleccion() {
+  var tipo = document.getElementById('hist-periodo').value;
+  var valor = '';
+  if(tipo === 'mes-libre') valor = document.getElementById('hist-mes-libre').value;
+  if(tipo === 'anio-libre') valor = document.getElementById('hist-anio-libre').value;
+  return histRango(tipo, valor);
+}
+
+function poblarSelectoresHistorico() {
+  var hoy = new Date();
+  var selMes = document.getElementById('hist-mes-libre');
+  var selAnio = document.getElementById('hist-anio-libre');
+  var htmlMes = '';
+  for(var i = 0; i < 36; i++) {
+    var d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    var val = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0');
+    htmlMes += '<option value="' + val + '"' + (i === 1 ? ' selected' : '') + '>' + MESES_HISTORICO[d.getMonth()].charAt(0).toUpperCase() + MESES_HISTORICO[d.getMonth()].slice(1) + ' ' + d.getFullYear() + '</option>';
+  }
+  selMes.innerHTML = htmlMes;
+  var htmlAnio = '';
+  for(var y = hoy.getFullYear(); y >= hoy.getFullYear() - 3; y--) {
+    htmlAnio += '<option value="' + y + '"' + (y === hoy.getFullYear() - 1 ? ' selected' : '') + '>' + y + '</option>';
+  }
+  selAnio.innerHTML = htmlAnio;
+}
+
+function iniciarHistoricoVentas() {
+  var sec = document.getElementById('dash-historico-section');
+  if(!sec) return;
+  var autorizado = currentUser && (currentUser.role === 'Director' || currentUser.role === 'Gerencia');
+  sec.style.display = autorizado ? 'block' : 'none';
+  if(!autorizado) return;
+  if(!histInicializado) { poblarSelectoresHistorico(); histInicializado = true; }
+  cargarHistoricoVentas();
+}
+
+function cambiarPeriodoHistorico() {
+  var tipo = document.getElementById('hist-periodo').value;
+  document.getElementById('hist-mes-libre').style.display = tipo === 'mes-libre' ? '' : 'none';
+  document.getElementById('hist-anio-libre').style.display = tipo === 'anio-libre' ? '' : 'none';
+  cargarHistoricoVentas();
+}
+
+// Convierte tickets y NV en operaciones planas {fecha, monto, tipo, metodos[]} para sumarlas igual.
+function histNormalizar(tickets, pedidos) {
+  var ops = [];
+  tickets.forEach(function(t){
+    if(t.status === 'cancelado') return;
+    var metodo = t.metodoPago === 'efectivo' ? 'Efectivo' : (t.metodoPago === 'transferencia' ? 'Transferencia' : ((t.metodoPago === 'debito' || t.metodoPago === 'credito') ? 'Tarjeta' : 'Otro'));
+    ops.push({ fecha:t.fecha, monto:corteNum(t.total), tipo:'ticket', metodos:[metodo] });
+  });
+  pedidos.forEach(function(p){
+    if(p.s === 'cancelado') return;
+    function nombre(m) { return m === 'efectivo' ? 'Efectivo' : (m === 'transferencia' ? 'Transferencia' : (m === 'tpv' ? 'Tarjeta' : (m === 'credito' ? 'Crédito' : 'Otro'))); }
+    var metodos = (p.pago === 'mixto' && p.pagos) ? p.pagos.map(function(s){ return nombre(s.metodo); }) : [nombre(p.pago)];
+    ops.push({ fecha:p.fecha, monto:corteNum(p.m), tipo:'nv', metodos:metodos });
+  });
+  return ops;
+}
+
+function histLeerVentas(ini, fin) {
+  return Promise.all([
+    db.collection('tickets').where('fecha','>=',ini).where('fecha','<=',fin).get(),
+    db.collection('pedidos').where('fecha','>=',ini).where('fecha','<=',fin).get()
+  ]).then(function(res){ return histNormalizar(cortesDocs(res[0]), cortesDocs(res[1])); });
+}
+
+function histResumir(ops, r) {
+  var res = { total:0, tickets:{ monto:0, n:0 }, nv:{ monto:0, n:0 }, mejorDia:null, metodoTop:null, serie:[] };
+  var porClave = {};   // 'YYYY-MM-DD' (modo mes) o 'YYYY-MM' (modo año)
+  var porDia = {};
+  var metodos = {}, usos = 0;
+  ops.forEach(function(o){
+    res.total += o.monto;
+    var bloque = o.tipo === 'ticket' ? res.tickets : res.nv;
+    bloque.monto += o.monto;
+    bloque.n++;
+    porDia[o.fecha] = (porDia[o.fecha] || 0) + o.monto;
+    var clave = r.tipo === 'mes' ? o.fecha : (o.fecha || '').slice(0, 7);
+    porClave[clave] = (porClave[clave] || 0) + o.monto;
+    o.metodos.forEach(function(m){ metodos[m] = (metodos[m] || 0) + 1; usos++; });
+  });
+  Object.keys(porDia).forEach(function(f){
+    if(!res.mejorDia || porDia[f] > res.mejorDia.monto) res.mejorDia = { fecha:f, monto:porDia[f] };
+  });
+  Object.keys(metodos).forEach(function(m){
+    if(!res.metodoTop || metodos[m] > res.metodoTop.n) res.metodoTop = { nombre:m, n:metodos[m] };
+  });
+  if(res.metodoTop) res.metodoTop.pct = Math.round(res.metodoTop.n / usos * 100);
+  if(r.tipo === 'mes') {
+    for(var d = 1; d <= r.dias; d++) {
+      var f = histIso(r.anio, r.mes, d);
+      res.serie.push({ etiqueta:String(d), titulo:d + ' de ' + MESES_HISTORICO[r.mes], monto:porClave[f] || 0 });
+    }
+  } else {
+    for(var m = 0; m < 12; m++) {
+      var k = r.anio + '-' + String(m + 1).padStart(2,'0');
+      res.serie.push({ etiqueta:MESES_HISTORICO[m].slice(0, 3), titulo:MESES_HISTORICO[m] + ' ' + r.anio, monto:porClave[k] || 0 });
+    }
+  }
+  return res;
+}
+
+function histMontoCorto(n) {
+  if(n >= 1000000) return '$' + (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if(n >= 1000) return '$' + (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k';
+  return '$' + Math.round(n);
+}
+
+function histEscala(max) {
+  if(max <= 0) return { tope:100, paso:25 };
+  var paso = Math.pow(10, Math.floor(Math.log(max / 4) / Math.LN10));
+  var m = (max / 4) / paso;
+  paso *= (m <= 1 ? 1 : (m <= 2 ? 2 : (m <= 5 ? 5 : 10)));
+  return { tope:Math.ceil(max / paso) * paso, paso:paso };
+}
+
+// Gráfica de barras en SVG inline (sin librerías). Una barra por día (mes) o por mes (año).
+function histGraficaSVG(serie, tipo) {
+  var W = 420, H = 210, izq = 40, der = 6, arriba = 10, abajo = 24;
+  var anchoUtil = W - izq - der, altoUtil = H - arriba - abajo;
+  var max = 0, idxMejor = -1;
+  serie.forEach(function(s, i){ if(s.monto > max) { max = s.monto; idxMejor = i; } });
+  var esc = histEscala(max);
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;max-width:640px;height:auto;display:block;" role="img" aria-label="Ventas por ' + (tipo === 'mes' ? 'día' : 'mes') + '">';
+  for(var v = 0; v <= esc.tope + 0.001; v += esc.paso) {
+    var y = arriba + altoUtil - (v / esc.tope) * altoUtil;
+    svg += '<line x1="' + izq + '" y1="' + y.toFixed(1) + '" x2="' + (W - der) + '" y2="' + y.toFixed(1) + '" stroke="#E8E2DA" stroke-width="1"/>' +
+      '<text x="' + (izq - 4) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end" font-size="9" fill="#888">' + histMontoCorto(v) + '</text>';
+  }
+  var n = serie.length;
+  var slot = anchoUtil / n;
+  var ancho = Math.max(2, slot * 0.7);
+  serie.forEach(function(s, i){
+    var x = izq + i * slot + (slot - ancho) / 2;
+    var alto = esc.tope > 0 ? (s.monto / esc.tope) * altoUtil : 0;
+    if(s.monto > 0) {
+      svg += '<rect x="' + x.toFixed(1) + '" y="' + (arriba + altoUtil - alto).toFixed(1) + '" width="' + ancho.toFixed(1) + '" height="' + Math.max(1, alto).toFixed(1) + '" rx="1.5" style="fill:' + (i === idxMejor ? '#B53B00' : 'var(--naranja)') + ';"><title>' + s.titulo + ': ' + fmtMoney(s.monto) + '</title></rect>';
+    }
+    var rotular = tipo === 'anio' || i === 0 || (i + 1) % 5 === 0 || i === n - 1;
+    if(rotular && !(tipo === 'mes' && i !== 0 && i !== n - 1 && (n - 1 - i) < 3)) {
+      svg += '<text x="' + (x + ancho / 2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="9" fill="#888">' + s.etiqueta + '</text>';
+    }
+  });
+  svg += '</svg>';
+  return svg;
+}
+
+function histFechaLarga(fechaISO) {
+  var p = (fechaISO || '').split('-');
+  if(p.length !== 3) return fechaISO || '';
+  return parseInt(p[2], 10) + ' de ' + MESES_HISTORICO[parseInt(p[1], 10) - 1];
+}
+
+function histCaja(titulo, valor, sub) {
+  return '<div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;">' +
+    '<div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">' + titulo + '</div>' +
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--naranja);margin-top:4px;">' + valor + '</div>' +
+    (sub ? '<div style="font-size:10px;color:#888;margin-top:2px;">' + sub + '</div>' : '') +
+    '</div>';
+}
+
+function cargarHistoricoVentas() {
+  var cont = document.getElementById('hist-contenido');
+  if(!cont) return;
+  if(!db) { cont.innerHTML = '<div style="padding:14px;color:#888;font-size:12px;">Sin conexión</div>'; return; }
+  var solicitud = ++histSolicitud;
+  var r = histSeleccion();
+  var prev = histPeriodoAnterior(r);
+  cont.innerHTML = '<div style="padding:14px;color:#888;font-size:12px;">Cargando ' + r.etiqueta + '...</div>';
+  Promise.all([histLeerVentas(r.ini, r.fin), histLeerVentas(prev.ini, prev.fin)]).then(function(res){
+    if(solicitud !== histSolicitud) return;   // el usuario ya cambió el período
+    var actual = histResumir(res[0], r);
+    var anterior = histResumir(res[1], prev);
+
+    var comparativo;
+    if(anterior.total > 0) {
+      var pct = (actual.total - anterior.total) / anterior.total * 100;
+      var sube = pct >= 0;
+      comparativo = '<span style="color:' + (sube ? '#15803D' : '#DC2626') + ';">' + (sube ? '📈 +' : '📉 ') + pct.toFixed(0) + '%</span> vs ' + prev.etiqueta + prev.nota +
+        '<div style="font-size:11px;font-weight:400;color:#888;margin-top:2px;">' + fmtMoney(actual.total) + ' contra ' + fmtMoney(anterior.total) + '</div>';
+    } else {
+      comparativo = '<span style="color:#888;">Sin ventas registradas en ' + prev.etiqueta + prev.nota + ' para comparar</span>';
+    }
+
+    var vacio = actual.tickets.n + actual.nv.n === 0;
+    var html =
+      '<div style="font-size:13px;font-weight:700;margin-bottom:10px;">' + r.etiqueta.charAt(0).toUpperCase() + r.etiqueta.slice(1) + '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">' +
+        histCaja('Total ventas', fmtMoney(actual.total)) +
+        histCaja('Método más usado', actual.metodoTop ? actual.metodoTop.nombre : '—', actual.metodoTop ? actual.metodoTop.pct + '% de los cobros' : '') +
+        histCaja('Total tickets', fmtMoney(actual.tickets.monto), actual.tickets.n + ' operacion' + (actual.tickets.n === 1 ? '' : 'es')) +
+        histCaja('Total NV', fmtMoney(actual.nv.monto), actual.nv.n + ' operacion' + (actual.nv.n === 1 ? '' : 'es')) +
+      '</div>' +
+      '<div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;margin-bottom:12px;">' +
+        '<div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">Mejor día del período</div>' +
+        '<div style="font-size:14px;font-weight:700;margin-top:4px;">' + (actual.mejorDia ? histFechaLarga(actual.mejorDia.fecha) + ' — <span style="color:var(--naranja);">' + fmtMoney(actual.mejorDia.monto) + '</span>' : '—') + '</div>' +
+      '</div>' +
+      '<div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;margin-bottom:12px;font-size:14px;font-weight:700;">' + comparativo + '</div>' +
+      '<div style="background:#fff;border:1px solid #F0EDE8;border-radius:8px;padding:12px;">' +
+        '<div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Ventas por ' + (r.tipo === 'mes' ? 'día' : 'mes') + '</div>' +
+        (vacio ? '<div style="padding:20px;text-align:center;color:#888;font-size:12px;">Sin ventas en este período</div>' : histGraficaSVG(actual.serie, r.tipo)) +
+      '</div>';
+    cont.innerHTML = html;
+  }).catch(function(e){
+    console.log('Error cargando histórico de ventas:', e);
+    if(solicitud === histSolicitud) cont.innerHTML = '<div style="padding:14px;color:#DC2626;font-size:12px;">⚠️ No se pudo cargar el histórico. Toca 🔄 Actualizar.</div>';
+  });
 }
 
 // ════════════════════════════════════════════
