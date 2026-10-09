@@ -2003,18 +2003,28 @@ var FAMILIAS_SERIES = [
 
 // ════ PERMISOS POR ROL — matriz editable (tab Inventario, solo Director/Gerencia) ════
 var PERMISOS_ROLES_DEFAULT = {
-  Ventas:   { agregarProducto:true,  agregarTruper:false, editar:false, borrar:false, ajustarExistencia:false },
-  Compras:  { agregarProducto:true,  agregarTruper:true,  editar:false, borrar:false, ajustarExistencia:true  },
-  Gerencia: { agregarProducto:true,  agregarTruper:true,  editar:true,  borrar:true,  ajustarExistencia:true  },
-  Director: { agregarProducto:true,  agregarTruper:true,  editar:true,  borrar:true,  ajustarExistencia:true  }
+  Ventas:   { agregarProducto:true,  agregarTruper:false, editar:false, borrar:false, borrarClientes:false, ajustarExistencia:false },
+  Compras:  { agregarProducto:true,  agregarTruper:true,  editar:false, borrar:false, borrarClientes:false, ajustarExistencia:true  },
+  Gerencia: { agregarProducto:true,  agregarTruper:true,  editar:true,  borrar:true,  borrarClientes:true,  ajustarExistencia:true  },
+  Director: { agregarProducto:true,  agregarTruper:true,  editar:true,  borrar:true,  borrarClientes:true,  ajustarExistencia:true  }
 };
 var permisosRolesCache = JSON.parse(JSON.stringify(PERMISOS_ROLES_DEFAULT));
+
+// La matriz guardada en Firestore puede no traer acciones agregadas después (ej. borrarClientes):
+// esas toman el valor por defecto en vez de quedar apagadas para todos.
+function mezclarPermisosConDefault(guardados){
+  var m = JSON.parse(JSON.stringify(PERMISOS_ROLES_DEFAULT));
+  Object.keys(guardados || {}).forEach(function(rol){
+    m[rol] = Object.assign(m[rol] || {}, guardados[rol]);
+  });
+  return m;
+}
 
 function cargarPermisosRoles(){
   if(!db) return;
   db.collection('permisos_roles').doc('matriz').get().then(function(doc){
     if(doc.exists){
-      permisosRolesCache = doc.data();
+      permisosRolesCache = mezclarPermisosConDefault(doc.data());
     } else {
       db.collection('permisos_roles').doc('matriz').set(PERMISOS_ROLES_DEFAULT).catch(function(e){ console.log('Error creando permisos_roles:', e); });
     }
@@ -3364,7 +3374,8 @@ var PERMISOS_ACCIONES = [
   { key:'agregarProducto', label:'Agregar producto' },
   { key:'agregarTruper', label:'Agregar Truper' },
   { key:'editar', label:'Editar' },
-  { key:'borrar', label:'Borrar/desactivar' },
+  { key:'borrar', label:'Borrar/desactivar productos' },
+  { key:'borrarClientes', label:'Borrar/desactivar clientes' },
   { key:'ajustarExistencia', label:'Ajustar existencia' }
 ];
 var PERMISOS_ROLES_ORDEN = ['Ventas', 'Compras', 'Gerencia', 'Director'];
@@ -3708,9 +3719,10 @@ function mostrarSaldoFavorCliente(clienteId) {
   }).catch(function(e){ console.log('Error cargando saldo a favor:', e); });
 }
 
-// ════ Eliminar / desactivar cliente — solo Director y Gerencia ════
+// ════ Eliminar / desactivar cliente — permiso "Borrar/desactivar clientes" de la matriz ════
+// Director siempre; los demás roles según la matriz del tab Inventario (separado del de productos).
 function puedeAdministrarClientes() {
-  return currentUser && (currentUser.role === 'Director' || currentUser.role === 'Gerencia');
+  return tienePermisoRol('borrarClientes');
 }
 function renderClienteAdminAcciones(c) {
   if(!puedeAdministrarClientes()) return '';
@@ -3741,47 +3753,70 @@ function eliminarCliente(id) {
   if(!puedeAdministrarClientes()) return;
   var c = clientesCache.find(function(x){ return x.id === id; });
   if(!c || !db) return;
+  // Dos clientes duplicados comparten nombre: los pedidos se ligan por la cotización de origen
+  // (los pedidos no guardan clienteId, solo el nombre). Buscar por nombre bloquearía el borrado
+  // del duplicado por los pedidos pendientes del cliente original.
+  var nombreNorm = normalizar(c.nombre);
+  var hayHomonimo = clientesCache.some(function(x){ return x.id !== id && normalizar(x.nombre) === nombreNorm; });
   Promise.all([
     db.collection('cotizaciones').where('clienteId','==',id).get(),
-    db.collection('pedidos').where('cliente','==',c.nombre).get(),
     db.collection('cuentas_cobrar').where('clienteId','==',id).get(),
-    db.collection('precios_cliente').where('clienteId','==',id).get()
+    db.collection('precios_cliente').where('clienteId','==',id).get(),
+    db.collection('saldos_favor').doc(id).get()
   ]).then(function(results){
-    var cotSnap = results[0], pedSnap = results[1], ccSnap = results[2], preciosSnap = results[3];
-    var cotActivas = cotSnap.docs.filter(function(d){
-      var s = d.data().status;
-      return s === 'pendiente' || s === 'contactado';
-    }).length;
-    var nvPendientes = pedSnap.docs.filter(function(d){
-      var s = d.data().s;
-      return s === 'confirmado' || s === 'en-ruta';
-    }).length;
-    var saldoPendiente = ccSnap.docs.reduce(function(a,d){
-      var x = d.data();
-      return a + (x.estado === 'pendiente' ? (x.saldo || 0) : 0);
-    }, 0);
-    var motivos = [];
-    if(cotActivas > 0) motivos.push(cotActivas + ' cotizacion' + (cotActivas > 1 ? 'es' : '') + ' activa' + (cotActivas > 1 ? 's' : ''));
-    if(nvPendientes > 0) motivos.push(nvPendientes + ' NV pendiente' + (nvPendientes > 1 ? 's' : '') + '/en ruta');
-    if(saldoPendiente > 0) motivos.push('saldo por cobrar de ' + fmtMoney(saldoPendiente));
-    if(motivos.length) {
-      showToast('⚠️ No se puede eliminar — este cliente tiene ' + motivos.join(', ') + '. Ciérralas primero.');
-      return;
+    var cotSnap = results[0], ccSnap = results[1], preciosSnap = results[2], favorDoc = results[3];
+    var consultasPedidos = [];
+    var cotIds = cotSnap.docs.map(function(d){ return d.id; });
+    for(var i = 0; i < cotIds.length; i += 10) {
+      consultasPedidos.push(db.collection('pedidos').where('cotizacionId','in',cotIds.slice(i, i + 10)).get());
     }
-    if(!confirm('¿Eliminar a ' + c.nombre + '? Esta acción no se puede deshacer.')) return;
-    var batch = db.batch();
-    batch.delete(db.collection('clientes').doc(id));
-    preciosSnap.docs.forEach(function(d){ batch.delete(d.ref); });
-    batch.commit().then(function(){
-      clientesCache = clientesCache.filter(function(x){ return x.id !== id; });
-      if(clienteSeleccionado && clienteSeleccionado.id === id) {
-        clienteSeleccionado = null;
-        document.getElementById('cli-detalle').classList.remove('visible');
+    if(!hayHomonimo) consultasPedidos.push(db.collection('pedidos').where('cliente','==',c.nombre).get());
+    return Promise.all(consultasPedidos).then(function(pedSnaps){
+      var cotActivas = cotSnap.docs.filter(function(d){
+        var s = d.data().status;
+        return s === 'pendiente' || s === 'contactado';
+      }).length;
+      var vistos = {}, nvPendientes = 0;
+      pedSnaps.forEach(function(snap){
+        snap.docs.forEach(function(d){
+          if(vistos[d.id]) return;
+          vistos[d.id] = true;
+          var s = d.data().s;
+          if(s === 'confirmado' || s === 'en-ruta') nvPendientes++;
+        });
+      });
+      var saldoPendiente = ccSnap.docs.reduce(function(a,d){
+        var x = d.data();
+        return a + (x.estado === 'pendiente' ? (x.saldo || 0) : 0);
+      }, 0);
+      var saldoFavor = favorDoc.exists ? (favorDoc.data().saldo || 0) : 0;
+      var motivos = [];
+      if(cotActivas > 0) motivos.push(cotActivas + ' cotizacion' + (cotActivas > 1 ? 'es' : '') + ' activa' + (cotActivas > 1 ? 's' : ''));
+      if(nvPendientes > 0) motivos.push(nvPendientes + ' NV pendiente' + (nvPendientes > 1 ? 's' : '') + '/en ruta');
+      if(saldoPendiente > 0) motivos.push('saldo por cobrar de ' + fmtMoney(saldoPendiente));
+      if(saldoFavor > 0) motivos.push('saldo a favor de ' + fmtMoney(saldoFavor));
+      if(motivos.length) {
+        showToast('⚠️ No se puede eliminar — este cliente tiene ' + motivos.join(', ') + '. Resuélvelo primero.');
+        return;
       }
-      showToast('🗑️ Cliente eliminado');
-      buscarCliente();
-    }).catch(function(e){ console.log('Error eliminando cliente:', e); showToast('⚠️ Error al eliminar cliente'); });
-  }).catch(function(e){ console.log('Error verificando pendientes del cliente:', e); showToast('⚠️ Error al verificar pendientes'); });
+      var detalle = c.nombre + ' (' + (c.telefono || 'sin teléfono') + ', #' + c.id + ')';
+      var historial = cotSnap.size > 0 ? '\n\nOjo: tiene ' + cotSnap.size + ' cotización' + (cotSnap.size > 1 ? 'es' : '') + ' en su historial; sus notas conservan el nombre pero ya no quedarán ligadas a este cliente.' : '';
+      if(!confirm('¿Eliminar a ' + detalle + '?' + historial + '\n\nEsta acción no se puede deshacer.')) return;
+      var batch = db.batch();
+      batch.delete(db.collection('clientes').doc(id));
+      preciosSnap.docs.forEach(function(d){ batch.delete(d.ref); });
+      if(favorDoc.exists) batch.delete(db.collection('saldos_favor').doc(id));
+      return batch.commit().then(function(){
+        clientesCache = clientesCache.filter(function(x){ return x.id !== id; });
+        if(clienteSeleccionado && clienteSeleccionado.id === id) {
+          clienteSeleccionado = null;
+          document.getElementById('cli-detalle').classList.remove('visible');
+        }
+        showToast('🗑️ Cliente eliminado');
+        buscarCliente();
+      });
+    });
+  }).catch(function(e){ console.log('Error eliminando cliente:', e); showToast('⚠️ No se pudo eliminar — no se borró nada'); });
 }
 
 // ════ Editar datos básicos del cliente (nombre/teléfono) — Ventas/Compras/Gerencia/Director ════
