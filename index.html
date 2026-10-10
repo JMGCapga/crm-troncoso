@@ -1672,6 +1672,25 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
                 <input type="text" id="nom-sabado" readonly style="background:#F5F2EE;cursor:default;">
               </div>
             </div>
+            <!-- NÓMINA FUERA DE TIEMPO — solo Viridiana (Gerencia): capturar la nómina de una semana pasada -->
+            <div id="nom-fuera-tiempo" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed #B7D9FF;">
+              <div style="font-weight:700;font-size:13px;margin-bottom:8px;">⏱ Nómina fuera de tiempo <span style="font-weight:400;color:var(--suave);">(solo Viridiana)</span></div>
+              <div class="form-grid">
+                <div class="field">
+                  <label>Cualquier fecha de la semana a capturar</label>
+                  <input type="date" id="nom-ft-fecha">
+                </div>
+                <div class="field">
+                  <label>Fecha en que se pagó (vacío = sábado de esa semana)</label>
+                  <input type="date" id="nom-ft-fecha-pago">
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-naranja" onclick="cargarNominaFueraDeTiempo()" style="font-size:12px;padding:9px 14px;">Cargar esa semana</button>
+                <button class="btn btn-gris" onclick="volverANominaDeEstaSemana()" style="font-size:12px;padding:9px 14px;">↩ Volver a esta semana</button>
+              </div>
+              <div id="nom-ft-aviso"></div>
+            </div>
           </div>
 
           <div style="background:#F5F2EE;border:1px solid #D8D0C8;border-radius:10px;padding:16px;margin-bottom:16px;">
@@ -9173,8 +9192,15 @@ function switchNominaTab(tab) {
   if(tab === 'historial') iniciarHistorialNomina();
 }
 
-function semanaISO() {
-  var d = new Date();
+// Fecha local como 'YYYY-MM-DD'. toISOString() convierte a UTC y, después de las 6 pm en
+// México, ya es "mañana": el lunes salía martes y el sábado de pago salía domingo.
+function fechaLocalISO(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// base: fecha opcional dentro de la semana que se quiere (sin base = hoy)
+function semanaISO(base) {
+  var d = base ? new Date(base.getTime()) : new Date();
   d.setHours(0,0,0,0);
   d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
   var week1 = new Date(d.getFullYear(), 0, 4);
@@ -9182,28 +9208,122 @@ function semanaISO() {
   return d.getFullYear() + '-W' + String(weekNum).padStart(2, '0');
 }
 
-function lunesDeEstaSemana() {
-  var d = new Date();
+function lunesDeEstaSemana(base) {
+  var d = base ? new Date(base.getTime()) : new Date();
   var day = d.getDay();
   var diff = d.getDate() - day + (day === 0 ? -6 : 1);
   d.setDate(diff);
-  return d.toISOString().split('T')[0];
+  return fechaLocalISO(d);
 }
 
-function sabadoDeEstaSemana() {
-  var lunes = new Date(lunesDeEstaSemana());
-  lunes.setDate(lunes.getDate() + 5);
-  return lunes.toISOString().split('T')[0];
+function sabadoDeEstaSemana(base) {
+  var d = new Date(lunesDeEstaSemana(base) + 'T12:00:00');
+  d.setDate(d.getDate() + 5);
+  return fechaLocalISO(d);
+}
+
+// Pinta semana/lunes/sábado: los de la nómina fuera de tiempo si hay una cargada, si no los de esta semana.
+function pintarFechasNomina() {
+  var tarde = nominaFueraDeTiempo && nominaActual;
+  document.getElementById('nom-semana').value = tarde ? nominaActual.semana : semanaISO();
+  document.getElementById('nom-lunes').value = tarde ? nominaActual.fechaInicio : lunesDeEstaSemana();
+  document.getElementById('nom-sabado').value = tarde ? nominaActual.fechaSabado : sabadoDeEstaSemana();
+  var aviso = document.getElementById('nom-ft-aviso');
+  if(!aviso) return;
+  aviso.innerHTML = tarde
+    ? '<div style="margin-top:10px;background:#FFF6E5;border:1.5px solid #FF9800;border-radius:8px;padding:10px 12px;font-size:12px;font-weight:700;color:#92400E;">⏱ NÓMINA FUERA DE TIEMPO — semana ' + nominaActual.semana + ' (del ' + nominaActual.fechaInicio + ' al ' + nominaActual.fechaSabado + '). El pago en efectivo se registrará con fecha ' + nominaActual.fechaPago + '. Solo cuentan los préstamos que ya existían a esa semana.</div>'
+    : '';
 }
 
 function initNominaFechas() {
-  document.getElementById('nom-semana').value = semanaISO();
-  document.getElementById('nom-lunes').value = lunesDeEstaSemana();
-  document.getElementById('nom-sabado').value = sabadoDeEstaSemana();
+  pintarFechasNomina();
+  mostrarControlesNominaFueraDeTiempo();
+}
+
+// ════ NÓMINA FUERA DE TIEMPO — solo Viridiana (Gerencia) ════
+// Captura y procesa la nómina de una semana pasada que no se registró a tiempo.
+// Cualquier salida de la pantalla (o volver a entrar al módulo) regresa a la semana actual.
+var nominaFueraDeTiempo = false;
+
+function puedeNominaFueraDeTiempo() {
+  return !!(currentUser && currentUser.role === 'Gerencia');
+}
+
+function mostrarControlesNominaFueraDeTiempo() {
+  var caja = document.getElementById('nom-fuera-tiempo');
+  if(!caja) return;
+  var autorizada = puedeNominaFueraDeTiempo();
+  caja.style.display = autorizada ? 'block' : 'none';
+  if(!autorizada) return;
+  var hoyISO = fechaISOLocal();
+  document.getElementById('nom-ft-fecha').max = hoyISO;
+  document.getElementById('nom-ft-fecha-pago').max = hoyISO;
+  if(!document.getElementById('nom-ft-fecha').value) {
+    var d = new Date();
+    d.setDate(d.getDate() - 7);
+    document.getElementById('nom-ft-fecha').value = fechaLocalISO(d);
+  }
+}
+
+function cargarNominaFueraDeTiempo() {
+  if(!puedeNominaFueraDeTiempo()) { showToast('⚠️ Solo Viridiana puede capturar nóminas fuera de tiempo'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+  var valor = document.getElementById('nom-ft-fecha').value;
+  if(!valor) { showToast('⚠️ Elige una fecha de la semana que quieres capturar'); return; }
+  var hoyISO = fechaISOLocal();
+  if(valor > hoyISO) { showToast('⚠️ La fecha no puede ser futura'); return; }
+  var base = new Date(valor + 'T12:00:00');
+  var semana = semanaISO(base);
+  if(semana === semanaISO()) {
+    showToast('Esa es la semana actual — se captura normal');
+    volverANominaDeEstaSemana();
+    return;
+  }
+  var lunes = lunesDeEstaSemana(base), sabado = sabadoDeEstaSemana(base);
+  var fechaPago = document.getElementById('nom-ft-fecha-pago').value || sabado;
+  if(fechaPago < lunes || fechaPago > hoyISO) { showToast('⚠️ La fecha de pago debe estar entre el lunes de esa semana y hoy'); return; }
+
+  db.collection('nomina_semanas').where('semana', '==', semana).get().then(function(snap) {
+    var procesada = snap.docs.find(function(doc){ return doc.data().status === 'procesada'; });
+    if(procesada) {
+      var d = procesada.data();
+      alert('⚠️ La nómina de la semana ' + semana + ' ya fue procesada el ' + new Date(d.timestamp || 0).toLocaleDateString('es-MX') + '.\nPara corregirla usa el botón Editar en el historial.');
+      return;
+    }
+    var borrador = snap.docs[0];
+    nominaFueraDeTiempo = true;
+    if(borrador) {
+      nominaActual = Object.assign({ id: borrador.id }, borrador.data());
+      if(!Array.isArray(nominaActual.empleados) || nominaActual.empleados.length === 0) crearNominaNueva(base);
+      else resincronizarEmpleadosNomina();
+    } else {
+      crearNominaNueva(base);
+    }
+    nominaActual.fueraDeTiempo = true;
+    nominaActual.fechaPago = fechaPago;
+    nominaActual.fechaInicio = lunes;
+    nominaActual.fechaSabado = sabado;
+    pintarFechasNomina();
+    renderTablaEmpleados();
+    cargarPrestamos();
+  }).catch(function(e) { console.log(e); showToast('⚠️ No se pudo revisar la semana'); });
+}
+
+function volverANominaDeEstaSemana() {
+  cargarNominaDeEstaSemana();
+}
+
+// En una nómina fuera de tiempo solo cuentan los préstamos que ya existían a esa semana:
+// uno pedido después no se le puede descontar a un sueldo que ya se pagó.
+function prestamosParaNomina() {
+  if(!nominaActual || !nominaActual.fueraDeTiempo) return prestamosActivos;
+  return prestamosActivos.filter(function(p){ return !p.fechaInicio || p.fechaInicio <= nominaActual.fechaSabado; });
 }
 
 function cargarNominaDeEstaSemana() {
   if(!db) return;
+  nominaFueraDeTiempo = false;
+  pintarFechasNomina();
   var semana = semanaISO();
 
   db.collection('nomina_semanas')
@@ -9222,6 +9342,9 @@ function cargarNominaDeEstaSemana() {
           return;
         }
 
+        // Un borrador creado después de las 6 pm pudo guardar las fechas desfasadas un día
+        nominaActual.fechaInicio = lunesDeEstaSemana();
+        nominaActual.fechaSabado = sabadoDeEstaSemana();
         resincronizarEmpleadosNomina();
         renderTablaEmpleados();
         cargarPrestamos();
@@ -9295,15 +9418,15 @@ function parsearSemanaISO(semana) {
   return { anio: parseInt(partes[0]) || 0, semanaNum: parseInt(partes[1]) || 0 };
 }
 
-function crearNominaNueva() {
-  var semana = semanaISO();
+function crearNominaNueva(base) {
+  var semana = semanaISO(base);
   var partesSemana = parsearSemanaISO(semana);
   nominaActual = {
     semana: semana,
     anio: partesSemana.anio,
     semanaNum: partesSemana.semanaNum,
-    fechaInicio: lunesDeEstaSemana(),
-    fechaSabado: sabadoDeEstaSemana(),
+    fechaInicio: lunesDeEstaSemana(base),
+    fechaSabado: sabadoDeEstaSemana(base),
     timestamp: Date.now(),
     procesadoPor: currentUser ? currentUser.name : 'Sistema',
     status: 'borrador',
@@ -9606,7 +9729,8 @@ function procesarNomina() {
   // Gerencia y Director son administradores de nómina: procesan/corrigen
   // las veces que haga falta, sin el candado de "una sola vez por semana".
   var esAdminNomina = currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director');
-  if(esAdminNomina) { continuarProcesarNomina(); return; }
+  if(esAdminNomina && nominaActual.fueraDeTiempo && !puedeNominaFueraDeTiempo()) { showToast('⚠️ Solo Viridiana puede procesar nóminas fuera de tiempo'); procesandoNomina = false; return; }
+  if(esAdminNomina && !nominaActual.fueraDeTiempo) { continuarProcesarNomina(); return; }
 
   db.collection('nomina_semanas').where('semana', '==', nominaActual.semana).get().then(function(snap) {
     var yaProcesada = snap.docs.find(function(doc) {
@@ -9615,6 +9739,11 @@ function procesarNomina() {
     if(yaProcesada) {
       var d = yaProcesada.data();
       var fecha = new Date(d.timestamp || 0).toLocaleDateString('es-MX');
+      if(nominaActual.fueraDeTiempo) {
+        alert('⚠️ La nómina de la semana ' + nominaActual.semana + ' ya fue procesada el ' + fecha + '.\nPara corregirla usa el botón Editar en el historial.');
+        procesandoNomina = false;
+        return;
+      }
       alert('⚠️ La nómina de la semana ' + (d.semanaNum || nominaActual.semanaNum || nominaActual.semana) + ' ya fue procesada el ' + fecha + '.\nSi necesitas corregirla, usa el botón Editar en el historial.');
       procesandoNomina = false;
       return;
@@ -9624,10 +9753,18 @@ function procesarNomina() {
 }
 
 function continuarProcesarNomina() {
-  if(!confirm('¿Procesar y cerrar la nómina de la semana '+nominaActual.semana+'? Esta acción registra el pago y descuenta los préstamos activos.')) { procesandoNomina = false; return; }
+  var tarde = !!nominaActual.fueraDeTiempo;
+  var textoConfirm = tarde
+    ? '¿Procesar la nómina FUERA DE TIEMPO de la semana ' + nominaActual.semana + ' (del ' + nominaActual.fechaInicio + ' al ' + nominaActual.fechaSabado + ')?\n\nSe registra la salida de efectivo con fecha ' + nominaActual.fechaPago + ' y se descuentan los préstamos que ya existían a esa semana.'
+    : '¿Procesar y cerrar la nómina de la semana '+nominaActual.semana+'? Esta acción registra el pago y descuenta los préstamos activos.';
+  if(!confirm(textoConfirm)) { procesandoNomina = false; return; }
 
   nominaActual.status = 'procesada';
   nominaActual.timestamp = Date.now();
+  if(tarde) {
+    nominaActual.capturadaEl = Date.now();
+    nominaActual.capturadaPor = currentUser ? currentUser.name : 'Sistema';
+  }
 
   // Actualizar documento de nómina
   var docRef = nominaActual.id
@@ -9640,13 +9777,13 @@ function continuarProcesarNomina() {
 
       // Crear registro en salidas
       var salida = {
-        fecha: nominaActual.fechaSabado,
+        fecha: tarde ? nominaActual.fechaPago : nominaActual.fechaSabado,
         timestamp: Date.now(),
         tipo: 'nomina',
         tipoLabel: '👷 Pago nómina semanal',
         categoria: 'Nómina',
         monto: nominaActual.totalEfectivo,
-        concepto: 'Nómina semana '+nominaActual.semana+' — '+nominaActual.empleados.length+' empleados',
+        concepto: 'Nómina semana '+nominaActual.semana+(tarde ? ' (fuera de tiempo)' : '')+' — '+nominaActual.empleados.length+' empleados',
         rs: 'JMG',
         rsNombre: 'José Manuel Garín',
         factura: 'no',
@@ -9654,6 +9791,7 @@ function continuarProcesarNomina() {
         status: 'aprobado',
         nominaId: nominaActual.id
       };
+      if(tarde) salida.fueraDeTiempo = true;
 
       db.collection('salidas').add(salida).then(function() {
         // Decrementar préstamos — usa lo realmente descontado del sueldo (prestamoSemanal),
@@ -9663,7 +9801,7 @@ function continuarProcesarNomina() {
         // uno, liquidando de golpe préstamos que no se habían pagado. Ahora se reparte el
         // total descontado entre los préstamos del empleado en orden cronológico.
         var prestamosPorEmpleado = {};
-        prestamosActivos.forEach(function(prest) {
+        prestamosParaNomina().forEach(function(prest) {
           (prestamosPorEmpleado[prest.empleado] = prestamosPorEmpleado[prest.empleado] || []).push(prest);
         });
         Object.keys(prestamosPorEmpleado).forEach(function(nombreEmp) {
@@ -9683,7 +9821,7 @@ function continuarProcesarNomina() {
           });
         });
 
-        showToast('✅ Nómina procesada');
+        showToast(tarde ? '✅ Nómina fuera de tiempo procesada' : '✅ Nómina procesada');
         procesandoNomina = false;
         setTimeout(function() { cargarNominaDeEstaSemana(); }, 800);
       }).catch(function(e) { console.log(e); showToast('⚠️ Error al crear salida'); procesandoNomina = false; });
@@ -9701,9 +9839,10 @@ function cargarPrestamos() {
     // $100 diarios) — antes solo se tomaba el primero con .find(), ignorando el resto.
     // Ahora se suman todos los de tipo 'adelanto', más la cuota del préstamo fijo si existe.
     if(nominaActual) {
+      var prestamosSemana = prestamosParaNomina();
       nominaActual.empleados.forEach(function(emp) {
-        var adelantosEmp = prestamosActivos.filter(function(p){ return p.empleado === emp.nombre && p.tipo === 'adelanto'; });
-        var fijoEmp = prestamosActivos.find(function(p){ return p.empleado === emp.nombre && p.tipo !== 'adelanto'; });
+        var adelantosEmp = prestamosSemana.filter(function(p){ return p.empleado === emp.nombre && p.tipo === 'adelanto'; });
+        var fijoEmp = prestamosSemana.find(function(p){ return p.empleado === emp.nombre && p.tipo !== 'adelanto'; });
         emp.adelantosSemana = adelantosEmp.map(function(p){
           return { id: p.id, monto: Math.min(p.montoSemanal, p.saldoPendiente), fecha: p.fechaInicio };
         });
@@ -9987,7 +10126,7 @@ function renderHistorialNomina() {
       '<td style="padding:8px 10px;">'+(nom.fechaSabado||'')+'</td>' +
       '<td style="padding:8px 10px;text-align:center;">'+(nom.empleados?nom.empleados.length:0)+'</td>' +
       '<td style="padding:8px 10px;text-align:right;font-weight:700;">$'+fmtNumero(nom.totalEfectivo||0)+'</td>' +
-      '<td style="padding:8px 10px;">✅ Pagada</td>' +
+      '<td style="padding:8px 10px;">✅ Pagada' + (nom.fueraDeTiempo ? ' <span style="font-size:10px;font-weight:700;color:#92400E;">⏱ fuera de tiempo</span>' : '') + '</td>' +
       '<td style="padding:8px 10px;white-space:nowrap;">'+acciones+'</td>' +
     '</tr>';
   }).join('');
