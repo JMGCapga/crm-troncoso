@@ -1271,6 +1271,14 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         <div id="inv-permisos-tabla" style="overflow-x:auto;"></div>
         <button type="button" class="btn btn-naranja" style="width:100%;margin-top:10px;" onclick="guardarPanelPermisos()">Guardar permisos</button>
       </div>
+      <div class="card" id="inv-bitacora-panel" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;">
+          <div class="card-title" style="margin-bottom:0;">🗂️ Bitácora de borrados</div>
+          <button type="button" class="btn btn-gris" style="font-size:11px;padding:6px 12px;" onclick="cargarBitacoraBorrados()">🔄 Actualizar</button>
+        </div>
+        <div style="font-size:11px;color:var(--suave);margin-bottom:10px;">Quién eliminó o desactivó productos y clientes (últimos 50). Lo eliminado conserva un respaldo de sus datos.</div>
+        <div id="inv-bitacora-lista"></div>
+      </div>
       <div class="card" id="inv-precios-volumen-panel" style="display:none;">
         <div class="card-title">💰 Precios por volumen</div>
         <div style="font-size:11px;color:var(--suave);margin-bottom:10px;">Agregados en costal — precio por costal según cantidad comprada. El descuento de canal reventa se aplica aparte, sobre estos precios.</div>
@@ -2792,6 +2800,11 @@ function iniciarInventario() {
     if(puedeVerPanelPermisos()) { panelPermisos.style.display = ''; renderPanelPermisos(); }
     else panelPermisos.style.display = 'none';
   }
+  var panelBitacora = document.getElementById('inv-bitacora-panel');
+  if(panelBitacora) {
+    if(puedeVerPanelPermisos()) { panelBitacora.style.display = ''; cargarBitacoraBorrados(); }
+    else panelBitacora.style.display = 'none';
+  }
   var panelPreciosVol = document.getElementById('inv-precios-volumen-panel');
   if(panelPreciosVol) {
     if(puedeVerPanelPermisos()) { panelPreciosVol.style.display = ''; renderPreciosVolumenPanel(); }
@@ -2874,7 +2887,10 @@ function cambiarActivoProducto(clave, activar) {
 function guardarActivoProducto(clave, activar) {
   var p = productosIndex[clave];
   if(!p || !db) return;
-  db.collection('productos').doc(clave).update({ activo: !!activar }).then(function(){
+  var batch = db.batch();
+  batch.update(db.collection('productos').doc(clave), { activo: !!activar });
+  batch.set(db.collection('bitacora_borrados').doc(), bitacoraBorradoDoc(activar ? 'reactivado' : 'desactivado', 'producto', clave, p.descripcion, 'Existencia ' + (p.existencia || 0)));
+  batch.commit().then(function(){
     p.activo = !!activar;
     showToast(activar ? '♻️ Producto reactivado' : '🗑 Producto desactivado');
     renderInventarioLista();
@@ -2912,7 +2928,10 @@ function eliminarProducto(clave) {
       return;
     }
     if(!confirm('¿ELIMINAR ' + clave + ' · ' + p.descripcion + '?\n\nNo tiene existencia, ventas ni compras. Se borra por completo y no se puede deshacer.')) { eliminandoProducto = false; return; }
-    return db.collection('productos').doc(clave).delete().then(function(){
+    var batchDel = db.batch();
+    batchDel.delete(db.collection('productos').doc(clave));
+    batchDel.set(db.collection('bitacora_borrados').doc(), bitacoraBorradoDoc('eliminado', 'producto', clave, p.descripcion, (p.familia || '') + ' · existencia 0', p));
+    return batchDel.commit().then(function(){
       productos = productos.filter(function(x){ return x.clave !== clave; });
       reindexProductos();
       renderInventarioLista();
@@ -3719,6 +3738,58 @@ function mostrarSaldoFavorCliente(clienteId) {
   }).catch(function(e){ console.log('Error cargando saldo a favor:', e); });
 }
 
+// ════ BITÁCORA DE BORRADOS ════
+// Cada eliminación o desactivación de productos y clientes se escribe en el MISMO batch que la
+// operación: si la bitácora no se puede guardar, tampoco se borra nada. Las eliminaciones guardan
+// además un respaldo de los datos para poder recrearlos si fue un error.
+function bitacoraBorradoDoc(tipo, entidad, id, nombre, detalle, respaldo) {
+  var ahora = new Date();
+  var d = {
+    tipo: tipo,                 // 'eliminado' | 'desactivado' | 'reactivado'
+    entidad: entidad,           // 'producto' | 'cliente'
+    id: String(id),
+    nombre: nombre || '',
+    detalle: detalle || '',
+    usuario: currentUser ? currentUser.name : 'Desconocido',
+    rol: currentUser ? currentUser.role : '',
+    fecha: fechaISOLocal(),
+    hora: ahora.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'}),
+    timestamp: ahora.getTime()
+  };
+  if(respaldo) d.respaldo = JSON.parse(JSON.stringify(respaldo));   // quita undefined, que Firestore rechaza
+  return d;
+}
+
+function htmlSeguro(t) {
+  return String(t === undefined || t === null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function cargarBitacoraBorrados() {
+  var cont = document.getElementById('inv-bitacora-lista');
+  if(!cont) return;
+  if(!puedeVerPanelPermisos()) { cont.innerHTML = ''; return; }
+  if(!db) { cont.innerHTML = '<div style="padding:10px;color:var(--suave);font-size:12px;">Sin conexión</div>'; return; }
+  cont.innerHTML = '<div style="padding:10px;color:var(--suave);font-size:12px;">Cargando...</div>';
+  db.collection('bitacora_borrados').orderBy('timestamp','desc').limit(50).get().then(function(snap){
+    if(snap.empty) { cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Aún no hay borrados registrados</div>'; return; }
+    var etiquetas = { eliminado:'🗑 Eliminó', desactivado:'🚫 Desactivó', reactivado:'♻️ Reactivó' };
+    var html = '';
+    snap.forEach(function(doc){
+      var b = doc.data();
+      var color = b.tipo === 'eliminado' ? '#DC2626' : (b.tipo === 'desactivado' ? '#B45309' : '#15803D');
+      html += '<div style="padding:10px 4px;border-bottom:1px solid #F0EDE8;font-size:12px;">' +
+        '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">' +
+          '<span><strong>' + htmlSeguro(b.usuario) + '</strong> <span style="color:var(--suave);">(' + htmlSeguro(b.rol) + ')</span> · <span style="color:' + color + ';font-weight:700;">' + (etiquetas[b.tipo] || htmlSeguro(b.tipo)) + '</span> ' + (b.entidad === 'cliente' ? 'cliente' : 'producto') + '</span>' +
+          '<span style="color:var(--suave);">' + htmlSeguro(fechaCortaHistorial(b.fecha)) + ' ' + htmlSeguro(b.hora) + '</span>' +
+        '</div>' +
+        '<div style="margin-top:2px;">' + htmlSeguro(b.id) + ' · ' + htmlSeguro(b.nombre) + '</div>' +
+        (b.detalle ? '<div style="font-size:11px;color:var(--suave);">' + htmlSeguro(b.detalle) + '</div>' : '') +
+      '</div>';
+    });
+    cont.innerHTML = html;
+  }).catch(function(e){ console.log('Error cargando bitácora:', e); cont.innerHTML = '<div style="padding:10px;color:#DC2626;font-size:12px;">⚠️ No se pudo cargar la bitácora</div>'; });
+}
+
 // ════ Eliminar / desactivar cliente — permiso "Borrar/desactivar clientes" de la matriz ════
 // Director siempre; los demás roles según la matriz del tab Inventario (separado del de productos).
 function puedeAdministrarClientes() {
@@ -3739,7 +3810,10 @@ function toggleActivoCliente(id) {
   var c = clientesCache.find(function(x){ return x.id === id; });
   if(!c || !db) return;
   var nuevoActivo = c.activo === false;
-  db.collection('clientes').doc(id).set({ activo: nuevoActivo }, { merge: true }).then(function(){
+  var batch = db.batch();
+  batch.set(db.collection('clientes').doc(id), { activo: nuevoActivo }, { merge: true });
+  batch.set(db.collection('bitacora_borrados').doc(), bitacoraBorradoDoc(nuevoActivo ? 'reactivado' : 'desactivado', 'cliente', id, c.nombre, c.telefono || 'sin teléfono'));
+  batch.commit().then(function(){
     c.activo = nuevoActivo;
     showToast(nuevoActivo ? '✅ Cliente reactivado' : '🚫 Cliente desactivado');
     if(clienteSeleccionado && clienteSeleccionado.id === id) {
@@ -3806,6 +3880,7 @@ function eliminarCliente(id) {
       batch.delete(db.collection('clientes').doc(id));
       preciosSnap.docs.forEach(function(d){ batch.delete(d.ref); });
       if(favorDoc.exists) batch.delete(db.collection('saldos_favor').doc(id));
+      batch.set(db.collection('bitacora_borrados').doc(), bitacoraBorradoDoc('eliminado', 'cliente', id, c.nombre, (c.telefono || 'sin teléfono') + ' · ' + preciosSnap.size + ' precio' + (preciosSnap.size === 1 ? '' : 's') + ' guardado' + (preciosSnap.size === 1 ? '' : 's'), c));
       return batch.commit().then(function(){
         clientesCache = clientesCache.filter(function(x){ return x.id !== id; });
         if(clienteSeleccionado && clienteSeleccionado.id === id) {
