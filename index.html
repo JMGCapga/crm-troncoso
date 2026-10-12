@@ -543,13 +543,31 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <label>Buscar por producto (clave o nombre)</label>
             <input type="text" id="cons-producto" placeholder="ej: 200202 o ARENA..." oninput="buscarConsultas()" autocomplete="off">
           </div>
+          <div class="field" style="grid-column:1/-1;">
+            <label>Período</label>
+            <div id="cons-atajos" style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button type="button" class="btn btn-gris" data-p="hoy" onclick="consPeriodoRapido('hoy')" style="font-size:12px;padding:8px 14px;">Hoy</button>
+              <button type="button" class="btn btn-gris" data-p="ayer" onclick="consPeriodoRapido('ayer')" style="font-size:12px;padding:8px 14px;">Ayer</button>
+              <button type="button" class="btn btn-gris" data-p="mes" onclick="consPeriodoRapido('mes')" style="font-size:12px;padding:8px 14px;">Este mes</button>
+              <button type="button" class="btn btn-gris" data-p="mes-anterior" onclick="consPeriodoRapido('mes-anterior')" style="font-size:12px;padding:8px 14px;">Mes anterior</button>
+              <button type="button" class="btn btn-naranja" data-p="todo" onclick="consPeriodoRapido('todo')" style="font-size:12px;padding:8px 14px;">Últimos registros</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Un día</label>
+            <input type="date" id="cons-dia" onchange="consElegirDia()">
+          </div>
+          <div class="field">
+            <label>Un mes</label>
+            <input type="month" id="cons-mes" onchange="consElegirMes()">
+          </div>
           <div class="field">
             <label>Desde</label>
-            <input type="date" id="cons-desde" onchange="buscarConsultas()">
+            <input type="date" id="cons-desde" onchange="consCambioRango()">
           </div>
           <div class="field">
             <label>Hasta</label>
-            <input type="date" id="cons-hasta" onchange="buscarConsultas()">
+            <input type="date" id="cons-hasta" onchange="consCambioRango()">
           </div>
           <div class="field">
             <label>Estado</label>
@@ -612,6 +630,10 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <div style="font-size:12px;color:var(--suave);margin-bottom:14px;" id="corte-turno-fecha"></div>
           <div style="font-size:13px;margin-bottom:16px;">El sistema suma solo lo que tú cobraste en este turno (tickets, notas de venta y abonos). Revisa que cuadre y envíalo a Viridiana.</div>
           <button class="btn btn-naranja" onclick="abrirCierreTurno()" style="width:100%;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;padding:16px;">📤 Cerrar mi turno</button>
+          <div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--borde);">
+            <div style="font-size:13px;margin-bottom:10px;">¿Ya juntaste bastante efectivo? Entrégale una parte a Viridiana <strong>antes</strong> de cerrar tu turno. Lo que entregues se descuenta del efectivo a entregar al cierre.</div>
+            <button class="btn btn-gris" onclick="abrirRetiroPrevio()" style="width:100%;font-size:14px;padding:12px;">💵 Retiro previo de efectivo</button>
+          </div>
         </div>
       </div>
 
@@ -5486,7 +5508,8 @@ function calcularCorteDelDia(fecha) {
     db.collection('retiros_parciales').where('fecha','==',fecha).get(),
     db.collection('caja_apartada').where('fecha','==',fecha).get(),
     db.collection('cuentas_cobrar').where('estado','==','pendiente').get(),
-    db.collection('transferencias').where('fecha','==',fecha).where('confirmada','==',true).get()
+    db.collection('transferencias').where('fecha','==',fecha).where('confirmada','==',true).get(),
+    db.collection('entregas_efectivo').where('fecha','==',fecha).get()
   ]).then(function(res){
     var d = sumarCobrosPorMetodo(cortesDocs(res[0]), cortesDocs(res[1]), cortesDocs(res[2]));
     d.fecha = fecha;
@@ -5519,6 +5542,18 @@ function calcularCorteDelDia(fecha) {
     d.transferConfirmadas = 0;
     d.transferConfirmadasOps = 0;
     cortesDocs(res[7]).forEach(function(t){ d.transferConfirmadas += corteNum(t.monto); d.transferConfirmadasOps++; });
+
+    // Efectivo que ventas/compras entregaron antes de cerrar turno: no altera la caja, solo hay que confirmarlo
+    d.entregasVentas = [];
+    d.entregasRecibidas = 0;
+    d.entregasPendientes = 0;
+    res[8].forEach(function(doc){
+      var e = doc.data();
+      e.id = doc.id;
+      d.entregasVentas.push(e);
+      if(e.estado === 'recibido') d.entregasRecibidas += corteNum(e.monto); else d.entregasPendientes += corteNum(e.monto);
+    });
+    d.entregasVentas.sort(function(a,b){ return (a.timestamp || 0) - (b.timestamp || 0); });
     return d;
   });
 }
@@ -5576,6 +5611,23 @@ function renderCorteAuto(d) {
     '<div style="font-size:10px;color:#999;padding:0 0 4px;">Ya incluido en caja · operativo (caja − apartado): ' + fmtMoney(d.efectivoOperativo) + '</div>' +
     filaCorte('📊 Cartera pendiente', fmtMoney(d.cartera) + ' <span style="font-size:10px;color:#999;">(' + d.carteraCuentas + ' cuenta' + (d.carteraCuentas === 1 ? '' : 's') + ')</span>', { color:'#ddd' }) +
     '</div>';
+
+  // ENTREGAS DE EFECTIVO DEL PERSONAL (retiros previos de Ventas/Compras)
+  if(d.entregasVentas.length) {
+    html += '<div style="background:#F5F2EE;border-radius:10px;padding:14px;margin-top:10px;">' +
+      '<div style="font-weight:700;font-size:12px;margin-bottom:6px;">💵 ENTREGAS DE EFECTIVO DEL PERSONAL</div>';
+    d.entregasVentas.forEach(function(e){
+      var recibido = e.estado === 'recibido';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;padding:5px 0;border-top:1px solid #E0DBD3;">' +
+        '<span>' + htmlSeguro(e.hora || '') + ' — ' + htmlSeguro(e.usuario || '') + (e.nota ? ' <span style="color:var(--suave);">(' + htmlSeguro(e.nota) + ')</span>' : '') + '</span>' +
+        '<span><strong>' + fmtMoney(corteNum(e.monto)) + '</strong> ' +
+        (recibido ? '<span style="color:#15803D;">✅ recibido</span>'
+                  : '<button class="btn btn-naranja" style="font-size:11px;padding:5px 10px;" onclick="confirmarEntregaEfectivo(\'' + e.id + '\')">✅ Recibí</button>') + '</span></div>';
+    });
+    html += filaCorte('Recibido', fmtMoney(d.entregasRecibidas), { borde:true, color:'#15803D' }) +
+      (d.entregasPendientes > 0.004 ? filaCorte('⏳ Pendiente de confirmar', fmtMoney(d.entregasPendientes), { bold:true, color:'#B45309' }) : '') +
+      '<div style="font-size:10px;color:var(--suave);">Es efectivo que ya estaba en caja y solo cambió de manos: no modifica el efectivo en caja.</div></div>';
+  }
   return html;
 }
 
@@ -5677,6 +5729,7 @@ function construirCierreDia(d, observaciones) {
     efectivoApartado: d.efectivoApartado,
     cartera: d.cartera,
     terminales: d.terminales,
+    entregasVentas: { recibido: d.entregasRecibidas, pendiente: d.entregasPendientes },
     observaciones: observaciones || '',
     cerradoPor: currentUser ? currentUser.name : 'Desconocido',
     timestamp: Date.now()
@@ -5750,6 +5803,7 @@ function cerrarDia() {
       liberar();
       return;
     }
+    if(r.datos.entregasPendientes > 0.004 && !confirm('Hay entregas de efectivo del personal SIN CONFIRMAR por ' + fmtMoney(r.datos.entregasPendientes) + '.\nSi ya las recibiste, tócales "Recibí" primero.\n¿Cerrar el día de todos modos?')) { liberar(); return; }
     if(r.cierre && !confirm('El día ya se cerró a las ' + (r.cierre.hora || '') + ' (' + (r.cierre.cerradoPor || '') + ').\n¿Cerrarlo de nuevo y reenviar los mensajes?')) { liberar(); return; }
     var obs = (document.getElementById('corte-observaciones').value || '').trim();
     var cierre = construirCierreDia(r.datos, obs);
@@ -5833,10 +5887,21 @@ function calcularCierreTurno() {
     db.collection('pedidos').where('fecha','==',fecha).get(),
     db.collection('tickets').where('fecha','==',fecha).get(),
     db.collection('cobros_cuentas_cobrar').where('fecha','==',fecha).get(),
-    db.collection('cierres_turno').where('fecha','==',fecha).where('usuario','==',nombre).get()
+    db.collection('cierres_turno').where('fecha','==',fecha).where('usuario','==',nombre).get(),
+    db.collection('entregas_efectivo').where('fecha','==',fecha).get()
   ]).then(function(res){
     var desde = 0;
     cortesDocs(res[3]).forEach(function(c){ if((c.hasta || 0) > desde) desde = c.hasta; });
+    // Retiros previos de ESTA persona hoy; solo restan los posteriores a su último cierre de turno
+    var entregasHoy = [], entregadoAntes = 0;
+    res[4].forEach(function(doc){
+      var e = doc.data();
+      if(e.usuario !== nombre) return;
+      e.id = doc.id;
+      entregasHoy.push(e);
+      if((e.timestamp || 0) > desde) entregadoAntes += corteNum(e.monto);
+    });
+    entregasHoy.sort(function(a,b){ return (a.timestamp || 0) - (b.timestamp || 0); });
     function nuevos(docs, campoUsuario) {
       return docs.filter(function(x){ return x[campoUsuario] === nombre && (x.timestamp || 0) > desde && x.s !== 'cancelado' && x.status !== 'cancelado'; });
     }
@@ -5851,7 +5916,9 @@ function calcularCierreTurno() {
       tarjeta: t.tarjeta,
       transferencia: t.transferencia,
       totalVendido: t.totalVentas,
-      efectivoAEntregar: t.efectivo,
+      entregadoAntes: entregadoAntes,
+      entregasHoy: entregasHoy,
+      efectivoAEntregar: Math.max(0, t.efectivo - entregadoAntes),
       desde: desde,
       operaciones: pedidos.length + tickets.length + abonos.length
     };
@@ -5865,6 +5932,7 @@ function renderCierreTurno(d) {
       filaCorte('💳 Tarjeta', fmtMoney(d.tarjeta)) +
       filaCorte('🏦 Transferencias', fmtMoney(d.transferencia)) +
       filaCorte('TOTAL VENDIDO', fmtMoney(d.totalVendido), { bold:true, borde:true, size:13 }) +
+      (d.entregadoAntes > 0.004 ? filaCorte('➖ Ya entregado en retiros previos', fmtResta(d.entregadoAntes), { color:'#DC2626', borde:true }) : '') +
     '</div>' +
     '<div style="background:#1A1A1A;border-radius:10px;padding:14px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
       '<span style="font-weight:700;font-size:13px;">💵 EFECTIVO A ENTREGAR</span>' +
@@ -5915,6 +5983,7 @@ function mensajeCierreTurno(c) {
     '🏦 Transferencias: ' + fmtMoney(c.transferencias) + '\n' +
     '──────────────────────\n' +
     'TOTAL VENDIDO:     ' + fmtMoney(c.totalVendido) + '\n\n' +
+    (c.entregadoAntes > 0.004 ? '➖ Ya te entregué antes (retiros previos): ' + fmtMoney(c.entregadoAntes) + '\n' : '') +
     '💵 Te entrego en efectivo: ' + fmtMoney(c.efectivoAEntregar);
 }
 
@@ -5931,7 +6000,7 @@ function enviarCierreTurno() {
   // Se recalcula al enviar: si entró un cobro mientras revisaba, se muestra y se pide confirmar de nuevo.
   calcularCierreTurno().then(function(d){
     var cambio = Math.abs(d.efectivo - vistos.efectivo) > 0.005 || Math.abs(d.tarjeta - vistos.tarjeta) > 0.005 ||
-      Math.abs(d.transferencia - vistos.transferencia) > 0.005 || d.fecha !== vistos.fecha;
+      Math.abs(d.transferencia - vistos.transferencia) > 0.005 || Math.abs(d.entregadoAntes - vistos.entregadoAntes) > 0.005 || d.fecha !== vistos.fecha;
     if(cambio) {
       cierreTurnoActual = d;
       var det = document.getElementById('cierre-turno-detalle');
@@ -5951,6 +6020,7 @@ function enviarCierreTurno() {
       tarjeta: d.tarjeta,
       transferencias: d.transferencia,
       totalVendido: d.totalVendido,
+      entregadoAntes: d.entregadoAntes,
       efectivoAEntregar: d.efectivoAEntregar,
       desde: d.desde,
       hasta: ahora.getTime(),
@@ -5975,6 +6045,153 @@ function enviarCierreTurno() {
       liberar();
     });
   }).catch(function(e){ console.log(e); showToast('⚠️ Error al cerrar el turno'); liberar(); });
+}
+
+// ════ RETIRO PREVIO DE EFECTIVO — Ventas/Compras entregan a Viridiana parte del efectivo antes de cerrar turno ════
+// Se guarda en 'entregas_efectivo' (NO en retiros_parciales): el efectivo no sale del negocio, solo cambia de manos,
+// así que no altera el "efectivo en caja" del Cierre del día. Viridiana confirma que lo recibió; mientras tanto queda
+// pendiente. Lo entregado se descuenta del "efectivo a entregar" de Cerrar mi turno.
+var registrandoRetiroPrevio = false;
+var retiroPrevioActual = null;
+
+function abrirRetiroPrevio() {
+  if(!puedeCerrarTurno()) { showToast('⚠️ Solo Ventas y Compras hacen retiros previos'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+  var existente = document.getElementById('modal-retiro-previo');
+  if(existente) existente.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-retiro-previo';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:440px;width:100%;max-height:90vh;overflow-y:auto;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:4px;">💵 RETIRO PREVIO DE EFECTIVO</div>' +
+      '<div style="font-size:12px;color:var(--suave);margin-bottom:14px;">' + currentUser.name + ' · entrega a Viridiana · ' + fechaLargaCorte(fechaISOLocal()) + '</div>' +
+      '<div id="retiro-previo-detalle"><div style="padding:14px;color:var(--suave);font-size:12px;">Calculando...</div></div>' +
+      '<div id="retiro-previo-whatsapp"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:14px;">' +
+        '<button class="btn btn-naranja" id="btn-registrar-retiro" style="flex:1;" onclick="registrarRetiroPrevio()" disabled>💵 Registrar y avisar a Viridiana</button>' +
+        '<button class="btn btn-gris" onclick="document.getElementById(\'modal-retiro-previo\').remove()">Cerrar</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  recargarRetiroPrevio();
+}
+
+function recargarRetiroPrevio() {
+  retiroPrevioActual = null;
+  calcularCierreTurno().then(function(d){
+    retiroPrevioActual = d;
+    pintarRetiroPrevio(d);
+  }).catch(function(e){
+    console.log('Error calculando retiro previo:', e);
+    var det = document.getElementById('retiro-previo-detalle');
+    if(det) det.innerHTML = '<div style="padding:14px;color:#DC2626;font-size:12px;">⚠️ No se pudo calcular. Cierra y vuelve a intentar.</div>';
+  });
+}
+
+function pintarRetiroPrevio(d) {
+  var det = document.getElementById('retiro-previo-detalle');
+  var btn = document.getElementById('btn-registrar-retiro');
+  if(!det) return;
+  var disponible = Math.max(0, d.efectivo - d.entregadoAntes);
+  var hist = d.entregasHoy.map(function(e){
+    var recibido = e.estado === 'recibido';
+    return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:4px 0;border-top:1px solid #E0DBD3;">' +
+      '<span>' + htmlSeguro(e.hora || '') + (e.nota ? ' · ' + htmlSeguro(e.nota) : '') + '</span>' +
+      '<span><strong>' + fmtMoney(corteNum(e.monto)) + '</strong> ' + (recibido ? '<span style="color:#15803D;">✅ recibido</span>' : '<span style="color:#B45309;">⏳ pendiente</span>') + '</span></div>';
+  }).join('');
+  det.innerHTML =
+    '<div style="background:#F5F2EE;border-radius:10px;padding:14px;margin-bottom:12px;">' +
+      filaCorte('💵 Efectivo cobrado en tu turno', fmtMoney(d.efectivo)) +
+      filaCorte('➖ Ya entregado en retiros previos', fmtResta(d.entregadoAntes), { color:'#DC2626' }) +
+      filaCorte('DISPONIBLE PARA ENTREGAR', fmtMoney(disponible), { bold:true, borde:true, size:13 }) +
+    '</div>' +
+    (disponible > 0.004
+      ? '<div class="field" style="margin-bottom:10px;"><label>¿Cuánto le entregas a Viridiana?</label>' +
+          '<input type="number" id="retiro-previo-monto" min="0" max="' + disponible + '" step="0.01" placeholder="0.00" style="width:100%;border:1.5px solid var(--borde);border-radius:8px;padding:10px 12px;"></div>' +
+        '<div class="field" style="margin-bottom:10px;"><label>Nota (opcional)</label>' +
+          '<input type="text" id="retiro-previo-nota" placeholder="ej: ya junté bastante en caja" style="width:100%;border:1.5px solid var(--borde);border-radius:8px;padding:10px 12px;"></div>'
+      : '<div style="padding:12px;text-align:center;color:var(--suave);font-size:13px;">No tienes efectivo disponible para entregar.</div>') +
+    (hist ? '<div style="margin-top:6px;"><div style="font-weight:700;font-size:12px;margin-bottom:2px;">Mis retiros previos de hoy</div>' + hist + '</div>' : '');
+  if(btn) btn.disabled = !(disponible > 0.004);
+}
+
+function mensajeRetiroPrevio(e) {
+  return '💵 *RETIRO PREVIO DE EFECTIVO — ' + e.usuario.toUpperCase() + '*\n' +
+    fechaLargaCorte(e.fecha).replace(/^[^,]+,\s*/, '') + ' ' + e.hora + '\n\n' +
+    'Te entrego: ' + fmtMoney(e.monto) + '\n' +
+    'Efectivo cobrado en mi turno: ' + fmtMoney(e.efectivoTurno) + '\n' +
+    (e.entregadoAntes > 0.004 ? 'Ya te había entregado: ' + fmtMoney(e.entregadoAntes) + '\n' : '') +
+    'Me queda por entregar al cierre: ' + fmtMoney(e.restante) +
+    (e.nota ? '\n📝 ' + e.nota : '');
+}
+
+function registrarRetiroPrevio() {
+  if(registrandoRetiroPrevio) return;
+  if(!puedeCerrarTurno()) { showToast('⚠️ Solo Ventas y Compras hacen retiros previos'); return; }
+  if(!db || !retiroPrevioActual) return;
+  var monto = Math.round((parseFloat((document.getElementById('retiro-previo-monto') || {}).value) || 0) * 100) / 100;
+  var nota = ((document.getElementById('retiro-previo-nota') || {}).value || '').trim();
+  var btn = document.getElementById('btn-registrar-retiro');
+  registrandoRetiroPrevio = true;
+  if(btn) btn.disabled = true;
+  function liberar() { registrandoRetiroPrevio = false; if(btn) btn.disabled = false; }
+
+  // Se recalcula justo antes de guardar: el monto nunca puede pasar de lo que de verdad hay disponible
+  calcularCierreTurno().then(function(d){
+    var disponible = Math.max(0, d.efectivo - d.entregadoAntes);
+    if(!(monto > 0)) { showToast('⚠️ Escribe cuánto vas a entregar'); liberar(); return; }
+    if(monto > disponible + 0.004) {
+      showToast('⚠️ Solo tienes ' + fmtMoney(disponible) + ' disponibles para entregar');
+      retiroPrevioActual = d; pintarRetiroPrevio(d); registrandoRetiroPrevio = false;
+      return;
+    }
+    var ahora = new Date();
+    var entrega = {
+      fecha: d.fecha,
+      hora: ahora.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'}),
+      usuario: d.usuario,
+      rol: currentUser.role,
+      monto: monto,
+      receptor: 'Viridiana',
+      estado: 'pendiente',
+      nota: nota,
+      timestamp: ahora.getTime()
+    };
+    function abrirWhatsApp() {
+      var datos = Object.assign({ efectivoTurno: d.efectivo, entregadoAntes: d.entregadoAntes, restante: Math.max(0, disponible - monto) }, entrega);
+      var url = 'https://wa.me/' + VIRIDIANA_WHATSAPP + '?text=' + encodeURIComponent(mensajeRetiroPrevio(datos));
+      window.open(url, '_blank');
+      var cont = document.getElementById('retiro-previo-whatsapp');
+      if(cont) cont.innerHTML = '<div style="margin-top:12px;padding:12px;background:#F0FFF4;border:1.5px solid #22C55E;border-radius:8px;font-size:12px;font-weight:700;">📱 Si no se abrió WhatsApp, toca aquí: <a href="' + url + '" target="_blank" style="color:#15803D;">Avisar a Viridiana</a></div>';
+    }
+    return db.collection('entregas_efectivo').add(entrega).then(function(){
+      showToast('✅ Retiro previo registrado — entrégale ' + fmtMoney(monto) + ' a Viridiana');
+      abrirWhatsApp();
+      liberar();
+      recargarRetiroPrevio();
+    }, function(e){
+      console.log('Error guardando retiro previo:', e);
+      if(confirm('No se pudo guardar el retiro en el sistema.\n¿Avisar a Viridiana por WhatsApp de todos modos?')) abrirWhatsApp();
+      liberar();
+    });
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al registrar el retiro'); liberar(); });
+}
+
+// Viridiana (o el Director) confirma que recibió el efectivo
+function confirmarEntregaEfectivo(id) {
+  if(!currentUser || (currentUser.role !== 'Gerencia' && currentUser.role !== 'Director')) { showToast('⚠️ Sin permisos'); return; }
+  if(!db) { showToast('⚠️ Sin conexión'); return; }
+  var ahora = new Date();
+  db.collection('entregas_efectivo').doc(id).update({
+    estado: 'recibido',
+    recibidoPor: currentUser.name,
+    recibidoHora: ahora.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'}),
+    recibidoEl: ahora.getTime()
+  }).then(function(){
+    showToast('✅ Efectivo recibido');
+    recalcularCorteAuto();
+  }).catch(function(e){ console.log(e); showToast('⚠️ No se pudo confirmar'); });
 }
 
 function cargarCortesPendientes() {
@@ -12700,65 +12917,143 @@ function pagoNormDeRegistro(pago, tipoTarjeta, metodoPago) {
 
 function iniciarConsultas() {
   if(consultasCargadas) { buscarConsultas(); return; }
+  cargarConsultas();
+}
+
+// Convierte los documentos de las tres colecciones en filas planas de búsqueda
+function armarConsultasCache(cotSnap, pedSnap, tkSnap) {
+  consultasCache = [];
+
+  cotSnap.forEach(function(doc){
+    var c = doc.data();
+    consultasCache.push({
+      tipo: 'COT', docId: doc.id, folio: 'COT-' + String(c.folio).padStart(3,'0'),
+      cliente: c.cliente || '', total: c.total || 0,
+      estado: c.status || 'pendiente',
+      estadoNorm: c.status === 'pendiente' ? 'pendiente' : (c.status || ''),
+      pago: c.pago || '', pagoNorm: pagoNormDeRegistro(c.pago, c.tipoTarjeta),
+      fecha: fechaAISO(c.fecha || ''), timestamp: c.timestamp || 0,
+      productos: c.productos || [],
+      texto: normalizar((c.cliente||'') + ' ' + c.folio + ' ' + (c.productos||[]).map(function(p){return p.desc+' '+(p.clave||'');}).join(' '))
+    });
+  });
+
+  pedSnap.forEach(function(doc){
+    var p = doc.data();
+    var estado = normStatusPedido(p);
+    consultasCache.push({
+      tipo: 'NV', docId: doc.id, folio: p.id || '',
+      cliente: p.cliente || p.c || '', total: p.m || 0,
+      estado: (STATUS_PEDIDO[estado] ? STATUS_PEDIDO[estado].label : estado),
+      estadoNorm: estado === 'entregado' ? 'entregado' : (estado === 'cancelado' ? 'cancelado' : 'pendiente'),
+      pago: p.pago || '', pagoNorm: pagoNormDeRegistro(p.pago, p.tipoTarjeta),
+      fecha: fechaAISO(p.fecha || ''), timestamp: p.timestamp || 0,
+      productos: p.productos || [],
+      texto: normalizar((p.cliente||p.c||'') + ' ' + (p.id||'') + ' ' + (p.p||'') + ' ' + (p.productos||[]).map(function(x){return x.clave||'';}).join(' '))
+    });
+  });
+
+  tkSnap.forEach(function(doc){
+    var t = doc.data();
+    consultasCache.push({
+      tipo: 'TK', docId: doc.id, folio: t.folio || '',
+      cliente: t.cliente || '', total: t.total || 0,
+      estado: t.status === 'cancelado' ? 'Cancelado' : 'Activo',
+      estadoNorm: t.status === 'cancelado' ? 'cancelado' : 'entregado',
+      pago: t.metodoPago || '', pagoNorm: pagoNormDeRegistro(null, null, t.metodoPago),
+      fecha: fechaAISO(t.fecha || ''), timestamp: t.timestamp || 0,
+      productos: t.productos || [],
+      texto: normalizar((t.cliente||'') + ' ' + (t.folio||'') + ' ' + (t.productos||[]).map(function(p){return p.desc+' '+(p.clave||'');}).join(' '))
+    });
+  });
+
+  consultasCache.sort(function(a,b){ return (b.timestamp||0) - (a.timestamp||0); });
+}
+
+// Sin fechas: los últimos 300 de cada tipo (como siempre). Con Desde/Hasta (o día/mes): TODO lo de ese
+// período, consultado a Firestore por fecha de creación — antes un mes viejo salía incompleto porque
+// solo se tenían los últimos 300.
+var consultasSolicitud = 0;
+function cargarConsultas() {
   var cont = document.getElementById('cons-lista');
   cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">Cargando...</div>';
   if(!db) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);">Sin conexión</div>'; return; }
-
-  Promise.all([
-    db.collection('cotizaciones').orderBy('timestamp','desc').limit(300).get(),
-    db.collection('pedidos').orderBy('timestamp','desc').limit(300).get(),
-    db.collection('tickets').orderBy('timestamp','desc').limit(300).get()
-  ]).then(function(results){
-    var cotSnap = results[0], pedSnap = results[1], tkSnap = results[2];
-    consultasCache = [];
-
-    cotSnap.forEach(function(doc){
-      var c = doc.data();
-      consultasCache.push({
-        tipo: 'COT', docId: doc.id, folio: 'COT-' + String(c.folio).padStart(3,'0'),
-        cliente: c.cliente || '', total: c.total || 0,
-        estado: c.status || 'pendiente',
-        estadoNorm: c.status === 'pendiente' ? 'pendiente' : (c.status || ''),
-        pago: c.pago || '', pagoNorm: pagoNormDeRegistro(c.pago, c.tipoTarjeta),
-        fecha: fechaAISO(c.fecha || ''), timestamp: c.timestamp || 0,
-        productos: c.productos || [],
-        texto: normalizar((c.cliente||'') + ' ' + c.folio + ' ' + (c.productos||[]).map(function(p){return p.desc+' '+(p.clave||'');}).join(' '))
-      });
+  var desde = document.getElementById('cons-desde').value;
+  var hasta = document.getElementById('cons-hasta').value;
+  var solicitud = ++consultasSolicitud;
+  var consultas;
+  if(!desde && !hasta) {
+    consultas = ['cotizaciones','pedidos','tickets'].map(function(n){ return db.collection(n).orderBy('timestamp','desc').limit(300).get(); });
+  } else {
+    var t0 = desde ? new Date(desde + 'T00:00:00').getTime() : 0;
+    var t1 = hasta ? new Date(hasta + 'T23:59:59.999').getTime() : Date.now() + 86400000;
+    consultas = ['cotizaciones','pedidos','tickets'].map(function(n){
+      return db.collection(n).where('timestamp','>=',t0).where('timestamp','<=',t1).orderBy('timestamp','desc').limit(3000).get();
     });
-
-    pedSnap.forEach(function(doc){
-      var p = doc.data();
-      var estado = normStatusPedido(p);
-      consultasCache.push({
-        tipo: 'NV', docId: doc.id, folio: p.id || '',
-        cliente: p.cliente || p.c || '', total: p.m || 0,
-        estado: (STATUS_PEDIDO[estado] ? STATUS_PEDIDO[estado].label : estado),
-        estadoNorm: estado === 'entregado' ? 'entregado' : (estado === 'cancelado' ? 'cancelado' : 'pendiente'),
-        pago: p.pago || '', pagoNorm: pagoNormDeRegistro(p.pago, p.tipoTarjeta),
-        fecha: fechaAISO(p.fecha || ''), timestamp: p.timestamp || 0,
-        productos: p.productos || [],
-        texto: normalizar((p.cliente||p.c||'') + ' ' + (p.id||'') + ' ' + (p.p||'') + ' ' + (p.productos||[]).map(function(x){return x.clave||'';}).join(' '))
-      });
-    });
-
-    tkSnap.forEach(function(doc){
-      var t = doc.data();
-      consultasCache.push({
-        tipo: 'TK', docId: doc.id, folio: t.folio || '',
-        cliente: t.cliente || '', total: t.total || 0,
-        estado: t.status === 'cancelado' ? 'Cancelado' : 'Activo',
-        estadoNorm: t.status === 'cancelado' ? 'cancelado' : 'entregado',
-        pago: t.metodoPago || '', pagoNorm: pagoNormDeRegistro(null, null, t.metodoPago),
-        fecha: fechaAISO(t.fecha || ''), timestamp: t.timestamp || 0,
-        productos: t.productos || [],
-        texto: normalizar((t.cliente||'') + ' ' + (t.folio||'') + ' ' + (t.productos||[]).map(function(p){return p.desc+' '+(p.clave||'');}).join(' '))
-      });
-    });
-
-    consultasCache.sort(function(a,b){ return (b.timestamp||0) - (a.timestamp||0); });
+  }
+  Promise.all(consultas).then(function(results){
+    if(solicitud !== consultasSolicitud) return;   // ya eligieron otro período
+    armarConsultasCache(results[0], results[1], results[2]);
     consultasCargadas = true;
     buscarConsultas();
-  }).catch(function(e){ console.log('Error cargando consultas:', e); cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);">Error al cargar</div>'; });
+  }).catch(function(e){ console.log('Error cargando consultas:', e); if(solicitud === consultasSolicitud) cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);">Error al cargar</div>'; });
+}
+
+function consMarcarAtajo(clave) {
+  document.querySelectorAll('#cons-atajos button').forEach(function(b){
+    b.className = 'btn ' + (b.getAttribute('data-p') === clave ? 'btn-naranja' : 'btn-gris');
+  });
+}
+
+function consPonerRango(desde, hasta) {
+  document.getElementById('cons-desde').value = desde;
+  document.getElementById('cons-hasta').value = hasta;
+}
+
+function consPeriodoRapido(clave) {
+  var hoy = new Date();
+  var desde = '', hasta = '';
+  document.getElementById('cons-dia').value = '';
+  document.getElementById('cons-mes').value = '';
+  if(clave === 'hoy') { desde = hasta = fechaLocalISO(hoy); document.getElementById('cons-dia').value = desde; }
+  else if(clave === 'ayer') { var ay = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 1); desde = hasta = fechaLocalISO(ay); document.getElementById('cons-dia').value = desde; }
+  else if(clave === 'mes' || clave === 'mes-anterior') {
+    var m = clave === 'mes' ? new Date(hoy.getFullYear(), hoy.getMonth(), 1) : new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+    desde = fechaLocalISO(m);
+    hasta = fechaLocalISO(new Date(m.getFullYear(), m.getMonth() + 1, 0));
+    document.getElementById('cons-mes').value = m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2,'0');
+  }
+  consPonerRango(desde, hasta);
+  consMarcarAtajo(clave);
+  cargarConsultas();
+}
+
+function consElegirDia() {
+  var d = document.getElementById('cons-dia').value;
+  document.getElementById('cons-mes').value = '';
+  consPonerRango(d, d);
+  consMarcarAtajo('');
+  cargarConsultas();
+}
+
+function consElegirMes() {
+  var v = document.getElementById('cons-mes').value;   // 'YYYY-MM'
+  document.getElementById('cons-dia').value = '';
+  if(!v) { consPonerRango('', ''); } else {
+    var p = v.split('-');
+    var ultimo = new Date(parseInt(p[0], 10), parseInt(p[1], 10), 0).getDate();
+    consPonerRango(v + '-01', v + '-' + String(ultimo).padStart(2,'0'));
+  }
+  consMarcarAtajo('');
+  cargarConsultas();
+}
+
+// Desde/Hasta a mano
+function consCambioRango() {
+  document.getElementById('cons-dia').value = '';
+  document.getElementById('cons-mes').value = '';
+  consMarcarAtajo('');
+  cargarConsultas();
 }
 
 function buscarConsultas() {
@@ -12786,9 +13081,17 @@ function buscarConsultas() {
       r._productoMatch = '';
     }
     return true;
-  }).slice(0, 200);
+  });
 
-  document.getElementById('cons-count').textContent = res.length + ' resultados';
+  // Resumen: lo vendido (notas de venta + tickets que no estén cancelados); las cotizaciones no son venta
+  var totalVendido = 0, opsVendidas = 0;
+  res.forEach(function(r){
+    if((r.tipo === 'NV' || r.tipo === 'TK') && r.estadoNorm !== 'cancelado') { totalVendido += r.total || 0; opsVendidas++; }
+  });
+  var totalFilas = res.length;
+  res = res.slice(0, 300);
+  document.getElementById('cons-count').textContent = totalFilas + ' resultados' + (totalFilas > 300 ? ' (se muestran 300: afina la búsqueda)' : '') +
+    ' · Vendido (NV + tickets sin cancelar): ' + fmtMoney(totalVendido) + ' en ' + opsVendidas + ' operacion' + (opsVendidas === 1 ? '' : 'es');
   if(!res.length) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">Sin resultados</div>'; return; }
 
   var badgeColor = { COT:'9C36B5', NV:'1D7A4F', TK:'E8500A' };

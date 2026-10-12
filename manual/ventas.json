@@ -334,6 +334,40 @@
    ]
   },
   {
+   "id": "retiro",
+   "titulo": "Entregar efectivo a Viridiana antes de cerrar el turno (retiro previo)",
+   "cuando": "Cuando ya juntaste bastante efectivo en caja y no quieres esperar al cierre de tu turno.",
+   "pasos": [
+    {
+     "t": "Entra a **Corte de Caja**. Debajo de Cerrar mi turno está el botón **Retiro previo de efectivo** (2).",
+     "img": "23-corte-turno.jpg",
+     "leyenda": "1 = Cerrar mi turno · 2 = Retiro previo de efectivo"
+    },
+    {
+     "t": "Se abre una ventana con tu efectivo: arriba (1) lo que cobraste en tu turno, lo que ya entregaste antes y lo que tienes **disponible para entregar**. Escribe cuánto le vas a dar a Viridiana (2). Si quieres, agrega una nota (3).",
+     "img": "28-retiro-previo.jpg",
+     "leyenda": "1 = tu efectivo disponible · 2 = monto a entregar · 3 = nota · 4 = Registrar y avisar a Viridiana"
+    },
+    {
+     "t": "Toca **Registrar y avisar a Viridiana** (4). Se abre WhatsApp con el aviso para ella: envíalo. Si no se abre, toca el enlace \"Avisar a Viridiana\" (3). **Entrégale el efectivo en mano.**",
+     "img": "29-retiro-previo-registrado.jpg",
+     "leyenda": "1 = tu efectivo actualizado · 2 = tus retiros previos de hoy (pendiente = Viridiana aún no confirma que lo recibió) · 3 = enlace para avisar por WhatsApp"
+    },
+    {
+     "t": "Viridiana ve la entrega en su Corte de Caja y toca **Recibí**. Entonces tu retiro cambia de \"pendiente\" a \"recibido\"."
+    },
+    {
+     "t": "Cuando cierres tu turno, el sistema **resta lo que ya entregaste**: solo le entregas el resto."
+    }
+   ],
+   "cuidado": [
+    "No puedes entregar más de lo que tienes disponible; el sistema no te deja.",
+    "Haz el retiro **cuando le des el dinero a Viridiana**, no antes ni después: así el registro coincide con el efectivo real.",
+    "Puedes hacer todos los retiros previos que necesites en el día."
+   ],
+   "ayuda": "Si Viridiana no ve tu entrega o el monto no coincide: avísale por WhatsApp y no cierres tu turno hasta aclararlo."
+  },
+  {
    "id": "turno",
    "titulo": "Cerrar mi turno",
    "cuando": "Al terminar tu turno, antes de entregar el efectivo.",
@@ -341,12 +375,12 @@
     {
      "t": "Entra a **Corte de Caja** y toca **Cerrar mi turno**.",
      "img": "23-corte-turno.jpg",
-     "leyenda": "1 = Cerrar mi turno"
+     "leyenda": "1 = Cerrar mi turno · 2 = Retiro previo de efectivo (tarea anterior)"
     },
     {
-     "t": "Revisa el resumen: arriba (1) lo que cobraste con tu usuario (efectivo, tarjeta, transferencias y total) y abajo (2) el **Efectivo a entregar**.",
+     "t": "Revisa el resumen: arriba (1) lo que cobraste con tu usuario (efectivo, tarjeta, transferencias y total). Si ya hiciste **retiros previos**, aparece una línea roja con lo ya entregado, que se resta. Abajo (2) el **Efectivo a entregar**.",
      "img": "24-turno-resumen.jpg",
-     "leyenda": "1 = ventas de mi turno · 2 = efectivo a entregar · 3 = Enviar resumen y cerrar turno"
+     "leyenda": "1 = ventas de mi turno y lo ya entregado · 2 = efectivo a entregar · 3 = Enviar resumen y cerrar turno"
     },
     {
      "t": "**Cuenta el efectivo.** Debe ser igual a \"Efectivo a entregar\". Si no cuadra, no lo envíes todavía: revisa si falta algún ticket, nota o abono."
@@ -359,6 +393,7 @@
     }
    ],
    "cuidado": [
+    "El **Efectivo a entregar** ya descuenta tus retiros previos: cuenta solo lo que te queda.",
     "Solo cuenta lo que registraste con tu nombre.",
     "Si cierras el turno dos veces el mismo día, la segunda solo incluye lo nuevo.",
     "Si dice \"No tienes cobros nuevos en este turno\", no hay nada que reportar."
@@ -366,22 +401,28 @@
   },
   {
    "id": "consultas",
-   "titulo": "Buscar una venta anterior",
-   "cuando": "Para saber si ya se hizo una nota, qué se le vendió a alguien o cuánto se vendió de un producto.",
+   "titulo": "Buscar una venta anterior (por día o por mes)",
+   "cuando": "Para saber si ya se hizo una nota, qué se le vendió a alguien, cuánto se vendió un día o en el mes, o cuánto se vendió de un producto.",
    "pasos": [
     {
-     "t": "Entra a **Consultas**.",
+     "t": "Entra a **Consultas**."
+    },
+    {
+     "t": "Elige el **período** (1): toca **Hoy**, **Ayer**, **Este mes** o **Mes anterior**. Para un día específico usa **Un día** (2) y para un mes completo **Un mes** (3). **Desde** y **Hasta** sirven para un rango propio.",
      "img": "26-consultas.jpg",
-     "leyenda": "1 = folio, cliente o producto · 2 = producto (clave o nombre) · 3 = fechas · 4 = estado · 5 = resultados"
+     "leyenda": "1 = atajos de período · 2 = un día · 3 = un mes"
     },
     {
-     "t": "Escribe lo que sepas: un folio (NV-001), un cliente o un producto. Puedes limitar por fechas, estado y método de pago."
+     "t": "Abajo (1) el sistema dice cuántos resultados hay y **cuánto se vendió** en ese período (notas de venta y tickets sin cancelar; las cotizaciones no cuentan como venta). La lista (2) muestra tickets (TK), notas de venta (NV) y cotizaciones (COT).",
+     "img": "27-consultas-resultado.jpg",
+     "leyenda": "1 = cuántos resultados y total vendido · 2 = lista"
     },
     {
-     "t": "Los resultados muestran tickets (TK) y notas de venta (NV) con total, estado y fecha."
+     "t": "Si buscas algo en particular, escribe un folio (NV-001), un cliente o un producto en los buscadores de arriba. Puedes combinarlo con el período, el estado y el método de pago."
     }
    ],
    "cuidado": [
+    "Con \"Últimos registros\" solo se ven las ventas más recientes. Para buscar algo viejo, elige el día o el mes.",
     "Si el sistema marcó **Sin conexión** al guardar una venta, búscala aquí antes de repetirla, para no duplicarla."
    ]
   },
@@ -451,6 +492,7 @@
   "Facturas: ¿quién las timbra cuando el cliente las pide? El botón Facturar solo prepara los datos.",
   "Anticipo parcial: el sistema lo permite y deja el resto como cuenta por cobrar, pero la regla del negocio es no dar crédito. ¿Se autoriza alguna vez?",
   "Impresión: ¿qué impresora y qué tamaño de hoja usa Ivette para la nota de venta, y qué hace si falla?",
-  "Turnos: ¿a qué hora cierra su turno Ivette (medio tiempo) y dónde guarda el efectivo entre cobro y entrega?"
+  "Turnos: ¿a qué hora cierra su turno Ivette (medio tiempo) y dónde guarda el efectivo entre cobro y entrega?",
+  "Retiro previo de efectivo: lo armé así: Ventas/Compras lo registran y Viridiana confirma \"Recibí\" en su Corte de Caja (si no confirma, queda pendiente y el sistema avisa al cerrar el día). ¿Así es como lo quieres, o debe iniciarlo Viridiana?"
  ]
 }
