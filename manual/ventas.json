@@ -339,9 +339,9 @@
    "cuando": "Cuando ya juntaste bastante efectivo en caja y no quieres esperar al cierre de tu turno.",
    "pasos": [
     {
-     "t": "Entra a **Corte de Caja**. Debajo de Cerrar mi turno está el botón **Retiro previo de efectivo** (2).",
+     "t": "Entra a **Corte de Caja**. En tu previo (1) mira cuánto efectivo llevas. Si ya es bastante, usa el botón **Retiro previo de efectivo** (4), debajo de Cerrar mi turno.",
      "img": "23-corte-turno.jpg",
-     "leyenda": "1 = Cerrar mi turno · 2 = Retiro previo de efectivo"
+     "leyenda": "1 = previo de tu turno · 2 = Actualizar · 3 = Cerrar mi turno · 4 = Retiro previo de efectivo"
     },
     {
      "t": "Se abre una ventana con tu efectivo: arriba (1) lo que cobraste en tu turno, lo que ya entregaste antes y lo que tienes **disponible para entregar**. Escribe cuánto le vas a dar a Viridiana (2). Si quieres, agrega una nota (3).",
@@ -373,9 +373,9 @@
    "cuando": "Al terminar tu turno, antes de entregar el efectivo.",
    "pasos": [
     {
-     "t": "Entra a **Corte de Caja** y toca **Cerrar mi turno**.",
+     "t": "Entra a **Corte de Caja**. Arriba ya ves tu **previo** (1): lo que llevas cobrado hasta ahorita y el efectivo que te toca entregar. Es solo para que sepas cómo vas: **no cierra nada**. Si cobraste algo nuevo, toca **Actualizar** (2). Cuando termines tu turno, toca **Cerrar mi turno** (3).",
      "img": "23-corte-turno.jpg",
-     "leyenda": "1 = Cerrar mi turno · 2 = Retiro previo de efectivo (tarea anterior)"
+     "leyenda": "1 = previo de tu turno · 2 = Actualizar · 3 = Cerrar mi turno · 4 = Retiro previo de efectivo"
     },
     {
      "t": "Revisa el resumen: arriba (1) lo que cobraste con tu usuario (efectivo, tarjeta, transferencias y total). Si ya hiciste **retiros previos**, aparece una línea roja con lo ya entregado, que se resta. Abajo (2) el **Efectivo a entregar**.",

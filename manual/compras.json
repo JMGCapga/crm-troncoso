@@ -344,9 +344,9 @@
    "cuando": "Si cobraste tickets, notas de venta o abonos con tu usuario, al terminar tu turno.",
    "pasos": [
     {
-     "t": "Entra a **Corte de Caja**. Toca **Cerrar mi turno** (1). Si ya juntaste bastante efectivo, puedes entregar una parte antes con **Retiro previo de efectivo** (2).",
+     "t": "Entra a **Corte de Caja**. Arriba ya ves tu **previo** (1): lo que llevas cobrado hasta ahorita y el efectivo que te toca entregar. Es solo para que sepas cómo vas: **no cierra nada**. Si cobraste algo nuevo, toca **Actualizar** (2). Si ya juntaste bastante efectivo, puedes entregar una parte antes con **Retiro previo de efectivo** (4). Al terminar tu turno, toca **Cerrar mi turno** (3).",
      "img": "24-corte-turno.jpg",
-     "leyenda": "1 = Cerrar mi turno · 2 = Retiro previo de efectivo"
+     "leyenda": "1 = previo de tu turno · 2 = Actualizar · 3 = Cerrar mi turno · 4 = Retiro previo de efectivo"
     },
     {
      "t": "Revisa el resumen: arriba (1) lo que cobraste con tu usuario y abajo (2) el **efectivo a entregar** (ya descuenta tus retiros previos). Toca **Enviar resumen y cerrar turno** (3): se abre WhatsApp con el mensaje para Viridiana.",

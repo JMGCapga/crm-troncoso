@@ -628,7 +628,14 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         <div class="card">
           <div class="card-title">📤 Cerrar mi turno</div>
           <div style="font-size:12px;color:var(--suave);margin-bottom:14px;" id="corte-turno-fecha"></div>
-          <div style="font-size:13px;margin-bottom:16px;">El sistema suma solo lo que tú cobraste en este turno (tickets, notas de venta y abonos). Revisa que cuadre y envíalo a Viridiana.</div>
+          <div style="font-size:13px;margin-bottom:14px;">El sistema suma solo lo que tú cobraste en este turno (tickets, notas de venta y abonos). Revisa que cuadre y envíalo a Viridiana.</div>
+          <div style="margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+              <div style="font-weight:700;font-size:12px;">👀 CÓMO VAS HASTA AHORITA <span style="font-weight:400;color:var(--suave);">(previo: no cierra nada)</span></div>
+              <button class="btn btn-gris" onclick="pintarPrevioTurno()" style="font-size:11px;padding:6px 10px;">🔄 Actualizar</button>
+            </div>
+            <div id="corte-turno-previo"></div>
+          </div>
           <button class="btn btn-naranja" onclick="abrirCierreTurno()" style="width:100%;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;padding:16px;">📤 Cerrar mi turno</button>
           <div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--borde);">
             <div style="font-size:13px;margin-bottom:10px;">¿Ya juntaste bastante efectivo? Entrégale una parte a Viridiana <strong>antes</strong> de cerrar tu turno. Lo que entregues se descuenta del efectivo a entregar al cierre.</div>
@@ -5668,6 +5675,7 @@ function iniciarCorte() {
   if(role === 'Ventas' || role === 'Compras') {
     document.getElementById('corte-turno').style.display = 'block';
     document.getElementById('corte-turno-fecha').textContent = 'Fecha: ' + fechaLargaCorte(fechaISOLocal()) + ' · ' + (currentUser ? currentUser.name : '');
+    pintarPrevioTurno();
   }
   if(role === 'Gerencia') {
     document.getElementById('corte-viri').style.display = 'block';
@@ -5957,6 +5965,27 @@ function renderCierreTurno(d) {
     '</div>';
 }
 
+// Previo en la pantalla del Corte: lo mismo que verá al cerrar el turno, sin abrir ni guardar nada.
+function pintarPrevioTurno() {
+  var cont = document.getElementById('corte-turno-previo');
+  if(!cont || !puedeCerrarTurno()) return;
+  if(!db) { cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Sin conexión</div>'; return; }
+  cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Calculando...</div>';
+  calcularCierreTurno().then(function(d){
+    var el = document.getElementById('corte-turno-previo');
+    if(!el) return;
+    var hora = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
+    el.innerHTML = (d.operaciones
+        ? renderCierreTurno(d)
+        : '<div style="padding:14px;text-align:center;background:#F5F2EE;border-radius:10px;color:var(--suave);font-size:13px;">Todavía no tienes cobros en este turno.</div>') +
+      '<div style="font-size:10px;color:var(--suave);margin-top:6px;">Calculado a las ' + hora + ' · si cobras algo más, toca Actualizar</div>';
+  }).catch(function(e){
+    console.log('Error calculando previo del turno:', e);
+    var el = document.getElementById('corte-turno-previo');
+    if(el) el.innerHTML = '<div style="padding:12px;color:#DC2626;font-size:12px;">⚠️ No se pudo calcular. Toca Actualizar.</div>';
+  });
+}
+
 function abrirCierreTurno() {
   if(!puedeCerrarTurno()) { showToast('⚠️ Solo Ventas y Compras cierran turno'); return; }
   if(!db) { showToast('⚠️ Sin conexión'); return; }
@@ -6056,6 +6085,7 @@ function enviarCierreTurno() {
       if(det) det.innerHTML = '<div style="padding:14px;text-align:center;font-weight:700;color:#15803D;">✅ Turno cerrado a las ' + cierre.hora + '</div>';
       cierreTurnoActual = null;
       cerrandoTurno = false;
+      pintarPrevioTurno();
     }, function(e){
       console.log('Error guardando cierre de turno:', e);
       if(confirm('No se pudo guardar el cierre en el sistema.\n¿Enviar el WhatsApp a Viridiana de todos modos?')) abrirWhatsApp();
@@ -6187,6 +6217,7 @@ function registrarRetiroPrevio() {
       abrirWhatsApp();
       liberar();
       recargarRetiroPrevio();
+      pintarPrevioTurno();
     }, function(e){
       console.log('Error guardando retiro previo:', e);
       if(confirm('No se pudo guardar el retiro en el sistema.\n¿Avisar a Viridiana por WhatsApp de todos modos?')) abrirWhatsApp();
