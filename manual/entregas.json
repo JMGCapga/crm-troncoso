@@ -13,7 +13,7 @@
   "Las cancelaciones sin cargo son hasta 2 horas antes de la entrega. Tú no cancelas notas de venta en el CRM: eso lo hacen Ivette o Viridiana.",
   "Las devoluciones se hacen con la nota original y dentro de 5 días hábiles. Tú no las registras: pásaselas a Ivette.",
   "No damos crédito a clientes.",
-  "Toma **siempre** la foto y la firma al entregar: son tu evidencia si el cliente reclama.",
+  "La **foto de evidencia** y la **firma del cliente** son obligatorias: sin ellas el sistema no te deja confirmar la entrega. Si la cámara falla, hay una alterna que avisa a Ventas.",
   "Tu PIN es personal: no lo compartas ni dejes la sesión abierta en el celular."
  ],
  "tareas": [
@@ -84,7 +84,7 @@
      "t": "**Notas de venta disponibles**: pedidos confirmados que todavía no tienen operador. Si vas a llevar uno, toca **Tomar este pedido** (2) y confirma \"¿Tomar este pedido como …?\". Pasa a tu lista."
     },
     {
-     "t": "**Mis entregas** (3): tus pedidos, los que te asignaron o los que tomaste. Cada tarjeta trae el **folio**, el **cliente**, la **dirección**, el **material** y su estado."
+     "t": "**Mis entregas** (3): tus pedidos, los que te asignaron o los que tomaste. Cada tarjeta trae el **folio**, el **cliente**, la **dirección**, el **material**, el botón para **llamar al cliente** y su estado."
     }
    ],
    "cuidado": [
@@ -103,20 +103,20 @@
      "t": "Revisa en la tarjeta el **cliente**, la **dirección** y el **material**. Que lo que cargaste coincida con lo que dice la tarjeta."
     },
     {
-     "t": "**Llama al cliente antes de salir** para avisarle que vas en camino."
-    },
-    {
-     "t": "Toca **EN RUTA** (1). La tarjeta cambia a azul con la etiqueta \"En ruta\" y el botón queda marcado con ✓, como en el segundo pedido de la captura.",
+     "t": "**Llama al cliente antes de salir**: toca el botón negro **LLAMAR AL CLIENTE** (1). Se abre la marcación del celular con su número. Avísale que vas en camino.",
      "img": "03-mis-entregas.jpg",
-     "leyenda": "1 = EN RUTA · 2 = ENTREGADO · 3 = REGRESAR · 4 = ENTREGADO de un pedido que ya va en ruta"
+     "leyenda": "1 = LLAMAR AL CLIENTE · 2 = EN RUTA · 3 = ENTREGADO · 4 = REGRESAR · 5 = ENTREGADO de un pedido que ya va en ruta"
     },
     {
-     "t": "Si lo tocaste por error o el viaje se cancela, toca **REGRESAR** (3): el pedido vuelve a \"Confirmado\"."
+     "t": "Toca **EN RUTA** (2). La tarjeta cambia a azul con la etiqueta \"En ruta\" y el botón queda marcado con ✓, como en el segundo pedido de la captura."
+    },
+    {
+     "t": "Si lo tocaste por error o el viaje se cancela, toca **REGRESAR** (4): el pedido vuelve a \"Confirmado\"."
     }
    ],
    "cuidado": [
     "Tocar **EN RUTA** **no** le avisa al cliente: por eso se le llama.",
-    "Hoy la tarjeta **no muestra el teléfono del cliente**. Si no lo tienes, pídeselo a Ivette o Viridiana antes de salir."
+    "Si en lugar del botón negro la tarjeta dice **\"Sin teléfono registrado\"**, es una nota anterior sin número (las notas nuevas de entrega propia ya lo exigen). Pídeselo a Ivette o Viridiana antes de salir."
    ]
   },
   {
@@ -127,16 +127,16 @@
     {
      "t": "En la tarjeta del pedido toca **ENTREGADO**. Se abre la ventana **Confirmar entrega**.",
      "img": "04-confirmar-entrega.jpg",
-     "leyenda": "1 = aviso de saldo pendiente (solo si lo hay) · 2 = ¿entrega completa? · 3 = foto de evidencia · 4 = firma del cliente · 5 = Confirmar"
+     "leyenda": "1 = aviso de saldo pendiente (solo si lo hay) · 2 = ¿entrega completa? · 3 = foto de evidencia · 4 = ¿No funciona la cámara? · 5 = firma del cliente · 6 = Confirmar"
     },
     {
      "t": "Deja **SÍ** en \"¿Entrega completa?\" si entregaste todo."
     },
     {
-     "t": "Toca el recuadro de **Foto de evidencia**: se abre la cámara. Toma la foto del material ya entregado en el lugar. Cuando dice \"Foto tomada\", ya quedó."
+     "t": "Toca el recuadro de **Foto de evidencia**: se abre la cámara. Toma la foto del material ya entregado en el lugar. Cuando dice \"Foto tomada\", ya quedó; si salió mal, tócalo otra vez para repetirla. **Es obligatoria.**"
     },
     {
-     "t": "Pide al cliente que **firme con el dedo** en el recuadro de **Firma del cliente** (2). Si se equivoca, toca **Borrar** y que firme otra vez.",
+     "t": "Pide al cliente que **firme con el dedo** en el recuadro de **Firma del cliente** (2). Si se equivoca, toca **Borrar** y que firme otra vez. **También es obligatoria.**",
      "img": "05-entrega-foto-firma.jpg",
      "leyenda": "1 = foto tomada · 2 = firma del cliente · 3 = Confirmar"
     },
@@ -150,12 +150,40 @@
     }
    ],
    "cuidado": [
+    "Sin **foto** o sin **firma**, el sistema no confirma la entrega y te avisa qué falta (\"Toma la foto de evidencia\" o \"Pide la firma del cliente\"). Si la cámara no funciona, mira la tarea \"Si la cámara no funciona\".",
+    "Si tocas **Borrar** la firma, hay que firmar otra vez: un recuadro vacío no cuenta.",
+    "La foto se toma **en cada pedido**: la foto de otro pedido no se reutiliza.",
     "El sistema guarda una **remisión digital** con tu nombre, la hora, la foto y la firma.",
     "El **aviso amarillo de saldo pendiente** solo informa que el cliente todavía debe una parte. El CRM del operador no tiene dónde registrar un cobro: si el cliente quiere pagarte ese saldo, pregunta a Ivette o Viridiana antes de recibirlo.",
     "El mensaje de la encuesta sale **desde el WhatsApp de tu celular**: sin tocar Enviar, no llega al cliente.",
     "Toca **ENTREGADO** hasta que el cliente tenga el material. Si te arrepientes, toca **Cancelar** en la ventana y el pedido no cambia."
    ],
    "ayuda": "Cliente que no recibe, rechaza el material o dice que no es lo que pidió: Ivette o Viridiana."
+  },
+  {
+   "id": "sinfoto",
+   "titulo": "Si la cámara no funciona",
+   "cuando": "Cuando no puedes tomar la foto de evidencia (la cámara no abre, no hay permiso, el celular falla).",
+   "pasos": [
+    {
+     "t": "En la ventana **Confirmar entrega**, toca el enlace **¿No funciona la cámara? Confirmar sin foto y avisar a Ventas** (1). Aparece un aviso amarillo (2): se confirmará sin foto y Ivette y Viridiana recibirán un aviso.",
+     "img": "14-entrega-sin-foto.jpg",
+     "leyenda": "1 = enlace (después dice \"Mejor sí tomo la foto\") · 2 = aviso · 3 = firma del cliente · 4 = Confirmar"
+    },
+    {
+     "t": "Pide al cliente la **firma** (3). La firma **sigue siendo obligatoria**."
+    },
+    {
+     "t": "Toca **CONFIRMAR** (4). Sale \"Entrega confirmada SIN foto — se avisó a Ventas\". Ivette y Viridiana ven el caso en **Entregas por revisar** y confirman con el cliente que recibió su pedido."
+    }
+   ],
+   "cuidado": [
+    "Úsalo **solo** cuando de verdad no puedas tomar la foto. Cada uso genera un aviso que Ivette o Viridiana tienen que atender.",
+    "Si cambias de opinión, toca **Mejor sí tomo la foto**. Y si tomas la foto después de marcar la opción, el modo sin foto se quita solo.",
+    "Funciona igual en una entrega incompleta: se avisa por las dos cosas.",
+    "Avísales también de viva voz, para que llamen al cliente pronto."
+   ],
+   "ayuda": "Si la cámara falla seguido: avísale a Viridiana para revisar el celular."
   },
   {
    "id": "incompleta",
@@ -166,17 +194,17 @@
      "t": "Toca **ENTREGADO** en la tarjeta y, en \"¿Entrega completa?\", toca **NO** (1)."
     },
     {
-     "t": "Aparece **¿Qué faltó?** (2). Escribe qué producto y cuánto faltó, o qué pasó.",
+     "t": "Aparece **¿Qué faltó?** (2). Escribe qué producto y cuánto faltó, o qué pasó. **Es obligatorio:** sin esa nota el sistema no confirma.",
      "img": "06-entrega-incompleta.jpg",
      "leyenda": "1 = NO · 2 = qué faltó"
     },
     {
-     "t": "Toma la **foto** y pide la **firma** igual que en una entrega completa, y toca **CONFIRMAR**. Sale \"Entrega parcial registrada\"."
+     "t": "Toma la **foto** y pide la **firma** igual que en una entrega completa (también son obligatorias), y toca **CONFIRMAR**. Sale \"Entrega parcial registrada\"."
     }
    ],
    "cuidado": [
     "Sé concreto: producto y cantidad (\"faltaron 5 varillas de 3/8\"). Ivette usa esa nota para llamarle al cliente.",
-    "Al confirmar, el sistema crea una **alerta para Ivette** para que le dé seguimiento al cliente. La nota queda en la remisión.",
+    "Al confirmar, el sistema crea una **alerta para Ivette y Viridiana** para que le den seguimiento al cliente. La nota queda en la remisión.",
     "En una entrega incompleta **no** se manda la encuesta de satisfacción."
    ],
    "ayuda": "Cómo se completa la entrega o qué se le ofrece al cliente: Ivette o Viridiana."
@@ -265,7 +293,7 @@
     }
    ],
    "cuidado": [
-    "**Revisa bien el km de llegada antes de tocar el botón.** El cierre normal no avisa si el km de llegada es menor al de salida: quedaría un recorrido negativo.",
+    "Si escribes un **km de llegada menor al de salida**, el sistema no te deja finalizar y te muestra el aviso con los dos números. Revisa lo que escribiste.",
     "Finaliza **antes** de salir del trabajo: así los km del día quedan completos."
    ]
   },
@@ -284,7 +312,7 @@
     }
    ],
    "cuidado": [
-    "En el cierre manual el **km de llegada no puede ser menor al de salida**: el sistema no te deja guardarlo.",
+    "Igual que en el cierre normal, el **km de llegada no puede ser menor al de salida**: el sistema no te deja guardarlo.",
     "Queda marcado como \"capturado a mano\", para que se sepa que no pasó por el flujo normal.",
     "Si nunca iniciaste turno ese día, avísale a Viridiana para que sepa por qué falta el registro."
    ],
@@ -297,12 +325,8 @@
    "r": "Confirma con Ivette o Viridiana que te lo asignaron a ti y que está Confirmado o En ruta. Si no tiene operador, sale en \"Notas de venta disponibles\". Toca otra vez la pestaña Ventas para recargar."
   },
   {
-   "p": "No sé el teléfono del cliente para llamarle antes de salir.",
-   "r": "La tarjeta no lo muestra. Pídeselo a Ivette o Viridiana."
-  },
-  {
    "p": "La cámara no abre o no sale la foto.",
-   "r": "Revisa que el navegador tenga permiso para usar la cámara. El sistema deja confirmar sin foto, pero sin foto no hay evidencia: avisa a Viridiana."
+   "r": "Revisa que el navegador tenga permiso para usar la cámara. Si no logras abrirla, usa el enlace **¿No funciona la cámara? Confirmar sin foto y avisar a Ventas** (mira la tarea \"Si la cámara no funciona\")."
   },
   {
    "p": "No se abrió el WhatsApp de la encuesta.",
@@ -321,19 +345,25 @@
    "r": "Pregunta a Ivette o Viridiana antes de recibir dinero: el CRM del operador no registra cobros."
   },
   {
-   "p": "Me salió un recorrido negativo al terminar el turno.",
-   "r": "Capturaste un km de llegada menor al de salida. Avísale a Viridiana para corregir el registro."
+   "p": "Dice \"Pide la firma del cliente\" aunque el cliente ya firmó.",
+   "r": "La firma debe trazarse con el dedo dentro del recuadro; un solo toque no cuenta. Si tocaste Borrar, hay que firmar otra vez."
+  },
+  {
+   "p": "La tarjeta dice \"Sin teléfono registrado\".",
+   "r": "Es una nota anterior sin teléfono: las notas nuevas de entrega propia ya lo exigen. Pídeselo a Ivette o Viridiana y que lo agreguen a la nota."
+  },
+  {
+   "p": "Dice que el km de llegada no puede ser menor al de salida.",
+   "r": "Revisa los dos números. Si el km de salida que capturaste en la mañana estaba mal, avisa a Viridiana para corregirlo."
   }
  ],
  "por_confirmar": [
-  "Foto y firma: el sistema deja confirmar una entrega sin foto y sin firma. ¿Las hacemos obligatorias?",
-  "Teléfono del cliente: la tarjeta del operador no lo muestra ni el WhatsApp de asignación tampoco, pero la regla es llamar antes de salir. ¿Cómo lo consiguen hoy? Propuesta: botón \"Llamar\" en la tarjeta.",
   "Saldo pendiente: el sistema solo avisa. ¿El operador cobra saldos al entregar? Si sí, hoy no hay dónde registrarlo.",
   "Gasolina en efectivo: queda como salida aprobada sin que Viridiana la valide. ¿De dónde sale ese efectivo (fondo del operador o caja) y quién lo revisa?",
-  "Turno de flota: ¿quién revisa los km recorridos cada día? El cierre normal no avisa si el km de llegada es menor al de salida.",
   "Asignación: ¿Ivette/Viridiana asignan cada pedido o los operadores los toman libremente? Si dos tocan el mismo a la vez, se queda con el último.",
+  "Turno de flota: ¿quién revisa los km recorridos cada día? El sistema ya no deja guardar un km de llegada menor al de salida.",
   "Entrega marcada por error: el operador no puede deshacerla. ¿Quién la corrige y cómo?",
-  "Entrega incompleta: ¿qué sigue después (segunda entrega, nota de crédito, descuento) y quién se lo ofrece al cliente?",
+  "Entregas incompletas o sin foto: ¿qué sigue después (segunda entrega, nota de crédito, descuento, llamada al cliente) y quién lo atiende? Hoy el sistema avisa a Ivette y Viridiana y se marca como resuelta.",
   "Encuesta: el mensaje sale del WhatsApp personal de cada operador. ¿Está bien así o debe salir de un número del negocio?"
  ]
 }

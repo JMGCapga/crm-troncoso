@@ -196,10 +196,10 @@
     {
      "t": "Se abre **Confirmar venta**. Revisa y llena:",
      "img": "13-confirmar-venta.jpg",
-     "leyenda": "1 = Dirección de entrega · 2 = Operador asignado · 3 = Tipo de entrega · 4 = Forma de pago · 5 = Anticipo recibido · 6 = Crear Nota de Venta"
+     "leyenda": "1 = Dirección de entrega · 2 = Teléfono del cliente · 3 = Operador asignado · 4 = Tipo de entrega · 5 = Forma de pago · 6 = Anticipo recibido · 7 = Crear Nota de Venta"
     },
     {
-     "t": "**Dirección de entrega**: confírmala con el cliente. **Operador**: Francisco, Agustín Lara, Carlos J. Escobar o Sin asignar. **Tipo de entrega**: Entrega propia, Pasa a recoger o Entrega de proveedor."
+     "t": "**Dirección de entrega** (1): confírmala con el cliente. **Teléfono del cliente** (2): sale del cliente; si falta o está mal, **escríbelo**. Es **obligatorio** (10 dígitos) cuando la entrega es propia o queda saldo por cobrar: el operador le llama antes de salir. **Operador** (3): Francisco, Agustín Lara, Carlos J. Escobar o Sin asignar. **Tipo de entrega** (4): Entrega propia, Pasa a recoger o Entrega de proveedor."
     },
     {
      "t": "**Forma de pago**: Efectivo, Transferencia, TPV / Tarjeta o Pago mixto (cuando paga una parte de un modo y otra de otro). Si paga completo, deja el anticipo igual al total: debe salir \"Pago completo\" en verde."
@@ -214,12 +214,13 @@
      "t": "Si es **tarjeta**, elige la terminal. Usa **IZZ — BBVA** siempre que se pueda: es la que menos comisión cobra. **Mercado Pago es la más cara; úsala solo si no hay otra.**"
     },
     {
-     "t": "Toca **Crear Nota de Venta** (6). Verás el aviso \"Nota de venta NV-… creada\"."
+     "t": "Toca **Crear Nota de Venta** (7). Verás el aviso \"Nota de venta NV-… creada\". Si falta el teléfono, el sistema te avisa y marca el campo en rojo: captúralo y vuelve a tocar."
     }
    ],
    "cuidado": [
     "Al crear la nota se **descuenta el inventario**.",
-    "Si el cliente paga menos del total, el resto queda como saldo por cobrar. Como no damos crédito, hazlo **solo si Viridiana lo autoriza**."
+    "Si el cliente paga menos del total, el resto queda como saldo por cobrar. Como no damos crédito, hazlo **solo si Viridiana lo autoriza**.",
+    "El teléfono que captures se guarda en la nota y, si la cotización no tenía uno, también en la cotización. Es el que usa el operador para llamar y el que se usa para mandar la encuesta al entregar."
    ]
   },
   {
@@ -267,6 +268,33 @@
     "Cancela solo si el pedido todavía no sale. Si ya se entregó o el cliente quiere devolver, avisa a Viridiana: las devoluciones van con la nota original y dentro de 5 días hábiles."
    ],
    "ayuda": "Devoluciones y notas de crédito: Viridiana."
+  },
+  {
+   "id": "entregas-revisar",
+   "titulo": "Entregas por revisar (incompletas o sin foto)",
+   "cuando": "Cuando aparece el ! rojo en la pestaña Ventas.",
+   "pasos": [
+    {
+     "t": "Cuando un operador deja una entrega **incompleta** o la confirma **sin foto** (porque falló la cámara), aparece un **!** rojo en la pestaña **Ventas** (1) y sale un aviso. Se actualiza solo cada par de minutos; no tienes que volver a entrar.",
+     "img": "30-entregas-por-revisar.jpg",
+     "leyenda": "1 = aviso en la pestaña Ventas · 2 = recuadro Entregas por revisar · 3 = tipo (INCOMPLETA o SIN FOTO) · 4 = Marcar resuelta"
+    },
+    {
+     "t": "Entra a **Ventas → Notas de Venta**. Arriba está el recuadro **Entregas por revisar** (2). Cada caso trae el pedido, el cliente, el tipo (3), la nota del operador y quién fue."
+    },
+    {
+     "t": "**INCOMPLETA:** llámale al cliente y coordina cómo se completa lo que faltó (la nota del operador dice qué fue). **SIN FOTO:** confirma con el cliente que recibió su pedido."
+    },
+    {
+     "t": "Cuando ya quedó atendido, toca **Marcar resuelta** (4). El aviso desaparece para todos."
+    }
+   ],
+   "cuidado": [
+    "No la marques resuelta antes de hablar con el cliente.",
+    "Viridiana y José Manuel ven el mismo recuadro: si uno la resuelve, ya no le sale a nadie.",
+    "Si hay que ofrecerle algo al cliente (descuento, nota de crédito), consúltalo con Viridiana."
+   ],
+   "ayuda": "Dudas de qué ofrecerle al cliente: Viridiana."
   },
   {
    "id": "ticket",
@@ -493,6 +521,7 @@
   "Anticipo parcial: el sistema lo permite y deja el resto como cuenta por cobrar, pero la regla del negocio es no dar crédito. ¿Se autoriza alguna vez?",
   "Impresión: ¿qué impresora y qué tamaño de hoja usa Ivette para la nota de venta, y qué hace si falla?",
   "Turnos: ¿a qué hora cierra su turno Ivette (medio tiempo) y dónde guarda el efectivo entre cobro y entrega?",
-  "Retiro previo de efectivo: lo armé así: Ventas/Compras lo registran y Viridiana confirma \"Recibí\" en su Corte de Caja (si no confirma, queda pendiente y el sistema avisa al cerrar el día). ¿Así es como lo quieres, o debe iniciarlo Viridiana?"
+  "Retiro previo de efectivo: lo armé así: Ventas/Compras lo registran y Viridiana confirma \"Recibí\" en su Corte de Caja (si no confirma, queda pendiente y el sistema avisa al cerrar el día). ¿Así es como lo quieres, o debe iniciarlo Viridiana?",
+  "Entregas incompletas o sin foto: ¿cuál es el procedimiento (re-entrega, nota de crédito, descuento) y cuánto tiempo hay para resolverlas? Hoy el sistema solo avisa y deja marcarlas como resueltas."
  ]
 }

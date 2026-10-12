@@ -1425,6 +1425,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         <div class="card">
           <div class="card-title">📊 Panel de Notas de Venta</div>
           <button class="btn btn-naranja" onclick="abrirNuevaNotaVenta()" style="width:100%;margin-bottom:12px;">🎯 Nueva Nota de Venta</button>
+          <div id="ped-alertas-incompletas-jm"></div>
           <div id="ped-resumen-jm" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"></div>
           <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
             <button class="btn btn-naranja" onclick="filtrarPedidosFecha('hoy')" id="ped-jm-f-hoy" style="font-size:11px;padding:7px 14px;">Hoy</button>
@@ -2392,6 +2393,8 @@ const CLIENTES_SEED = [];
 
 const PRODUCTOS_SEED = [];
 let pinBuf = '', currentUser = null, currentPin = null;
+var alertasEntregaTimer = null;   // revisa cada par de minutos si hay entregas por revisar (incompletas / sin foto)
+var alertasEntregaConteo = null;
 let clientesCache = [];
 let cotizaciones = [];
 let clienteSeleccionado = null;
@@ -2506,6 +2509,9 @@ function checkPin(){
   }
 }
 function logout(){
+  if(alertasEntregaTimer) { clearInterval(alertasEntregaTimer); alertasEntregaTimer = null; }
+  alertasEntregaConteo = null;
+  quitarBadgeAlertasPedidos();   // el ! de la sesión anterior no debe quedarse para el siguiente usuario
   pinBuf=''; currentUser=null;
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
@@ -4808,6 +4814,11 @@ function mostrarModalPedido(cot, docId) {
           <input type="text" id="mp-direccion" value="${cot.clienteDom||''}" placeholder="Calle, colonia, referencias..." style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;grid-column:1/-1;">
         </div>
         <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Teléfono del cliente <span style="color:#DC2626;">*</span></label>
+          <input type="tel" id="mp-telefono" value="${cot.clienteTel||''}" placeholder="10 dígitos" inputmode="tel" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
+          <div style="font-size:10px;color:#6B6560;margin-top:3px;">Obligatorio en entrega propia: el operador le llama antes de salir</div>
+        </div>
+        <div>
           <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:4px;">Operador asignado</label>
           <select id="mp-operador" style="width:100%;border:1.5px solid #D8D0C8;border-radius:8px;padding:9px 11px;font-family:'Barlow',sans-serif;font-size:13px;">
             <option value="Sin asignar">Sin asignar</option>
@@ -5157,6 +5168,8 @@ function confirmarCierrePedido(docId) {
   const operador = document.getElementById('mp-operador').value;
   const tipo = document.getElementById('mp-tipo').value;
   const pago = document.getElementById('mp-pago').value;
+  const campoTelefono = document.getElementById('mp-telefono');
+  const telefonoNota = (campoTelefono ? campoTelefono.value : (cot.clienteTel || '')).trim();
   const saldoFavorMontoAplicado = (window._saldoFavorAplicado && window._saldoFavorAplicado.clienteId === cot.clienteId) ? window._saldoFavorAplicado.monto : 0;
 
   // Pago mixto: hasta 2 métodos (efectivo/transferencia/tarjeta), cada uno
@@ -5208,6 +5221,15 @@ function confirmarCierrePedido(docId) {
     return;
   }
 
+  // El teléfono es obligatorio cuando el operador va a entregar (tiene que llamar antes de salir)
+  // y cuando queda saldo por cobrar (si no, no hay a quién recordarle).
+  if((tipo === 'propia' || saldoPendiente > 0) && telefonoNota.replace(/[^0-9]/g,'').length < 10) {
+    creandoPedido = false;
+    showToast('⚠️ Captura el teléfono del cliente (10 dígitos): ' + (tipo === 'propia' ? 'el operador le llama antes de salir' : 'sin él no se le puede cobrar el saldo'));
+    if(campoTelefono) { campoTelefono.style.borderColor = '#EF4444'; campoTelefono.focus(); }
+    return;
+  }
+
   Promise.resolve('NV-' + String(cot.folio).padStart(3,'0')).then(function(folioBase){
     const pedido = {
       id: folioBase,
@@ -5224,7 +5246,7 @@ function confirmarCierrePedido(docId) {
       fecha: fechaISOLocal(),
       cliente: cot.cliente,
       direccion: direccion,
-      telefono: cot.clienteTel || '',
+      telefono: telefonoNota,
       operador: operador,
       tipo: tipo,
       pago: pago,
@@ -5262,8 +5284,10 @@ function confirmarCierrePedido(docId) {
 
     // Actualizar cotización
     cotizaciones[idx].status = 'cerrado';
+    var datosCierreCot = { status: 'cerrado' };
+    if(!cot.clienteTel && telefonoNota) { datosCierreCot.clienteTel = telefonoNota; cotizaciones[idx].clienteTel = telefonoNota; }   // la cotización se queda con el teléfono capturado
     if(db && cot._docId){
-      db.collection('cotizaciones').doc(cot._docId).update({status:'cerrado'}).catch(function(e){console.log(e);});
+      db.collection('cotizaciones').doc(cot._docId).update(datosCierreCot).catch(function(e){console.log(e);});
       // Verificar si ya existe pedido para esta cotización antes de crear
       db.collection('pedidos').where('cotizacionId','==',cot._docId).limit(1).get().then(function(snap){
         if(!snap.empty) {
@@ -5308,7 +5332,7 @@ function confirmarCierrePedido(docId) {
               origen: 'nv',
               clienteId: cot.clienteId || null,
               cliente: cot.cliente,
-              telefono: cot.clienteTel || '',
+              telefono: telefonoNota,
               total: cot.total || 0,
               anticipo: anticipo,
               metodoPagoAnticipo: pago,
@@ -11799,32 +11823,51 @@ function verificarAlertasCuentasCobrarVencidas() {
     if(hayVencidas) mostrarBadgeCuentasCobrar(); else quitarBadgeCuentasCobrar();
   }).catch(function(e){ console.log('Error verificando alertas de cuentas por cobrar:', e); });
 }
+var TIPOS_ALERTA_ENTREGA = { entrega_incompleta: 'INCOMPLETA', entrega_sin_foto: 'SIN FOTO' };
+
+function alertasEntregaPendientes() {
+  return db.collection('alertas').where('resuelta','==',false).get().then(function(snap){
+    var docs = snap.docs.filter(function(d){ return TIPOS_ALERTA_ENTREGA[d.data().tipo]; });
+    docs.sort(function(a,b){ return (b.data().timestamp||0) - (a.data().timestamp||0); });
+    return docs;
+  });
+}
+// Badge "!" en la pestaña Ventas para Ventas, Compras, Gerencia y Director; se repite cada 2 minutos
+// para que lo vean sin tener que volver a entrar. Si aparece una nueva, además sale un aviso.
 function verificarAlertasEntregasIncompletas() {
-  if(!db) return;
-  db.collection('alertas').where('tipo','==','entrega_incompleta').where('resuelta','==',false).limit(1).get().then(function(snap){
-    if(!snap.empty) mostrarBadgeAlertasPedidos();
+  if(!db || !currentUser || currentUser.role === 'Operador' || currentUser.role === 'Mecanico') return;
+  if(!alertasEntregaTimer) alertasEntregaTimer = setInterval(verificarAlertasEntregasIncompletas, 120000);
+  alertasEntregaPendientes().then(function(docs){
+    if(docs.length) mostrarBadgeAlertasPedidos(); else quitarBadgeAlertasPedidos();
+    if(alertasEntregaConteo !== null && docs.length > alertasEntregaConteo) {
+      showToast('⚠️ Hay una entrega nueva por revisar (Ventas → Notas de Venta)');
+      var panel = document.getElementById('panel-pedidos');
+      if(panel && panel.classList.contains('active')) cargarAlertasIncompletas();
+    }
+    alertasEntregaConteo = docs.length;
   }).catch(function(e){ console.log('Error verificando alertas de entrega:', e); });
 }
 function cargarAlertasIncompletas() {
-  var cont = document.getElementById('ped-alertas-incompletas');
-  if(!cont) return;
-  if(!db) { cont.innerHTML = ''; return; }
-  db.collection('alertas').where('tipo','==','entrega_incompleta').where('resuelta','==',false).get().then(function(snap){
-    if(snap.empty) { cont.innerHTML = ''; quitarBadgeAlertasPedidos(); return; }
-    var docs = snap.docs.slice().sort(function(a,b){ return (b.data().timestamp||0) - (a.data().timestamp||0); });
+  var conts = ['ped-alertas-incompletas','ped-alertas-incompletas-jm'].map(function(id){ return document.getElementById(id); }).filter(function(c){ return !!c; });
+  if(!conts.length) return;
+  if(!db) { conts.forEach(function(c){ c.innerHTML = ''; }); return; }
+  alertasEntregaPendientes().then(function(docs){
+    alertasEntregaConteo = docs.length;
+    if(!docs.length) { conts.forEach(function(c){ c.innerHTML = ''; }); quitarBadgeAlertasPedidos(); return; }
     var html = '<div style="background:#FEE2E2;border:1px solid #EF4444;border-radius:10px;padding:14px;margin-bottom:14px;">' +
-      '<div style="font-weight:700;color:#DC2626;margin-bottom:8px;">⚠️ Entregas incompletas pendientes de resolver</div>';
+      '<div style="font-weight:700;color:#DC2626;margin-bottom:8px;">⚠️ Entregas por revisar</div>';
     docs.forEach(function(doc){
       var a = doc.data();
       html += '<div style="background:#fff;border-radius:8px;padding:10px;margin-bottom:8px;">' +
-        '<div style="font-size:12px;font-weight:700;">Pedido ' + (a.pedidoId||'') + ' · ' + (a.cliente||'') + '</div>' +
-        '<div style="font-size:11px;color:var(--suave);margin:4px 0;">' + (a.notaFaltante || 'Sin detalle') + '</div>' +
-        '<div style="font-size:10px;color:#AAA;margin-bottom:6px;">' + (a.fecha||'') + '</div>' +
+        '<div style="font-size:12px;font-weight:700;">Pedido ' + htmlSeguro(a.pedidoId || '') + ' · ' + htmlSeguro(a.cliente || '') +
+          ' <span style="background:#FEE2E2;color:#DC2626;border-radius:10px;padding:1px 8px;font-size:10px;margin-left:4px;">' + TIPOS_ALERTA_ENTREGA[a.tipo] + '</span></div>' +
+        '<div style="font-size:11px;color:var(--suave);margin:4px 0;">' + htmlSeguro(a.detalle || a.notaFaltante || 'Sin detalle') + '</div>' +
+        '<div style="font-size:10px;color:#AAA;margin-bottom:6px;">' + htmlSeguro(a.fecha || '') + (a.creadoPor ? ' · ' + htmlSeguro(a.creadoPor) : '') + '</div>' +
         '<button class="btn btn-verde" onclick="resolverAlertaEntrega(\'' + doc.id + '\')" style="font-size:10px;padding:5px 10px;">✅ Marcar resuelta</button>' +
         '</div>';
     });
     html += '</div>';
-    cont.innerHTML = html;
+    conts.forEach(function(c){ c.innerHTML = html; });
   }).catch(function(e){ console.log('Error cargando alertas de entrega:', e); });
 }
 function resolverAlertaEntrega(alertaDocId) {
@@ -11857,6 +11900,7 @@ function iniciarPedidos() {
     } else if(role === 'Gerencia' || role === 'Director') {
       document.getElementById('pedidos-jm').style.display = 'block';
       filtrarPedidosFecha('hoy');
+      cargarAlertasIncompletas();
     }
   });
 }
@@ -13432,6 +13476,11 @@ function pedidoCardOperador(p) {
   var btnEntregado = estado !== 'entregado'
     ? '<button onclick="marcarEntregado(\''+did+'\')" style="flex:1;padding:18px 8px;border:none;border-radius:12px;background:#22C55E;color:#fff;font-family:Bebas Neue,sans-serif;font-size:18px;letter-spacing:1px;cursor:pointer;">&#128230; ENTREGADO</button>'
     : '<button disabled style="flex:1;padding:18px 8px;border:3px solid #22C55E;border-radius:12px;background:#DCFCE7;color:#22C55E;font-family:Bebas Neue,sans-serif;font-size:18px;letter-spacing:1px;">&#128230; ENTREGADO &check;</button>';
+  // La regla es llamar al cliente antes de salir: el teléfono va en la tarjeta como botón de marcación directa
+  var telDigitos = String(p.telefono || '').replace(/[^0-9]/g,'');
+  var btnLlamar = telDigitos.length >= 10
+    ? '<a href="tel:+' + (telDigitos.length > 10 ? telDigitos : '52' + telDigitos) + '" style="display:block;box-sizing:border-box;width:100%;text-align:center;text-decoration:none;padding:14px 8px;margin-bottom:8px;border-radius:12px;background:#1A1A1A;color:#fff;font-family:Bebas Neue,sans-serif;font-size:17px;letter-spacing:1px;">&#128222; LLAMAR AL CLIENTE &middot; ' + telDigitos.slice(-10) + '</a>'
+    : '<div style="box-sizing:border-box;width:100%;text-align:center;padding:12px 8px;margin-bottom:8px;border-radius:12px;background:#F5F2EE;color:#6B6560;font-size:12px;font-weight:700;">&#128222; Sin tel&eacute;fono registrado &mdash; p&iacute;delo a Ivette</div>';
   return `
     <div style="background:#fff;border-radius:14px;padding:18px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
@@ -13443,6 +13492,7 @@ function pedidoCardOperador(p) {
         </div>
         <span style="background:#${st.bg};color:#${st.color};border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;white-space:nowrap;">${st.label}</span>
       </div>
+      ${btnLlamar}
       ${btnRegresar}
       <div style="display:flex;gap:8px;">${btnEnRuta}${btnEntregado}</div>
     </div>
@@ -13543,6 +13593,10 @@ function marcarEntregado(docId) {
           <input type="file" id="foto-evidencia" accept="image/*" capture="environment" style="display:none;" onchange="previsualizarFoto(this)">
         </label>
         <img id="foto-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:180px;object-fit:cover;">
+        <div style="text-align:center;margin-top:8px;">
+          <button type="button" id="btn-sin-foto" onclick="alternarSinFoto()" style="background:none;border:none;color:#E8500A;font-family:'Barlow',sans-serif;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;">¿No funciona la cámara? Confirmar sin foto y avisar a Ventas</button>
+        </div>
+        <div id="aviso-sin-foto" style="display:none;background:#FEF3C7;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:12px;font-weight:700;color:#92400E;">⚠️ Se confirmará SIN FOTO. Ivette y Viridiana recibirán un aviso para revisar esta entrega.</div>
       </div>
 
       <!-- FIRMA -->
@@ -13587,10 +13641,22 @@ function marcarEntregado(docId) {
     canvas.addEventListener('pointerup', function(){ drawing=false; });
     canvas.addEventListener('pointerleave', function(){ drawing=false; });
     canvas._firmaTrazada = function(){ return firmaTrazada; };
+    canvas._firmaReiniciar = function(){ firmaTrazada = false; };
   }, 200);
 
   window._entregaCompleta = true;
   window._entregaDocId = docId;
+  window._fotoBase64 = null;   // una foto tomada para otro pedido (y cancelada) no cuenta como evidencia de este
+  window._sinFoto = false;
+}
+
+// Alterna de la foto: si la cámara falla, se confirma sin foto pero Ventas y Gerencia reciben un aviso para revisar
+function alternarSinFoto() {
+  window._sinFoto = !window._sinFoto;
+  var aviso = document.getElementById('aviso-sin-foto');
+  var btn = document.getElementById('btn-sin-foto');
+  if(aviso) aviso.style.display = window._sinFoto ? 'block' : 'none';
+  if(btn) btn.textContent = window._sinFoto ? 'Mejor sí tomo la foto' : '¿No funciona la cámara? Confirmar sin foto y avisar a Ventas';
 }
 
 function selCompleta(val) {
@@ -13605,6 +13671,7 @@ function limpiarFirma() {
   if(!canvas) return;
   var ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if(canvas._firmaReiniciar) canvas._firmaReiniciar();
 }
 
 function previsualizarFoto(input) {
@@ -13615,8 +13682,11 @@ function previsualizarFoto(input) {
     var img = document.getElementById('foto-preview');
     img.src = e.target.result;
     img.style.display = 'block';
-    document.getElementById('foto-label').textContent = '✅ Foto tomada';
+    // Solo se cambia el texto: reemplazar todo el contenido borraba el input y ya no se podía repetir la foto
+    var lab = document.getElementById('foto-label');
+    if(lab.firstChild && lab.firstChild.nodeType === 3) lab.firstChild.nodeValue = '✅ Foto tomada — toca para cambiarla\n          '; else lab.textContent = '✅ Foto tomada';
     window._fotoBase64 = e.target.result;
+    if(window._sinFoto) alternarSinFoto();
   };
   reader.readAsDataURL(file);
 }
@@ -13627,6 +13697,12 @@ function confirmarEntregaFinal(docId) {
   var canvas = document.getElementById('canvas-firma');
   var firmaDataUrl = canvas ? canvas.toDataURL('image/png') : null;
   var fotoDataUrl = window._fotoBase64 || null;
+
+  // Evidencia obligatoria: sin foto, sin firma (o sin decir qué faltó) no se confirma
+  var sinFoto = !fotoDataUrl && window._sinFoto === true;
+  if(!fotoDataUrl && !sinFoto) { showToast('📷 Toma la foto de evidencia (o toca "¿No funciona la cámara?")'); return; }
+  if(!canvas || !canvas._firmaTrazada || !canvas._firmaTrazada()) { showToast('✍️ Pide la firma del cliente para confirmar'); return; }
+  if(!completa && !notaFaltante.trim()) { showToast('📝 Escribe qué faltó para confirmar'); return; }
 
   var idx = pedidosCache.findIndex(function(p){ return p._docId === docId; });
   if(idx < 0) return;
@@ -13651,6 +13727,7 @@ function confirmarEntregaFinal(docId) {
       })
     };
     if(!completa && notaFaltante) update.notaFaltante = notaFaltante;
+    if(sinFoto) update.sinFoto = true;
 
     // Guardar remisión con firma y foto
     var remision = {
@@ -13661,6 +13738,7 @@ function confirmarEntregaFinal(docId) {
       fecha: fechaISOLocal(),
       timestamp: Date.now(),
       completo: completa,
+      sinFoto: sinFoto,
       notaIncompleto: notaFaltante,
       firmaBase64: firmaDataUrl,
       fotoBase64: fotoDataUrl
@@ -13674,8 +13752,9 @@ function confirmarEntregaFinal(docId) {
 
   document.getElementById('modal-entrega').remove();
   window._fotoBase64 = null;
+  window._sinFoto = false;
   window._entregaCompleta = true;
-  showToast(completa ? '✅ Entrega confirmada con firma y foto' : '⚠️ Entrega parcial registrada');
+  showToast(sinFoto ? '⚠️ Entrega confirmada SIN foto — se avisó a Ventas' : (completa ? '✅ Entrega confirmada con firma y foto' : '⚠️ Entrega parcial registrada'));
 
   if(completa && pedidosCache[idx]) {
     // Encuesta post-entrega — solo si es JMG y hay teléfono
@@ -13701,9 +13780,23 @@ function confirmarEntregaFinal(docId) {
       timestamp: Date.now(),
       resuelta: false,
       creadoPor: currentUser ? currentUser.name : ''
-    }).then(function(){
-      mostrarBadgeAlertasPedidos();
     }).catch(function(e){ console.log('Error creando alerta de entrega incompleta:', e); });
+  }
+
+  // Sin foto: aviso para Ventas y Gerencia (aparece en Notas de Venta y como "!" en la pestaña Ventas)
+  if(sinFoto && db && pedidosCache[idx]) {
+    var pedidoSinFoto = pedidosCache[idx];
+    db.collection('alertas').add({
+      tipo: 'entrega_sin_foto',
+      pedidoId: pedidoSinFoto.id || docId,
+      pedidoDocId: docId,
+      cliente: pedidoSinFoto.cliente || pedidoSinFoto.c || '',
+      detalle: 'Entrega confirmada SIN FOTO: la cámara del celular no funcionó.' + (completa ? '' : ' Además quedó incompleta.'),
+      fecha: fechaISOLocal(),
+      timestamp: Date.now(),
+      resuelta: false,
+      creadoPor: currentUser ? currentUser.name : ''
+    }).catch(function(e){ console.log('Error creando alerta de entrega sin foto:', e); });
   }
 
   renderPedidosOperador();
@@ -14072,6 +14165,7 @@ function finalizarTurnoFlota(){
 // mala señal, esperar a que suba una foto en base64 no debe bloquear el
 // cierre del turno.
 function cerrarTurnoConDatos(turno, kmLlegada){
+  if(kmLlegada < turno.kmSalida){ showToast('⚠️ El km de llegada (' + kmLlegada + ') no puede ser menor al de salida (' + turno.kmSalida + ')'); return; }
   var kmRecorridos = kmLlegada - turno.kmSalida;
   var update = { kmLlegada: kmLlegada, kmRecorridos: kmRecorridos };
   if(window._flotaFotocierre) update.fotoOdometroCierreBase64 = window._flotaFotocierre;
