@@ -1,0 +1,456 @@
+{
+ "departamento": "Ventas",
+ "titulo": "Manual de Ventas",
+ "para": "Ivette",
+ "actualizado": "Octubre 2026",
+ "url": "https://jmgcapga.github.io/crm-troncoso",
+ "intro": "Este manual explica, paso a paso, lo que haces todos los días en el CRM de Materiales Troncoso: buscar clientes, cotizar, hacer notas de venta y tickets, cobrar abonos y cerrar tu turno. Cada tarea tiene capturas con números rojos que te dicen dónde tocar. Las capturas usan datos de ejemplo, no clientes reales.",
+ "reglas_titulo": "Reglas del negocio — las que le dices al cliente",
+ "reglas": [
+  "No damos crédito. No lo ofrezcas ni lo menciones. Si el cliente lo pide, pásalo con Viridiana.",
+  "La entrega es en 24 a 72 horas, según disponibilidad.",
+  "Todo se entrega a pie de carro. Los operadores llaman al cliente antes de salir.",
+  "Sin cambios en material a granel, tabicones y encostalados.",
+  "Devoluciones: con la nota original, dentro de 5 días hábiles.",
+  "Cancelaciones sin cargo hasta 2 horas antes de la entrega."
+ ],
+ "tareas": [
+  {
+   "id": "entrar",
+   "titulo": "Entrar y salir del CRM",
+   "cuando": "Al llegar y al irte.",
+   "pasos": [
+    {
+     "t": "Abre el CRM en el navegador: **jmgcapga.github.io/crm-troncoso**."
+    },
+    {
+     "t": "Escribe tu **PIN de 4 números** en el teclado. Los puntitos (1) se van llenando. El PIN es personal: no lo compartas.",
+     "img": "01-pin.jpg",
+     "leyenda": "1 = puntos del PIN · 2 = teclado"
+    },
+    {
+     "t": "Ya dentro, arriba ves tu nombre (2) y las pestañas (1). Tu trabajo diario usa seis: **Clientes, Ventas, Consultas, Corte de Caja, Cuentas e Inventario**. Las demás (Salidas, Notas de Crédito, Fondeos, Compras, Proveedores) son de Erika y Viridiana.",
+     "img": "02-pestanas.jpg",
+     "leyenda": "1 = pestañas · 2 = tu usuario · 3 = Ventas"
+    },
+    {
+     "t": "Al terminar el día, toca **Salir** (arriba a la derecha) para que nadie use tu sesión."
+    }
+   ],
+   "cuidado": [
+    "Si dice \"PIN incorrecto\", espera un segundo y vuelve a escribirlo.",
+    "Si dice \"Conexión lenta\", toca Reintentar."
+   ],
+   "ayuda": "PIN olvidado o bloqueado: Viridiana."
+  },
+  {
+   "id": "cliente",
+   "titulo": "Buscar un cliente o darlo de alta",
+   "cuando": "Antes de cotizar o hacer una nota a nombre de un cliente.",
+   "pasos": [
+    {
+     "t": "Toca la pestaña **Clientes**."
+    },
+    {
+     "t": "Escribe en el buscador (1) el nombre o el teléfono (mínimo 2 letras). Abajo sale la lista (2).",
+     "img": "03-buscar-cliente.jpg",
+     "leyenda": "1 = buscador · 2 = resultados · 3 = + Nuevo Cliente"
+    },
+    {
+     "t": "Si el cliente ya está en la lista, **úsalo**. No crees otro igual."
+    },
+    {
+     "t": "Si de verdad no está, toca **+ Nuevo Cliente** (3). Llena **Nombre o razón social** (1) y **Teléfono** (2), que son obligatorios. Celular, dirección, RFC y representante son opcionales. Toca **Guardar cliente** (3).",
+     "img": "04-nuevo-cliente.jpg",
+     "leyenda": "1 = nombre · 2 = teléfono · 3 = Guardar cliente"
+    }
+   ],
+   "cuidado": [
+    "Busca por nombre **y** por teléfono antes de crear: casi todos los duplicados nacen de buscar solo por una forma del nombre.",
+    "Escribe el nombre completo y sin abreviaturas raras para que el siguiente que lo busque lo encuentre."
+   ]
+  },
+  {
+   "id": "duplicado",
+   "titulo": "Eliminar o desactivar un cliente duplicado",
+   "cuando": "Cuando buscas y salen dos clientes iguales.",
+   "pasos": [
+    {
+     "t": "En **Clientes**, busca al cliente. Compara los dos (teléfono y dirección) y decide cuál se queda. **Se queda el que ya tiene cotizaciones o notas.**"
+    },
+    {
+     "t": "Toca el duplicado para abrir su ficha y baja hasta los botones.",
+     "img": "05-ficha-cliente.jpg",
+     "leyenda": "1 = Nueva cotización · 2 = WhatsApp · 3 = Nota de Venta · 4 = Eliminar cliente"
+    },
+    {
+     "t": "Toca **Eliminar cliente** (4). El sistema te muestra nombre, teléfono y número (#). **Verifica que sea el duplicado correcto** y confirma."
+    },
+    {
+     "t": "Si dice \"No se puede eliminar\", el cliente tiene algo pendiente: una cotización activa, una nota pendiente o en ruta, un saldo por cobrar o un saldo a favor. Resuélvelo primero o pregunta a Viridiana."
+    },
+    {
+     "t": "Si dudas, usa **Desactivar cliente** en lugar de eliminar: deja de salir en las búsquedas, no pierdes nada y se puede reactivar con la casilla \"Mostrar inactivos\"."
+    }
+   ],
+   "cuidado": [
+    "Eliminar **no se puede deshacer** y el cliente pierde sus precios guardados (los \"última vez\").",
+    "Cada borrado queda registrado con tu nombre y con un respaldo de los datos. Lo revisan Viridiana y José Manuel."
+   ]
+  },
+  {
+   "id": "cotizar",
+   "titulo": "Hacer una cotización a un cliente registrado",
+   "cuando": "Cuando un cliente pide precio o presupuesto.",
+   "pasos": [
+    {
+     "t": "Entra a **Ventas → Cotizaciones** y toca **Nueva cotización**."
+    },
+    {
+     "t": "En **Cliente** escribe las primeras letras (1) y toca al cliente en la lista (2).",
+     "img": "06-cotizacion-cliente.jpg",
+     "leyenda": "1 = campo Cliente · 2 = cliente encontrado"
+    },
+    {
+     "t": "Elige la **Forma de pago** y la **Probabilidad de cierre**: Alta (ya tiene fecha de obra), Media (sin fecha) o Baja (solo cotizando)."
+    },
+    {
+     "t": "Toca **+ Agregar producto** y luego la lupa para buscar en el catálogo. Escribe al menos 2 letras (1) y toca el producto (2).",
+     "img": "07-buscar-producto.jpg",
+     "leyenda": "1 = buscador de producto · 2 = producto encontrado"
+    },
+    {
+     "t": "Pon la **cantidad** (3) y revisa el **precio** (4). El sistema sugiere el precio solo, pero **tú puedes cambiarlo**. Repite con **+ Agregar producto** para cada material.",
+     "img": "08-cotizacion-productos.jpg",
+     "leyenda": "1 = + Agregar producto · 2 = lupa del catálogo · 3 = cantidad · 4 = precio"
+    },
+    {
+     "t": "Revisa el **Total** (1), pon **Descuento %** si hay y toca **Guardar Cotización** (2).",
+     "img": "09-cotizacion-guardar.jpg",
+     "leyenda": "1 = total · 2 = Guardar Cotización · 3 = Nota de Venta (cobra directo)"
+    },
+    {
+     "t": "Aparece abajo a la derecha el botón **Enviar cotización por WhatsApp**. Tócalo para mandársela al cliente.",
+     "img": "10-cotizacion-whatsapp.jpg",
+     "leyenda": "1 = Enviar cotización por WhatsApp"
+    }
+   ],
+   "cuidado": [
+    "Los agregados en costal (arena, grava, etc.) tienen precio de mayoreo desde 20 costales; se aplica solo y sale un aviso naranja.",
+    "Los clientes de canal reventa llevan 10% menos; también se aplica solo.",
+    "Si el producto no está en el catálogo, puedes usar \"texto libre\", pero **no descuenta inventario**. Avisa para darlo de alta."
+   ]
+  },
+  {
+   "id": "publico",
+   "titulo": "Cotizar a Público General (cliente sin registrar)",
+   "cuando": "Cuando el cliente no quiere o no puede dar sus datos.",
+   "pasos": [
+    {
+     "t": "Igual que la cotización normal, pero en **Cliente** escribe el nombre que te den (por ejemplo \"Señora de la obra\") y **no lo elijas de la lista**."
+    },
+    {
+     "t": "Aparece el campo **Teléfono para enviar cotización**: escribe el celular de 10 dígitos para poder mandarla por WhatsApp.",
+     "img": "11-cotizacion-publico.jpg",
+     "leyenda": "1 = nombre del cliente · 2 = teléfono para WhatsApp"
+    },
+    {
+     "t": "Agrega productos, guarda y envía igual que antes."
+    }
+   ],
+   "cuidado": [
+    "Sin teléfono no hay forma de mandar la cotización por WhatsApp.",
+    "Una nota a Público General no puede quedar con saldo pendiente: tiene que pagar completo."
+   ]
+  },
+  {
+   "id": "seguimiento",
+   "titulo": "Dar seguimiento a las cotizaciones",
+   "cuando": "Todos los días: revisa primero las de probabilidad Alta.",
+   "pasos": [
+    {
+     "t": "Entra a **Ventas → Cotizaciones**. Cada tarjeta muestra cliente, folio, fecha, quién la hizo, la probabilidad y el estado."
+    },
+    {
+     "t": "Usa los botones de cada tarjeta:",
+     "img": "12-seguimiento.jpg",
+     "leyenda": "1 = WhatsApp (seguimiento al cliente) · 2 = Cotización completa (la reenvía con productos y políticas) · 3 = Contactado · 4 = Cerrado (el cliente compró) · 5 = Perdido"
+    },
+    {
+     "t": "Con los filtros de arriba (**Todas, Alta, Media, Baja, Pendientes**) ves solo las que necesitas."
+    }
+   ],
+   "cuidado": [
+    "Marca **Contactado** cada vez que hables con el cliente para que se vea quién ya fue atendido.",
+    "Marca **Perdido** solo cuando el cliente ya dijo que no."
+   ]
+  },
+  {
+   "id": "nota",
+   "titulo": "Convertir una cotización en Nota de Venta (cobrar el pedido)",
+   "cuando": "Cuando el cliente confirma la compra.",
+   "pasos": [
+    {
+     "t": "En **Cotizaciones**, toca **Cerrado** en la cotización del cliente. (Si no hiciste cotización, puedes tocar **Nota de Venta** dentro del formulario de cotización.)"
+    },
+    {
+     "t": "Se abre **Confirmar venta**. Revisa y llena:",
+     "img": "13-confirmar-venta.jpg",
+     "leyenda": "1 = Dirección de entrega · 2 = Operador asignado · 3 = Tipo de entrega · 4 = Forma de pago · 5 = Anticipo recibido · 6 = Crear Nota de Venta"
+    },
+    {
+     "t": "**Dirección de entrega**: confírmala con el cliente. **Operador**: Francisco, Agustín Lara, Carlos J. Escobar o Sin asignar. **Tipo de entrega**: Entrega propia, Pasa a recoger o Entrega de proveedor."
+    },
+    {
+     "t": "**Forma de pago**: Efectivo, Transferencia, TPV / Tarjeta o Pago mixto (cuando paga una parte de un modo y otra de otro). Si paga completo, deja el anticipo igual al total: debe salir \"Pago completo\" en verde."
+    },
+    {
+     "t": "Si es **efectivo**, escribe cuánto te dan en \"Efectivo recibido\" y el sistema calcula el cambio."
+    },
+    {
+     "t": "Si es **transferencia**, aparece **Compartir datos de pago** para mandarle la cuenta por WhatsApp. No entregues hasta confirmar que el dinero llegó."
+    },
+    {
+     "t": "Si es **tarjeta**, elige la terminal. Usa **IZZ — BBVA** siempre que se pueda: es la que menos comisión cobra. **Mercado Pago es la más cara; úsala solo si no hay otra.**"
+    },
+    {
+     "t": "Toca **Crear Nota de Venta** (6). Verás el aviso \"Nota de venta NV-… creada\"."
+    }
+   ],
+   "cuidado": [
+    "Al crear la nota se **descuenta el inventario**.",
+    "Si el cliente paga menos del total, el resto queda como saldo por cobrar. Como no damos crédito, hazlo **solo si Viridiana lo autoriza**."
+   ]
+  },
+  {
+   "id": "imprimir",
+   "titulo": "Imprimir la Nota de Venta",
+   "cuando": "Después de crear la nota, para entregarla al cliente.",
+   "pasos": [
+    {
+     "t": "Entra a **Ventas → Notas de Venta**. Verás las de hoy (puedes cambiar a Esta semana o Todos, o filtrar por estado).",
+     "img": "14-notas-venta-lista.jpg",
+     "leyenda": "1 = Nueva Nota de Venta · 2 = filtros de fecha · 3 = la nota · 4 = Cancelar"
+    },
+    {
+     "t": "Toca la fila de la nota para abrir su detalle.",
+     "img": "15-nv-detalle.jpg",
+     "leyenda": "1 = WhatsApp al cliente · 2 = Recibo rápido (imprimir)"
+    },
+    {
+     "t": "Toca **Recibo rápido** (2). Se abre la nota lista para imprimir. Toca **Imprimir** (1) y confirma en la ventana de la impresora.",
+     "img": "16-nv-imprimir.jpg",
+     "leyenda": "1 = Imprimir"
+    },
+    {
+     "t": "Sale **una hoja con dos copias**, separadas por una línea punteada con tijeras. La de arriba dice **ORIGINAL — CLIENTE** y la de abajo **COPIA — ARCHIVO**. Corta por la línea: la original es para el cliente y la copia se archiva."
+    }
+   ],
+   "cuidado": [
+    "Cada copia lleva máximo 8 productos; si la nota tiene más, sale en más de una hoja.",
+    "El detalle también tiene En ruta, Entregado, Reasignar y Facturar: los usan principalmente los operadores y gerencia."
+   ]
+  },
+  {
+   "id": "cancelar",
+   "titulo": "Cancelar una Nota de Venta",
+   "cuando": "Cuando la nota se hizo por error o el cliente cancela antes de la entrega.",
+   "pasos": [
+    {
+     "t": "En **Notas de Venta**, toca **Cancelar** en la fila de la nota (4 en la captura de la lista)."
+    },
+    {
+     "t": "Escribe el **motivo** y confirma. El sistema regresa los productos al inventario y la nota queda como Cancelada."
+    }
+   ],
+   "cuidado": [
+    "Cancela solo si el pedido todavía no sale. Si ya se entregó o el cliente quiere devolver, avisa a Viridiana: las devoluciones van con la nota original y dentro de 5 días hábiles."
+   ],
+   "ayuda": "Devoluciones y notas de crédito: Viridiana."
+  },
+  {
+   "id": "ticket",
+   "titulo": "Hacer un ticket de mostrador",
+   "cuando": "Venta rápida de mostrador, con cobro inmediato.",
+   "pasos": [
+    {
+     "t": "Entra a **Ventas → Tickets** y toca **Nuevo Ticket**.",
+     "img": "17-tickets-lista.jpg",
+     "leyenda": "Lista de tickets del día"
+    },
+    {
+     "t": "**Cliente**: déjalo vacío para Público General, o escribe y elige uno registrado."
+    },
+    {
+     "t": "Toca la lupa, busca el producto y elígelo. Pon la cantidad. Fíjate en **Stock** (cuánto hay) y en **Último precio** (3): el sistema recuerda el último precio al que se vendió ese producto en mostrador y lo pone solo. Puedes cambiarlo.",
+     "img": "18-nuevo-ticket.jpg",
+     "leyenda": "1 = cliente · 2 = producto, cantidad y precio · 3 = último precio · 4 = método de pago · 5 = Cobrar y crear ticket"
+    },
+    {
+     "t": "Elige el **Método de pago**: Efectivo, Tarjeta o Transferencia. En Tarjeta elige la terminal (usa IZZ — BBVA). En Transferencia elige la razón social que recibe."
+    },
+    {
+     "t": "Si es efectivo, escribe el **Efectivo recibido** (1): abajo aparece el **Cambio a devolver** (2).",
+     "img": "19-ticket-cambio.jpg",
+     "leyenda": "1 = efectivo recibido · 2 = cambio a devolver"
+    },
+    {
+     "t": "Toca **Cobrar y crear ticket**. El ticket se imprime solo y aparece el aviso \"Ticket TK-… creado\".",
+     "img": "20-ticket-creado.jpg",
+     "leyenda": "El ticket queda en la lista del día"
+    },
+    {
+     "t": "Para **reimprimir o cancelar**, toca el ticket en la lista.",
+     "img": "21-ticket-detalle.jpg",
+     "leyenda": "1 = Imprimir ticket · 2 = Cancelar"
+    }
+   ],
+   "cuidado": [
+    "Un producto escrito a mano (sin elegirlo del catálogo) **no descuenta inventario** y no guarda su último precio.",
+    "El ticket es cobro inmediato: no admite saldo pendiente.",
+    "Si te equivocas, **cancela el ticket** (regresa el inventario) y haz otro.",
+    "Si el cliente tiene saldo a favor, aparece un aviso para aplicarlo."
+   ]
+  },
+  {
+   "id": "abonos",
+   "titulo": "Cobrar un abono de un cliente",
+   "cuando": "Cuando un cliente llega a pagar un saldo pendiente.",
+   "pasos": [
+    {
+     "t": "Entra a la pestaña **Cuentas**. En **Por cobrar** están los clientes con saldo.",
+     "img": "22-cuentas-abono.jpg",
+     "leyenda": "1 = cliente y saldo · 2 = monto a abonar · 3 = método · 4 = Registrar pago · 5 = WhatsApp (recordatorio)"
+    },
+    {
+     "t": "En la tarjeta del cliente escribe el **monto a abonar** (2), elige el **método** (3): Efectivo, Tarjeta o Transferencia, y toca **Registrar pago** (4)."
+    },
+    {
+     "t": "Si el cliente no ha pagado, **WhatsApp** (5) le manda un recordatorio de cobro."
+    }
+   ],
+   "cuidado": [
+    "Lo que cobres en efectivo aparece en tu **Cerrar mi turno**."
+   ]
+  },
+  {
+   "id": "turno",
+   "titulo": "Cerrar mi turno",
+   "cuando": "Al terminar tu turno, antes de entregar el efectivo.",
+   "pasos": [
+    {
+     "t": "Entra a **Corte de Caja** y toca **Cerrar mi turno**.",
+     "img": "23-corte-turno.jpg",
+     "leyenda": "1 = Cerrar mi turno"
+    },
+    {
+     "t": "Revisa el resumen: arriba (1) lo que cobraste con tu usuario (efectivo, tarjeta, transferencias y total) y abajo (2) el **Efectivo a entregar**.",
+     "img": "24-turno-resumen.jpg",
+     "leyenda": "1 = ventas de mi turno · 2 = efectivo a entregar · 3 = Enviar resumen y cerrar turno"
+    },
+    {
+     "t": "**Cuenta el efectivo.** Debe ser igual a \"Efectivo a entregar\". Si no cuadra, no lo envíes todavía: revisa si falta algún ticket, nota o abono."
+    },
+    {
+     "t": "Toca **Enviar resumen y cerrar turno** (3). Se abre WhatsApp con el mensaje para Viridiana: envíalo. Si no se abre, toca el enlace \"Enviar a Viridiana\"."
+    },
+    {
+     "t": "Entrega el efectivo a Viridiana."
+    }
+   ],
+   "cuidado": [
+    "Solo cuenta lo que registraste con tu nombre.",
+    "Si cierras el turno dos veces el mismo día, la segunda solo incluye lo nuevo.",
+    "Si dice \"No tienes cobros nuevos en este turno\", no hay nada que reportar."
+   ]
+  },
+  {
+   "id": "consultas",
+   "titulo": "Buscar una venta anterior",
+   "cuando": "Para saber si ya se hizo una nota, qué se le vendió a alguien o cuánto se vendió de un producto.",
+   "pasos": [
+    {
+     "t": "Entra a **Consultas**.",
+     "img": "26-consultas.jpg",
+     "leyenda": "1 = folio, cliente o producto · 2 = producto (clave o nombre) · 3 = fechas · 4 = estado · 5 = resultados"
+    },
+    {
+     "t": "Escribe lo que sepas: un folio (NV-001), un cliente o un producto. Puedes limitar por fechas, estado y método de pago."
+    },
+    {
+     "t": "Los resultados muestran tickets (TK) y notas de venta (NV) con total, estado y fecha."
+    }
+   ],
+   "cuidado": [
+    "Si el sistema marcó **Sin conexión** al guardar una venta, búscala aquí antes de repetirla, para no duplicarla."
+   ]
+  },
+  {
+   "id": "inventario",
+   "titulo": "Consultar existencias (Inventario)",
+   "cuando": "Antes de prometer material al cliente.",
+   "pasos": [
+    {
+     "t": "Entra a **Inventario**. Busca por clave o descripción (1) o filtra por familia (2).",
+     "img": "25-inventario.jpg",
+     "leyenda": "1 = buscador · 2 = familias · 3 = producto con su existencia · 4 = Nuevo producto"
+    },
+    {
+     "t": "Cada producto muestra su existencia (el número grande) y su mínimo y máximo. **Rojo** = sin existencia; **amarillo** = por debajo del mínimo."
+    },
+    {
+     "t": "Solo si el producto **de verdad no existe**, toca **Nuevo producto** (4) y créalo. El código se asigna solo."
+    }
+   ],
+   "cuidado": [
+    "Antes de crear un producto, búscalo por clave y por nombre. Si lo duplicas, **tú no puedes eliminarlo**: avisa a Erika o a Viridiana.",
+    "Tú no puedes ajustar existencias ni editar productos."
+   ]
+  }
+ ],
+ "problemas": [
+  {
+   "p": "No encuentro al cliente.",
+   "r": "Búscalo por teléfono y marca \"Mostrar inactivos\". Si no está, créalo."
+  },
+  {
+   "p": "El producto no aparece en el buscador.",
+   "r": "Pruébalo por clave o con otra palabra. Si no existe, puedes darlo de alta en Inventario → Nuevo producto."
+  },
+  {
+   "p": "Un producto sale con existencia 0 o negativa.",
+   "r": "El inventario se está levantando poco a poco. Vende normal y avisa a Erika para ajustarlo."
+  },
+  {
+   "p": "Me equivoqué en un ticket.",
+   "r": "Ábrelo en Tickets y toca Cancelar (regresa el inventario). Luego haz uno nuevo."
+  },
+  {
+   "p": "Me equivoqué en una nota de venta.",
+   "r": "Notas de Venta → Cancelar, con motivo. Luego haz otra."
+  },
+  {
+   "p": "Dice \"Sin conexión\" o no guarda.",
+   "r": "Revisa el internet. Antes de repetir la venta, búscala en Consultas para no duplicarla."
+  },
+  {
+   "p": "El cliente pide crédito.",
+   "r": "No damos crédito. Pásalo con Viridiana."
+  },
+  {
+   "p": "El cliente pide factura.",
+   "r": "Avisa a Viridiana. En el detalle de la nota hay un botón Facturar que prepara los datos."
+  },
+  {
+   "p": "No salió la impresión.",
+   "r": "Vuelve a tocar Imprimir (en tickets, abre el ticket desde la lista). Si sigue sin salir, avisa a Viridiana."
+  }
+ ],
+ "por_confirmar": [
+  "Razón social: ¿cuál usa Ivette por defecto en cotizaciones y notas, y cuándo se cambia? El formulario trae José Manuel Garín por defecto.",
+  "Facturas: ¿quién las timbra cuando el cliente las pide? El botón Facturar solo prepara los datos.",
+  "Anticipo parcial: el sistema lo permite y deja el resto como cuenta por cobrar, pero la regla del negocio es no dar crédito. ¿Se autoriza alguna vez?",
+  "Impresión: ¿qué impresora y qué tamaño de hoja usa Ivette para la nota de venta, y qué hace si falla?",
+  "Turnos: ¿a qué hora cierra su turno Ivette (medio tiempo) y dónde guarda el efectivo entre cobro y entrega?"
+ ]
+}

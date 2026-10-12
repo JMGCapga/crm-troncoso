@@ -173,6 +173,36 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 /* FONDEOS — link mágico */
 #magic-link-screen{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;background:var(--gris-oscuro);}
 .mlcard{width:100%;max-width:420px;background:#fff;border-radius:16px;padding:28px 24px;box-shadow:0 30px 70px rgba(0,0,0,0.4);}
+
+/* ── MANUAL POR DEPARTAMENTO ── */
+.man-barra{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px;}
+.man-barra .btn{font-size:12px;padding:9px 14px;text-decoration:none;}
+.man-meta{font-size:12px;color:var(--suave);margin-bottom:6px;}
+.man-indice{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.man-chip{border:1px solid var(--borde);background:#fff;border-radius:20px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;}
+.man-chip:hover{border-color:var(--naranja);color:var(--naranja);}
+.man-caja{background:#FFF6E5;border-left:4px solid var(--naranja);border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;}
+.man-caja-t{font-weight:700;margin-bottom:4px;}
+.man-caja ul{margin:4px 0 0 18px;padding:0;}
+.man-caja li{margin:3px 0;}
+.man-tarea{border:1px solid var(--borde);border-radius:10px;margin-bottom:10px;background:#fff;}
+.man-tarea>summary{cursor:pointer;padding:12px 14px;font-weight:700;font-size:14px;list-style:none;}
+.man-tarea>summary::-webkit-details-marker{display:none;}
+.man-tarea>summary::before{content:"▸ ";color:var(--naranja);}
+.man-tarea[open]>summary::before{content:"▾ ";}
+.man-cuando-s{display:block;font-weight:400;font-size:11px;color:var(--suave);margin-top:2px;}
+.man-cuerpo{padding:0 14px 14px;}
+.man-cuando{font-size:12px;color:var(--suave);font-style:italic;margin-bottom:8px;}
+.man-paso{display:flex;gap:10px;align-items:flex-start;margin:8px 0 4px;font-size:13px;line-height:1.45;}
+.man-num{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--naranja);color:#fff;font-weight:700;font-size:12px;text-align:center;line-height:22px;margin-top:1px;}
+.man-fig{margin:6px 0 10px 32px;}
+.man-fig img{max-width:100%;border:1px solid var(--borde);border-radius:6px;display:block;}
+.man-fig figcaption{font-size:11px;color:var(--suave);margin-top:4px;}
+.man-ayuda{font-size:13px;margin-top:8px;}
+.man-prob{width:100%;border-collapse:collapse;font-size:13px;}
+.man-prob td{padding:8px 10px;border-bottom:1px solid #F0EDE8;vertical-align:top;}
+.man-prob td:first-child{font-weight:700;width:36%;}
+.man-vacio{padding:30px 10px;text-align:center;color:var(--suave);font-size:14px;}
 </style>
 </head>
 <body>
@@ -248,6 +278,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <button class="tab" id="tab-flota-btn" onclick="switchTab('flota',this)" style="display:none">🚛 Flota</button>
     <button class="tab" id="tab-dashboard-btn" onclick="switchTab('dashboard',this)" style="display:none">📊 Dashboard</button>
     <button class="tab" id="tab-fiscal-btn" onclick="switchTab('fiscal',this)" style="display:none">📄 Fiscal</button>
+    <button class="tab" id="tab-manual-btn" onclick="switchTab('manual',this)" style="display:none">📖 Manual</button>
   </div>
 
   <div class="main">
@@ -1792,6 +1823,20 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
       </div>
     </div>
 
+    <!-- MANUAL POR DEPARTAMENTO — el contenido sale de manual/<depto>.json -->
+    <div class="panel" id="panel-manual">
+      <div class="card">
+        <div class="card-title">📖 Manual</div>
+        <div id="manual-selector" style="display:none;margin-bottom:10px;">
+          <div class="field" style="max-width:260px;">
+            <label>Ver el manual de</label>
+            <select id="manual-select" onchange="cargarManual(this.value)"></select>
+          </div>
+        </div>
+        <div id="manual-contenido"><div class="man-vacio">Cargando...</div></div>
+      </div>
+    </div>
+
     <!-- DASHBOARD PANEL -->
     <div class="panel" id="panel-dashboard">
       <div class="card">
@@ -2388,6 +2433,8 @@ function checkPin(){
                        role === 'Compras'  ? tabsCompras :
                        role === 'Gerencia' ? tabsGerencia :
                        role === 'Director' ? tabsDirector : [];
+
+    if(puedeVerManual(role)) tabsVisibles = tabsVisibles.concat(['tab-manual-btn']);
 
     // Ocultar todos primero
     document.querySelectorAll('.tabs .tab').forEach(function(btn){
@@ -3568,6 +3615,7 @@ function switchTab(tab, btn) {
   if(tab === 'dashboard') cargarDashboard();
   if(tab === 'inventario') iniciarInventario();
   if(tab === 'fiscal') iniciarFiscal();
+  if(tab === 'manual') iniciarManual();
   if(tab === 'proveedores') iniciarProveedoresDir();
   if(tab === 'consultas') iniciarConsultas();
   if(tab === 'cotizacion' || tab === 'seguimiento' || tab === 'pedidos' || tab === 'tickets') renderVentasSubnavGlobal(tab);
@@ -10916,6 +10964,148 @@ function cargarHistoricoVentas() {
 }
 
 // ════════════════════════════════════════════
+//  MANUAL POR DEPARTAMENTO
+//  El contenido vive en manual/<depto>.json y sus capturas en manual/img/<depto>/. De ese mismo
+//  JSON sale el PDF (python3 manual/build_pdf.py <depto>): se edita en un solo lugar.
+// ════════════════════════════════════════════
+var MANUALES_POR_ROL = { Ventas:'ventas', Compras:'compras', Operador:'entregas', Gerencia:'gerencia', Director:'gerencia' };
+var MANUALES_PUBLICADOS = { ventas: 'Ventas' };   // se agrega aquí cada manual al publicarlo
+var manualesCache = {};
+var manualActual = null;
+
+function puedeVerManual(rol) {
+  if(rol === 'Gerencia' || rol === 'Director') return true;
+  return !!MANUALES_PUBLICADOS[MANUALES_POR_ROL[rol]];
+}
+
+function manualTexto(t) {
+  return htmlSeguro(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+function iniciarManual() {
+  var rol = currentUser ? currentUser.role : '';
+  var esAdmin = rol === 'Gerencia' || rol === 'Director';
+  var clave = MANUALES_POR_ROL[rol];
+  var selector = document.getElementById('manual-selector');
+  if(esAdmin) {
+    var sel = document.getElementById('manual-select');
+    sel.innerHTML = Object.keys(MANUALES_PUBLICADOS).map(function(k){ return '<option value="' + k + '">' + MANUALES_PUBLICADOS[k] + '</option>'; }).join('');
+    if(MANUALES_PUBLICADOS[clave]) sel.value = clave; else clave = sel.value;
+    selector.style.display = 'block';
+  } else {
+    selector.style.display = 'none';
+  }
+  cargarManual(clave);
+}
+
+function cargarManual(clave) {
+  var cont = document.getElementById('manual-contenido');
+  if(!cont) return;
+  if(!MANUALES_PUBLICADOS[clave]) { cont.innerHTML = '<div class="man-vacio">📖 Tu manual todavía está en preparación.</div>'; return; }
+  if(manualesCache[clave]) { pintarManual(manualesCache[clave], clave); return; }
+  cont.innerHTML = '<div class="man-vacio">Cargando manual...</div>';
+  fetch('manual/' + clave + '.json').then(function(r){
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(m){
+    manualesCache[clave] = m;
+    pintarManual(m, clave);
+  }).catch(function(e){
+    console.log('Error cargando manual:', e);
+    cont.innerHTML = '<div class="man-vacio">⚠️ No se pudo cargar el manual. Revisa tu internet y vuelve a entrar.</div>';
+  });
+}
+
+// imprimir=true arma el HTML plano (todas las tareas abiertas, rutas de imagen absolutas) para la ventana de impresión
+function htmlManual(m, clave, imprimir) {
+  var base = imprimir ? new URL('manual/img/' + clave + '/', location.href).href : 'manual/img/' + clave + '/';
+  function lista(arr) { return '<ul>' + arr.map(function(x){ return '<li>' + manualTexto(x) + '</li>'; }).join('') + '</ul>'; }
+  var h = '<div class="man-caja"><div class="man-caja-t">' + manualTexto(m.reglas_titulo) + '</div>' + lista(m.reglas) + '</div>';
+  m.tareas.forEach(function(t, i){
+    var cuerpo = '<div class="man-cuando">Cuándo: ' + manualTexto(t.cuando) + '</div>';
+    t.pasos.forEach(function(p, n){
+      cuerpo += '<div class="man-paso"><span class="man-num">' + (n + 1) + '</span><div>' + manualTexto(p.t) + '</div></div>';
+      if(p.img) {
+        cuerpo += '<figure class="man-fig"><a href="' + base + p.img + '" target="_blank"><img src="' + base + p.img + '" alt=""></a>' +
+          (p.leyenda ? '<figcaption>' + manualTexto(p.leyenda) + '</figcaption>' : '') + '</figure>';
+      }
+    });
+    if(t.cuidado && t.cuidado.length) cuerpo += '<div class="man-caja"><div class="man-caja-t">⚠️ Cuidado</div>' + lista(t.cuidado) + '</div>';
+    if(t.ayuda) cuerpo += '<div class="man-ayuda"><strong>Si necesitas ayuda:</strong> ' + manualTexto(t.ayuda) + '</div>';
+    var titulo = (i + 1) + '. ' + manualTexto(t.titulo);
+    if(imprimir) h += '<section class="man-tarea"><h2>' + titulo + '</h2>' + cuerpo + '</section>';
+    else h += '<details class="man-tarea" id="man-t-' + t.id + '"><summary>' + titulo + '<span class="man-cuando-s">' + manualTexto(t.cuando) + '</span></summary><div class="man-cuerpo">' + cuerpo + '</div></details>';
+  });
+  var filas = m.problemas.map(function(p){ return '<tr><td>' + manualTexto(p.p) + '</td><td>' + manualTexto(p.r) + '</td></tr>'; }).join('');
+  var problemas = '<table class="man-prob">' + filas + '</table>';
+  if(imprimir) h += '<section class="man-tarea"><h2>Problemas frecuentes</h2>' + problemas + '</section>';
+  else h += '<details class="man-tarea"><summary>Problemas frecuentes</summary><div class="man-cuerpo">' + problemas + '</div></details>';
+  return h;
+}
+
+function pintarManual(m, clave) {
+  var cont = document.getElementById('manual-contenido');
+  manualActual = { datos: m, clave: clave };
+  var rol = currentUser ? currentUser.role : '';
+  var indice = m.tareas.map(function(t, i){ return '<span class="man-chip" onclick="abrirTareaManual(\'' + t.id + '\')">' + (i + 1) + '. ' + manualTexto(t.titulo) + '</span>'; }).join('');
+  var porConfirmar = '';
+  if((rol === 'Gerencia' || rol === 'Director') && m.por_confirmar && m.por_confirmar.length) {
+    porConfirmar = '<div class="man-caja" style="margin-top:14px;"><div class="man-caja-t">🛠️ Por confirmar (solo lo ves tú)</div><ul>' +
+      m.por_confirmar.map(function(x){ return '<li>' + manualTexto(x) + '</li>'; }).join('') + '</ul></div>';
+  }
+  cont.innerHTML =
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;">' + manualTexto(m.titulo.toUpperCase()) + '</div>' +
+    '<div class="man-meta">Para: ' + manualTexto(m.para) + ' · Actualizado: ' + manualTexto(m.actualizado) + '</div>' +
+    '<div style="font-size:13px;margin-bottom:4px;">' + manualTexto(m.intro) + '</div>' +
+    '<div class="man-barra">' +
+      '<button class="btn btn-naranja" onclick="imprimirManual()">🖨 Imprimir</button>' +
+      '<a class="btn btn-gris" href="manual/Manual-' + manualTexto(m.departamento) + '.pdf" target="_blank" rel="noopener">⬇ Descargar PDF</a>' +
+      '<button class="btn btn-gris" onclick="alternarTareasManual(true)">Abrir todo</button>' +
+      '<button class="btn btn-gris" onclick="alternarTareasManual(false)">Cerrar todo</button>' +
+    '</div>' +
+    '<div class="man-indice">' + indice + '</div>' +
+    htmlManual(m, clave, false) + porConfirmar;
+}
+
+function abrirTareaManual(id) {
+  var el = document.getElementById('man-t-' + id);
+  if(!el) return;
+  el.open = true;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function alternarTareasManual(abrir) {
+  document.querySelectorAll('#manual-contenido details.man-tarea').forEach(function(d){ d.open = abrir; });
+}
+
+var CSS_MANUAL_IMPRESION =
+  '@page{size:letter;margin:16mm;}' +
+  'body{font-family:Arial,Helvetica,sans-serif;color:#1A1A1A;font-size:12px;line-height:1.45;margin:0;}' +
+  '.portada{border-top:8px solid #E8500A;padding-top:14px;margin-bottom:16px;}' +
+  '.portada h1{font-size:30px;margin:0 0 4px;letter-spacing:1px;}.portada p{margin:2px 0;color:#6B6560;font-size:13px;}' +
+  '.man-tarea{margin-bottom:18px;}.man-tarea h2{font-size:18px;color:#E8500A;margin:0 0 4px;page-break-after:avoid;}' +
+  '.man-cuando{color:#6B6560;font-style:italic;margin-bottom:6px;}' +
+  '.man-paso{display:flex;gap:8px;align-items:flex-start;margin:8px 0 4px;page-break-inside:avoid;}' +
+  '.man-num{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:#E8500A;color:#fff;font-weight:700;font-size:11px;text-align:center;line-height:20px;}' +
+  '.man-fig{margin:4px 0 10px 28px;page-break-inside:avoid;}.man-fig img{width:13cm;max-width:100%;border:1px solid #D8D0C8;display:block;}' +
+  '.man-fig figcaption{font-size:10px;color:#6B6560;margin-top:3px;}' +
+  '.man-caja{background:#FFF6E5;border-left:4px solid #E8500A;padding:8px 12px;margin:10px 0;page-break-inside:avoid;}' +
+  '.man-caja-t{font-weight:700;margin-bottom:3px;}.man-caja ul{margin:3px 0 0 16px;padding:0;}' +
+  '.man-prob{width:100%;border-collapse:collapse;}.man-prob td{padding:6px 8px;border-bottom:1px solid #E0DBD3;vertical-align:top;}.man-prob td:first-child{font-weight:700;width:36%;}';
+
+function imprimirManual() {
+  if(!manualActual) return;
+  var m = manualActual.datos, clave = manualActual.clave;
+  var w = window.open('', '_blank');
+  if(!w) { showToast('⚠️ El navegador bloqueó la ventana de impresión'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + htmlSeguro(m.titulo) + '</title><style>' + CSS_MANUAL_IMPRESION + '</style></head><body>' +
+    '<div class="portada"><h1>' + manualTexto(m.titulo.toUpperCase()) + '</h1><p>Materiales Troncoso · CRM</p><p>Para: ' + manualTexto(m.para) + ' · Actualizado: ' + manualTexto(m.actualizado) + '</p><p>' + manualTexto(m.url) + '</p><p style="margin-top:10px;color:#1A1A1A;">' + manualTexto(m.intro) + '</p></div>' +
+    htmlManual(m, clave, true) +
+    '<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>');
+  w.document.close();
+}
+
+// ════════════════════════════════════════════
 //  FISCAL — Expediente Fiscal Parte 1: Razones Sociales
 // ════════════════════════════════════════════
 function iniciarFiscal() {
@@ -13202,6 +13392,9 @@ function aplicarConfigImpresionNota(rsCodigo) {
 function generarNotaDesdePedido(docId) {
   var p = pedidosCache.find(function(x){ return x._docId === docId; });
   if(!p) return;
+  // El detalle de la NV es un modal encima de todo: si se queda abierto tapa la nota lista para imprimir
+  var detalle = document.getElementById('modal-detalle-nv');
+  if(detalle) detalle.remove();
   if(p.cotizacionId && db) {
     db.collection('cotizaciones').doc(p.cotizacionId).get().then(function(doc){
       if(doc.exists) pintarNotaDesdeCotizacionPedido(doc.data(), p);
