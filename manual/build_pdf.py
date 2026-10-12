@@ -91,8 +91,9 @@ def imagen(ruta_img, ancho_max):
     w, h = ImageReader(ruta_img).getSize()
     ancho = min(ancho_max, 13.6 * cm)
     alto = ancho * h / w
-    if alto > 10 * cm:
-        alto = 10 * cm
+    tope = 12 * cm if h > w * 1.2 else 10 * cm   # capturas de celular (verticales) pueden ser un poco más altas
+    if alto > tope:
+        alto = tope
         ancho = alto * w / h
     im = Image(ruta_img, width=ancho, height=alto)
     marco = Table([[im]], colWidths=[ancho + 4])

@@ -11237,7 +11237,7 @@ function cargarHistoricoVentas() {
 //  JSON sale el PDF (python3 manual/build_pdf.py <depto>): se edita en un solo lugar.
 // ════════════════════════════════════════════
 var MANUALES_POR_ROL = { Ventas:'ventas', Compras:'compras', Operador:'entregas', Gerencia:'gerencia', Director:'gerencia' };
-var MANUALES_PUBLICADOS = { ventas: 'Ventas', compras: 'Compras' };   // se agrega aquí cada manual al publicarlo
+var MANUALES_PUBLICADOS = { ventas: 'Ventas', compras: 'Compras', entregas: 'Entregas' };   // se agrega aquí cada manual al publicarlo
 var manualesCache = {};
 var manualActual = null;
 var manualPedido = null;   // último manual solicitado: si llega tarde la respuesta de otro, no lo pisa
@@ -11358,7 +11358,7 @@ var CSS_MANUAL_IMPRESION =
   '.man-cuando{color:#6B6560;font-style:italic;margin-bottom:6px;}' +
   '.man-paso{display:flex;gap:8px;align-items:flex-start;margin:8px 0 4px;page-break-inside:avoid;}' +
   '.man-num{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:#E8500A;color:#fff;font-weight:700;font-size:11px;text-align:center;line-height:20px;}' +
-  '.man-fig{margin:4px 0 10px 28px;page-break-inside:avoid;}.man-fig img{width:13cm;max-width:100%;border:1px solid #D8D0C8;display:block;}' +
+  '.man-fig{margin:4px 0 10px 28px;page-break-inside:avoid;}.man-fig img{width:auto;max-width:13cm;max-height:11cm;border:1px solid #D8D0C8;display:block;}' +
   '.man-fig figcaption{font-size:10px;color:#6B6560;margin-top:3px;}' +
   '.man-caja{background:#FFF6E5;border-left:4px solid #E8500A;padding:8px 12px;margin:10px 0;page-break-inside:avoid;}' +
   '.man-caja-t{font-weight:700;margin-bottom:3px;}.man-caja ul{margin:3px 0 0 16px;padding:0;}' +

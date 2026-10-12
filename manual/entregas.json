@@ -1,0 +1,339 @@
+{
+ "departamento": "Entregas",
+ "titulo": "Manual de Entregas",
+ "para": "Francisco, Agustín y Carlos",
+ "actualizado": "Octubre 2026",
+ "url": "https://jmgcapga.github.io/crm-troncoso",
+ "intro": "Este manual explica, paso a paso, lo que haces todos los días en el CRM de Materiales Troncoso desde tu celular: iniciar el turno con la unidad, tomar y entregar pedidos, confirmar con foto y firma, cargar gasolina, reportar daños y terminar el turno. Cada tarea tiene capturas con números rojos que te dicen dónde tocar. Las capturas usan datos de ejemplo, no clientes ni cifras reales.",
+ "reglas_titulo": "Reglas que debes tener presentes",
+ "reglas": [
+  "Todo se entrega **a pie de carro**.",
+  "**Llama al cliente antes de salir.**",
+  "No hay cambios en material a granel, tabicones ni encostalados.",
+  "Las cancelaciones sin cargo son hasta 2 horas antes de la entrega. Tú no cancelas notas de venta en el CRM: eso lo hacen Ivette o Viridiana.",
+  "Las devoluciones se hacen con la nota original y dentro de 5 días hábiles. Tú no las registras: pásaselas a Ivette.",
+  "No damos crédito a clientes.",
+  "Toma **siempre** la foto y la firma al entregar: son tu evidencia si el cliente reclama.",
+  "Tu PIN es personal: no lo compartas ni dejes la sesión abierta en el celular."
+ ],
+ "tareas": [
+  {
+   "id": "entrar",
+   "titulo": "Entrar y salir del CRM",
+   "cuando": "Al empezar y al terminar el día.",
+   "pasos": [
+    {
+     "t": "Abre el CRM en el navegador del celular: **jmgcapga.github.io/crm-troncoso**."
+    },
+    {
+     "t": "Escribe tu **PIN de 4 números** (1). Los números están en el teclado (2).",
+     "img": "01-pin.jpg",
+     "leyenda": "1 = puntos del PIN · 2 = teclado"
+    },
+    {
+     "t": "Entras directo a **Notas de Venta**. Arriba solo ves tus pestañas: **Ventas** (1, aquí están tus pedidos), **Flota** (la unidad, gasolina y daños) y **Manual**.",
+     "img": "02-pedidos-operador.jpg",
+     "leyenda": "1 = pestaña Ventas · 2 = Tomar este pedido · 3 = tus entregas"
+    },
+    {
+     "t": "Al terminar, toca **Salir** (arriba a la derecha)."
+    }
+   ],
+   "cuidado": [
+    "Si dice \"PIN incorrecto\", espera un segundo y vuelve a escribirlo."
+   ],
+   "ayuda": "PIN olvidado o bloqueado: Viridiana."
+  },
+  {
+   "id": "turno",
+   "titulo": "Iniciar turno con la unidad",
+   "cuando": "Todos los días, antes de mover la unidad.",
+   "pasos": [
+    {
+     "t": "Toca la pestaña **Flota**."
+    },
+    {
+     "t": "En **Inicio de turno** elige la **unidad** (1) y escribe el **km de salida** tal como lo marca el odómetro (2). En **Estado de la unidad** (3) deja **OK**, o marca **Daño a reportar** si ves algo mal. Toma la **foto del odómetro** (4) y toca **Iniciar turno** (5).",
+     "img": "08-inicio-turno.jpg",
+     "leyenda": "1 = unidad · 2 = km de salida · 3 = estado de la unidad · 4 = foto del odómetro · 5 = Iniciar turno"
+    },
+    {
+     "t": "Sale el aviso \"Turno iniciado\" y arriba aparece un letrero azul: \"Turno activo — placas · salida … km\" (1). Ya puedes salir.",
+     "img": "09-turno-activo.jpg",
+     "leyenda": "1 = turno activo"
+    }
+   ],
+   "cuidado": [
+    "La **foto del odómetro es obligatoria**: sin ella el sistema no te deja iniciar.",
+    "Si marcas **Daño a reportar**, después repórtalo en la tarea \"Reportar un daño a la unidad\".",
+    "El turno queda guardado en tu celular. Si cambias de celular o se borran los datos, mira la tarea \"Si dice: No encontramos tu turno activo\"."
+   ],
+   "ayuda": "Si la unidad no prende o no se puede usar: Viridiana o José Manuel."
+  },
+  {
+   "id": "pedidos",
+   "titulo": "Ver y tomar tus pedidos",
+   "cuando": "Al empezar el día y cada vez que haya entregas nuevas.",
+   "pasos": [
+    {
+     "t": "Toca **Ventas** (1). Se abre **Notas de Venta** con dos secciones.",
+     "img": "02-pedidos-operador.jpg",
+     "leyenda": "1 = pestaña Ventas · 2 = Tomar este pedido · 3 = Mis entregas"
+    },
+    {
+     "t": "**Notas de venta disponibles**: pedidos confirmados que todavía no tienen operador. Si vas a llevar uno, toca **Tomar este pedido** (2) y confirma \"¿Tomar este pedido como …?\". Pasa a tu lista."
+    },
+    {
+     "t": "**Mis entregas** (3): tus pedidos, los que te asignaron o los que tomaste. Cada tarjeta trae el **folio**, el **cliente**, la **dirección**, el **material** y su estado."
+    }
+   ],
+   "cuidado": [
+    "Aquí solo salen los pedidos **Confirmados** y **En ruta**. Al entregar uno, desaparece de la lista.",
+    "Toma solo los que **tú** vas a entregar. Si dos operadores tocan el mismo pedido casi al mismo tiempo, el sistema se queda con el último: avisen de viva voz cuál toma cada quien.",
+    "Cuando Ivette o Viridiana te asignan un pedido, te llega un WhatsApp con folio, cliente, dirección y material, y el pedido aparece solo en tu lista."
+   ],
+   "ayuda": "Si un pedido no aparece o no es tuyo: Ivette o Viridiana."
+  },
+  {
+   "id": "salir",
+   "titulo": "Salir a entregar: llamar y marcar En ruta",
+   "cuando": "Cuando ya cargaste el material y vas a salir.",
+   "pasos": [
+    {
+     "t": "Revisa en la tarjeta el **cliente**, la **dirección** y el **material**. Que lo que cargaste coincida con lo que dice la tarjeta."
+    },
+    {
+     "t": "**Llama al cliente antes de salir** para avisarle que vas en camino."
+    },
+    {
+     "t": "Toca **EN RUTA** (1). La tarjeta cambia a azul con la etiqueta \"En ruta\" y el botón queda marcado con ✓, como en el segundo pedido de la captura.",
+     "img": "03-mis-entregas.jpg",
+     "leyenda": "1 = EN RUTA · 2 = ENTREGADO · 3 = REGRESAR · 4 = ENTREGADO de un pedido que ya va en ruta"
+    },
+    {
+     "t": "Si lo tocaste por error o el viaje se cancela, toca **REGRESAR** (3): el pedido vuelve a \"Confirmado\"."
+    }
+   ],
+   "cuidado": [
+    "Tocar **EN RUTA** **no** le avisa al cliente: por eso se le llama.",
+    "Hoy la tarjeta **no muestra el teléfono del cliente**. Si no lo tienes, pídeselo a Ivette o Viridiana antes de salir."
+   ]
+  },
+  {
+   "id": "entregar",
+   "titulo": "Confirmar una entrega completa",
+   "cuando": "En cuanto el cliente recibe el material, con el cliente presente.",
+   "pasos": [
+    {
+     "t": "En la tarjeta del pedido toca **ENTREGADO**. Se abre la ventana **Confirmar entrega**.",
+     "img": "04-confirmar-entrega.jpg",
+     "leyenda": "1 = aviso de saldo pendiente (solo si lo hay) · 2 = ¿entrega completa? · 3 = foto de evidencia · 4 = firma del cliente · 5 = Confirmar"
+    },
+    {
+     "t": "Deja **SÍ** en \"¿Entrega completa?\" si entregaste todo."
+    },
+    {
+     "t": "Toca el recuadro de **Foto de evidencia**: se abre la cámara. Toma la foto del material ya entregado en el lugar. Cuando dice \"Foto tomada\", ya quedó."
+    },
+    {
+     "t": "Pide al cliente que **firme con el dedo** en el recuadro de **Firma del cliente** (2). Si se equivoca, toca **Borrar** y que firme otra vez.",
+     "img": "05-entrega-foto-firma.jpg",
+     "leyenda": "1 = foto tomada · 2 = firma del cliente · 3 = Confirmar"
+    },
+    {
+     "t": "Toca **CONFIRMAR** (3). Sale \"Entrega confirmada con firma y foto\", el pedido pasa a Entregado y desaparece de tu lista.",
+     "img": "07-entrega-confirmada.jpg",
+     "leyenda": "Aviso de entrega confirmada · el pedido ya no está en Mis entregas"
+    },
+    {
+     "t": "**Encuesta de satisfacción:** si la nota es de JMG y el cliente tiene teléfono, se abre WhatsApp con un mensaje de agradecimiento, la encuesta y la reseña en Google, listo para el cliente. Toca **Enviar**. Si la nota es de otra razón social, no se abre."
+    }
+   ],
+   "cuidado": [
+    "El sistema guarda una **remisión digital** con tu nombre, la hora, la foto y la firma.",
+    "El **aviso amarillo de saldo pendiente** solo informa que el cliente todavía debe una parte. El CRM del operador no tiene dónde registrar un cobro: si el cliente quiere pagarte ese saldo, pregunta a Ivette o Viridiana antes de recibirlo.",
+    "El mensaje de la encuesta sale **desde el WhatsApp de tu celular**: sin tocar Enviar, no llega al cliente.",
+    "Toca **ENTREGADO** hasta que el cliente tenga el material. Si te arrepientes, toca **Cancelar** en la ventana y el pedido no cambia."
+   ],
+   "ayuda": "Cliente que no recibe, rechaza el material o dice que no es lo que pidió: Ivette o Viridiana."
+  },
+  {
+   "id": "incompleta",
+   "titulo": "Entrega incompleta (faltó material)",
+   "cuando": "Cuando no pudiste entregar todo: faltó material, hubo un error o el cliente no aceptó una parte.",
+   "pasos": [
+    {
+     "t": "Toca **ENTREGADO** en la tarjeta y, en \"¿Entrega completa?\", toca **NO** (1)."
+    },
+    {
+     "t": "Aparece **¿Qué faltó?** (2). Escribe qué producto y cuánto faltó, o qué pasó.",
+     "img": "06-entrega-incompleta.jpg",
+     "leyenda": "1 = NO · 2 = qué faltó"
+    },
+    {
+     "t": "Toma la **foto** y pide la **firma** igual que en una entrega completa, y toca **CONFIRMAR**. Sale \"Entrega parcial registrada\"."
+    }
+   ],
+   "cuidado": [
+    "Sé concreto: producto y cantidad (\"faltaron 5 varillas de 3/8\"). Ivette usa esa nota para llamarle al cliente.",
+    "Al confirmar, el sistema crea una **alerta para Ivette** para que le dé seguimiento al cliente. La nota queda en la remisión.",
+    "En una entrega incompleta **no** se manda la encuesta de satisfacción."
+   ],
+   "ayuda": "Cómo se completa la entrega o qué se le ofrece al cliente: Ivette o Viridiana."
+  },
+  {
+   "id": "equivoque",
+   "titulo": "Me equivoqué de botón",
+   "cuando": "Tocaste En ruta o Entregado por error.",
+   "pasos": [
+    {
+     "t": "**Marqué En ruta por error:** en la tarjeta toca **REGRESAR**. El pedido vuelve a \"Confirmado\"."
+    },
+    {
+     "t": "**Abrí la ventana de Entregado por error:** toca **Cancelar**. No se guarda nada."
+    },
+    {
+     "t": "**Ya confirmé una entrega por error:** el pedido desaparece de tu lista y desde tu usuario **no se puede deshacer**. Avísale de inmediato a Ivette o Viridiana con el **folio** del pedido."
+    }
+   ],
+   "cuidado": [
+    "Tampoco puedes cancelar notas de venta: si el cliente cancela, avísale a Ivette o Viridiana."
+   ]
+  },
+  {
+   "id": "gasolina",
+   "titulo": "Cargar gasolina",
+   "cuando": "Cada vez que cargas combustible a una unidad.",
+   "pasos": [
+    {
+     "t": "Entra a **Flota** y baja a **Cargar gasolina**."
+    },
+    {
+     "t": "Elige la **unidad** (1), escribe los **litros** (2), el **monto pagado** (3) y la **estación** (4). Elige la **forma de pago** (5): efectivo, transferencia, tarjeta Nu (morada), tarjeta Afirme (naranja) o mixto. Si tienes el ticket, toma la **foto** (6).",
+     "img": "10-gasolina.jpg",
+     "leyenda": "1 = unidad · 2 = litros · 3 = monto · 4 = estación · 5 = forma de pago · 6 = foto del ticket (opcional) · 7 = Registrar gasolina"
+    },
+    {
+     "t": "Toca **Registrar gasolina** (7). Sale \"Gasolina registrada\" con el monto y los campos se limpian."
+    }
+   ],
+   "cuidado": [
+    "Elige la **forma de pago real**. El Cierre del día solo resta de la caja lo pagado en efectivo (o mixto); transferencia y tarjeta no.",
+    "Al registrar, el sistema crea solo la **salida de dinero** de la gasolina, ya aprobada. **No** la captures otra vez en Salidas.",
+    "Guarda el ticket físico aunque no hayas tomado la foto."
+   ],
+   "ayuda": "Dudas de quién paga la gasolina o de dónde sale el efectivo: Viridiana."
+  },
+  {
+   "id": "danio",
+   "titulo": "Reportar un daño a la unidad",
+   "cuando": "Cuando ves o causas un golpe, rayón, falla o cualquier daño.",
+   "pasos": [
+    {
+     "t": "Entra a **Flota** y baja a **Reportar daño**."
+    },
+    {
+     "t": "Elige la **unidad** (1), describe el **daño** (2), elige la **gravedad** (3: leve, moderado o grave) y toma una **foto** (4).",
+     "img": "11-reportar-danio.jpg",
+     "leyenda": "1 = unidad · 2 = descripción · 3 = gravedad · 4 = foto del daño · 5 = Reportar daño"
+    },
+    {
+     "t": "Toca **Reportar daño** (5). Sale el aviso \"Daño reportado\" con las placas."
+    }
+   ],
+   "cuidado": [
+    "Repórtalo **el mismo día**, aunque sea leve: así se sabe quién lo trajo y cuándo.",
+    "El reporte le llega al mecánico y a Gerencia.",
+    "Si el daño es **grave** o la unidad ya no se puede usar, avisa además de viva voz a Viridiana o José Manuel."
+   ]
+  },
+  {
+   "id": "fin",
+   "titulo": "Terminar el turno",
+   "cuando": "Al regresar la unidad al terminar el día.",
+   "pasos": [
+    {
+     "t": "Entra a **Flota** y baja a **Fin de turno**."
+    },
+    {
+     "t": "Escribe el **km de llegada** tal como marca el odómetro (1). La **foto del odómetro** (2) es opcional: si no tienes señal, ciérralo sin foto. Toca **Finalizar turno** (3).",
+     "img": "12-fin-turno.jpg",
+     "leyenda": "1 = km de llegada · 2 = foto del odómetro (opcional) · 3 = Finalizar turno"
+    },
+    {
+     "t": "Sale \"Turno finalizado\" con los **km recorridos** (km de llegada − km de salida) y el km de la unidad se actualiza."
+    }
+   ],
+   "cuidado": [
+    "**Revisa bien el km de llegada antes de tocar el botón.** El cierre normal no avisa si el km de llegada es menor al de salida: quedaría un recorrido negativo.",
+    "Finaliza **antes** de salir del trabajo: así los km del día quedan completos."
+   ]
+  },
+  {
+   "id": "noencontrado",
+   "titulo": "Si dice: No encontramos tu turno activo",
+   "cuando": "Cambiaste de celular, se borraron los datos del navegador o no iniciaste turno ese día.",
+   "pasos": [
+    {
+     "t": "Primero escribe tu **km de llegada** en Fin de turno y toca **Finalizar turno**. El sistema busca tu turno abierto en el celular y, si no está ahí, en la base de datos."
+    },
+    {
+     "t": "Si aun así no lo encuentra, aparece el recuadro amarillo (1). Elige la **unidad** (2), escribe el **km de salida** que traía la unidad al iniciar (3) y toca **Cerrar turno manualmente** (4).",
+     "img": "13-turno-no-encontrado.jpg",
+     "leyenda": "1 = aviso · 2 = unidad · 3 = km de salida · 4 = Cerrar turno manualmente"
+    }
+   ],
+   "cuidado": [
+    "En el cierre manual el **km de llegada no puede ser menor al de salida**: el sistema no te deja guardarlo.",
+    "Queda marcado como \"capturado a mano\", para que se sepa que no pasó por el flujo normal.",
+    "Si nunca iniciaste turno ese día, avísale a Viridiana para que sepa por qué falta el registro."
+   ],
+   "ayuda": "No sabes cuál era el km de salida: pregúntale a Viridiana o revisa la foto del odómetro."
+  }
+ ],
+ "problemas": [
+  {
+   "p": "No me aparece un pedido en Mis entregas.",
+   "r": "Confirma con Ivette o Viridiana que te lo asignaron a ti y que está Confirmado o En ruta. Si no tiene operador, sale en \"Notas de venta disponibles\". Toca otra vez la pestaña Ventas para recargar."
+  },
+  {
+   "p": "No sé el teléfono del cliente para llamarle antes de salir.",
+   "r": "La tarjeta no lo muestra. Pídeselo a Ivette o Viridiana."
+  },
+  {
+   "p": "La cámara no abre o no sale la foto.",
+   "r": "Revisa que el navegador tenga permiso para usar la cámara. El sistema deja confirmar sin foto, pero sin foto no hay evidencia: avisa a Viridiana."
+  },
+  {
+   "p": "No se abrió el WhatsApp de la encuesta.",
+   "r": "Solo se abre en notas de JMG cuando el cliente tiene teléfono registrado, y si la entrega fue completa. Si no sale, permite ventanas emergentes en el navegador."
+  },
+  {
+   "p": "Se cerró la ventana de Confirmar entrega antes de guardar.",
+   "r": "Toca ENTREGADO otra vez. La foto y la firma hay que tomarlas de nuevo."
+  },
+  {
+   "p": "No tengo señal al confirmar una entrega.",
+   "r": "El aviso de \"Entrega confirmada\" puede salir aunque no se haya guardado todavía. No cierres ni recargues el CRM hasta que regrese la señal y revisa que el pedido ya no esté en tu lista."
+  },
+  {
+   "p": "El cliente quiere pagarme el saldo pendiente.",
+   "r": "Pregunta a Ivette o Viridiana antes de recibir dinero: el CRM del operador no registra cobros."
+  },
+  {
+   "p": "Me salió un recorrido negativo al terminar el turno.",
+   "r": "Capturaste un km de llegada menor al de salida. Avísale a Viridiana para corregir el registro."
+  }
+ ],
+ "por_confirmar": [
+  "Foto y firma: el sistema deja confirmar una entrega sin foto y sin firma. ¿Las hacemos obligatorias?",
+  "Teléfono del cliente: la tarjeta del operador no lo muestra ni el WhatsApp de asignación tampoco, pero la regla es llamar antes de salir. ¿Cómo lo consiguen hoy? Propuesta: botón \"Llamar\" en la tarjeta.",
+  "Saldo pendiente: el sistema solo avisa. ¿El operador cobra saldos al entregar? Si sí, hoy no hay dónde registrarlo.",
+  "Gasolina en efectivo: queda como salida aprobada sin que Viridiana la valide. ¿De dónde sale ese efectivo (fondo del operador o caja) y quién lo revisa?",
+  "Turno de flota: ¿quién revisa los km recorridos cada día? El cierre normal no avisa si el km de llegada es menor al de salida.",
+  "Asignación: ¿Ivette/Viridiana asignan cada pedido o los operadores los toman libremente? Si dos tocan el mismo a la vez, se queda con el último.",
+  "Entrega marcada por error: el operador no puede deshacerla. ¿Quién la corrige y cómo?",
+  "Entrega incompleta: ¿qué sigue después (segunda entrega, nota de crédito, descuento) y quién se lo ofrece al cliente?",
+  "Encuesta: el mensaje sale del WhatsApp personal de cada operador. ¿Está bien así o debe salir de un número del negocio?"
+ ]
+}
