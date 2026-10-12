@@ -55,7 +55,7 @@ EST = {
     'h1': ParagraphStyle('h1', fontName='Helvetica-Bold', fontSize=17, leading=21, textColor=NARANJA, spaceBefore=6, spaceAfter=4),
     'h2': ParagraphStyle('h2', fontName='Helvetica-Bold', fontSize=12, leading=15, textColor=OSCURO, spaceBefore=8, spaceAfter=4),
     'cuerpo': ParagraphStyle('cuerpo', fontName='Helvetica', fontSize=10.5, leading=14.5, textColor=OSCURO, alignment=TA_LEFT),
-    'cuando': ParagraphStyle('cuando', fontName='Helvetica-Oblique', fontSize=10, leading=13, textColor=GRIS, spaceAfter=6),
+    'cuando': ParagraphStyle('cuando', fontName='Helvetica-Oblique', fontSize=10, leading=13, textColor=GRIS, spaceAfter=6, keepWithNext=1),
     'leyenda': ParagraphStyle('leyenda', fontName='Helvetica', fontSize=8.5, leading=11, textColor=GRIS, spaceAfter=8),
     'caja': ParagraphStyle('caja', fontName='Helvetica', fontSize=10, leading=13.5, textColor=OSCURO),
     'toc1': ParagraphStyle('toc1', fontName='Helvetica', fontSize=11, leading=17, textColor=OSCURO),
@@ -114,7 +114,7 @@ def caja(titulo, lineas, fondo, borde):
     return t
 
 
-def paso(num, p, carpeta_img):
+def paso(num, p, carpeta_img, antes=None):
     texto = Paragraph(marcado(p['t']), EST['cuerpo'])
     numero = Table([[str(num)]], colWidths=[0.62 * cm], rowHeights=[0.62 * cm])
     numero.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, -1), NARANJA), ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
@@ -126,7 +126,7 @@ def paso(num, p, carpeta_img):
     fila = Table([[numero, texto]], colWidths=[0.95 * cm, 16.4 * cm])
     fila.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 0),
                               ('TOPPADDING', (0, 0), (-1, -1), 1), ('BOTTOMPADDING', (0, 0), (-1, -1), 3)]))
-    piezas = [fila]
+    piezas = list(antes or []) + [fila]   # 'antes' = título de la tarea: viaja pegado a su primer paso
     if p.get('img'):
         t = Table([[imagen(os.path.join(carpeta_img, p['img']), 15.5 * cm)]], colWidths=[17.4 * cm])
         t.setStyle(TableStyle([('LEFTPADDING', (0, 0), (-1, -1), 28), ('TOPPADDING', (0, 0), (-1, -1), 2),
@@ -146,7 +146,7 @@ def construir(depto):
     carpeta_img = os.path.join(AQUI, 'img', depto)
     salida = os.path.join(AQUI, 'Manual-%s.pdf' % m['departamento'])
     doc = Doc(salida, m['titulo'])
-    h1_toc = ParagraphStyle('h1_toc', parent=EST['h1'])
+    h1_toc = ParagraphStyle('h1_toc', parent=EST['h1'], keepWithNext=1)   # el título de cada tarea nunca queda solo al pie
     historia = []
 
     # Portada
@@ -175,11 +175,10 @@ def construir(depto):
     # Tareas
     for i, t in enumerate(m['tareas'], 1):
         historia.append(CondPageBreak(9 * cm))
-        historia.append(Spacer(1, 10))
-        historia.append(Paragraph('%d. %s' % (i, marcado(t['titulo'])), h1_toc))
-        historia.append(Paragraph('Cuándo: ' + marcado(t['cuando']), EST['cuando']))
+        cabecera = [Spacer(1, 10), Paragraph('%d. %s' % (i, marcado(t['titulo'])), h1_toc),
+                    Paragraph('Cuándo: ' + marcado(t['cuando']), EST['cuando'])]
         for n, p in enumerate(t['pasos'], 1):
-            historia.append(paso(n, p, carpeta_img))
+            historia.append(paso(n, p, carpeta_img, cabecera if n == 1 else None))
         if t.get('cuidado'):
             historia.append(Spacer(1, 3))
             historia.append(caja('Cuidado', t['cuidado'], AMARILLO, NARANJA))

@@ -1,0 +1,430 @@
+{
+ "departamento": "Compras",
+ "titulo": "Manual de Compras",
+ "para": "Erika",
+ "actualizado": "Octubre 2026",
+ "url": "https://jmgcapga.github.io/crm-troncoso",
+ "intro": "Este manual explica, paso a paso, lo que haces todos los días en el CRM de Materiales Troncoso: registrar compras a proveedores, registrar salidas de efectivo, pedir fondeos, hacer notas de crédito, abonar a proveedores, ajustar inventario y cerrar tu turno. Cada tarea tiene capturas con números rojos que te dicen dónde tocar. Las capturas usan datos de ejemplo, no proveedores ni cifras reales.",
+ "reglas_titulo": "Reglas que debes tener presentes",
+ "reglas": [
+  "José Manuel maneja las transferencias y los fondeos. Viridiana maneja el efectivo. Tú registras las compras (también en SICAR).",
+  "Tarjeta Morada = Nu. Tarjeta Naranja = Afirme.",
+  "Toda compra lleva proveedor, productos, forma de pago y la razón social que la absorbe. Si el proveedor da factura o remisión, captura el número.",
+  "Las compras pagadas en efectivo las valida Viridiana: mientras no lo haga, quedan como pendientes.",
+  "Los agregados (arena, grava, granzón, tepetate, tepojal, tezontle) se compran por metro y se venden por costal: 1 metro = 25 costales. El sistema convierte solo. Cada costal vendido descuenta 1 costal vacío (clave 800832), así que registra también las compras de costal vacío.",
+  "No damos crédito a clientes. El crédito del proveedor es otra cosa: es el que nos dan a nosotros."
+ ],
+ "tareas": [
+  {
+   "id": "entrar",
+   "titulo": "Entrar y salir del CRM",
+   "cuando": "Al llegar y al irte.",
+   "pasos": [
+    {
+     "t": "Abre el CRM en el navegador: **jmgcapga.github.io/crm-troncoso**."
+    },
+    {
+     "t": "Escribe tu **PIN de 4 números**. El PIN es personal: no lo compartas.",
+     "img": "01-pin.jpg",
+     "leyenda": "1 = puntos del PIN · 2 = teclado"
+    },
+    {
+     "t": "Arriba ves tu nombre (2) y las pestañas (1). Tu trabajo diario usa: **Compras, Proveedores, Salidas, Fondeos, Notas de Crédito, Cuentas, Inventario y Corte de Caja**. También ves Clientes, Ventas y Consultas por si apoyas en mostrador.",
+     "img": "01b-pestanas.jpg",
+     "leyenda": "1 = pestañas · 2 = tu usuario"
+    },
+    {
+     "t": "Al entrar, si hay **cuentas por pagar que vencen en los próximos 7 días**, aparece un aviso con la lista y te pregunta si quieres mandar la alerta a José Manuel por WhatsApp. Si aceptas, se abre el mensaje listo para enviar."
+    },
+    {
+     "t": "Al terminar, toca **Salir** (arriba a la derecha)."
+    }
+   ],
+   "cuidado": [
+    "Si dice \"PIN incorrecto\", espera un segundo y vuelve a escribirlo."
+   ],
+   "ayuda": "PIN olvidado o bloqueado: Viridiana."
+  },
+  {
+   "id": "compra",
+   "titulo": "Registrar una compra a un proveedor",
+   "cuando": "Cuando llega mercancía o se hace un pedido que se paga. Regístrala cuando la mercancía llegue, porque el inventario sube al registrar.",
+   "pasos": [
+    {
+     "t": "Entra a la pestaña **Compras**."
+    },
+    {
+     "t": "En **Proveedor** escribe las primeras letras (2) y toca el proveedor en la lista (3).",
+     "img": "02-proveedor-buscar.jpg",
+     "leyenda": "1 = Historial de compras · 2 = buscador de proveedor · 3 = proveedor encontrado"
+    },
+    {
+     "t": "Si el proveedor **no existe**, toca **+ Nuevo Proveedor**. Llena nombre (1), teléfono (2), categoría (3) y condiciones de pago (4), y toca **Guardar proveedor** (5).",
+     "img": "03-nuevo-proveedor.jpg",
+     "leyenda": "1 = nombre · 2 = teléfono · 3 = categoría · 4 = condiciones de pago · 5 = Guardar proveedor"
+    },
+    {
+     "t": "Ya elegido, se muestran su teléfono, categoría, condiciones y la última compra. Verifica que sea el proveedor correcto; si no, toca **Cambiar proveedor** (2).",
+     "img": "04-proveedor-seleccionado.jpg",
+     "leyenda": "1 = datos del proveedor · 2 = Cambiar proveedor"
+    },
+    {
+     "t": "En **Productos comprados** toca **+ Producto** (1), luego la lupa (2) para buscar en el catálogo. Pon la **cantidad** (3) y el **precio unitario** (5).",
+     "img": "05-productos.jpg",
+     "leyenda": "1 = + Producto · 2 = lupa del catálogo · 3 = cantidad · 4 = conversión de agregados · 5 = precio unitario · 6 = ¿Aplica IVA?"
+    },
+    {
+     "t": "Con los **agregados** (arena, grava, etc.) captura la cantidad en **metros**: el sistema te dice cuántos costales serán (4 = recuadro). Si el proveedor desglosa IVA, cambia **¿Aplica IVA?** (6) a Sí."
+    },
+    {
+     "t": "En **Pago y documentos** elige la **fecha** de la compra (1), la **forma de pago** (2), la **razón social que absorbe** (3), el **número de factura** (4) y el de **remisión**, y si **requiere factura** (5).",
+     "img": "06-pago-documentos.jpg",
+     "leyenda": "1 = fecha · 2 = forma de pago · 3 = razón social · 4 = número de factura · 5 = ¿requiere factura?"
+    },
+    {
+     "t": "Forma de pago: **Efectivo**, **Transferencia**, **Tarjeta de crédito** (aparece \"¿Cuál tarjeta?\": Morada o Naranja) o **Crédito del proveedor** (aparecen los días de crédito, 30 por defecto).",
+     "img": "07-pago-tarjeta.jpg",
+     "leyenda": "1 = forma de pago · 2 = ¿cuál tarjeta?"
+    },
+    {
+     "t": "Toca **Registrar compra**. Sale el aviso \"Compra CMP-… registrada\" y aparece abajo en **Últimas compras registradas**.",
+     "img": "08-compra-registrada.jpg",
+     "leyenda": "1 = la compra recién registrada"
+    }
+   ],
+   "cuidado": [
+    "Al registrar, **sube la existencia** de cada producto que elegiste del catálogo. Un producto \"sin catalogar\" (escrito a mano) **no sube inventario**.",
+    "**Efectivo:** se crea sola una salida pendiente de validación de Viridiana. **No la registres otra vez en Salidas.**",
+    "**Transferencia o tarjeta:** se crea una salida ya aprobada. No salen de la caja del mostrador.",
+    "**Crédito del proveedor:** no sale dinero todavía; se crea una cuenta por pagar y el dinero sale cuando abonas (ver \"Abonar a un proveedor\").",
+    "Revisa proveedor, cantidades y total **antes** de registrar. Si te equivocas, cancela la compra (siguiente tarea)."
+   ]
+  },
+  {
+   "id": "historial",
+   "titulo": "Buscar una compra anterior",
+   "cuando": "Para revisar qué se compró, a quién y cuánto.",
+   "pasos": [
+    {
+     "t": "En **Compras**, toca **Historial de compras** (arriba)."
+    },
+    {
+     "t": "Filtra por **proveedor** (1), **razón social**, **fechas** (2) o **forma de pago**. Arriba de la lista (3) ves cuántas compras salieron y cuánto suman. Cada compra (4) muestra su estado.",
+     "img": "09-historial-compras.jpg",
+     "leyenda": "1 = proveedor · 2 = fechas · 3 = número de compras y total · 4 = la compra"
+    },
+    {
+     "t": "Toca una compra para ver su detalle: productos, cantidades, costos y número de factura.",
+     "img": "10-compra-detalle.jpg",
+     "leyenda": "1 = Cancelar compra"
+    }
+   ],
+   "cuidado": [
+    "El historial carga las últimas 500 compras."
+   ]
+  },
+  {
+   "id": "cancelar",
+   "titulo": "Cancelar una compra registrada por error",
+   "cuando": "Cuando registraste una compra equivocada o el proveedor no entregó.",
+   "pasos": [
+    {
+     "t": "Abre la compra desde **Últimas compras registradas** (botón **Cancelar compra**) o desde el **Historial de compras** (botón **Cancelar compra** del detalle, 1)."
+    },
+    {
+     "t": "Escribe el **motivo** y confirma."
+    },
+    {
+     "t": "El sistema **regresa la existencia** que había subido, descuenta el total del proveedor, marca como rechazada la salida de efectivo y cancela la cuenta por pagar si era a crédito."
+    }
+   ],
+   "cuidado": [
+    "Si parte de esa mercancía ya se vendió, el inventario puede quedar **en negativo**: el sistema te avisa y tú decides si continúas.",
+    "Un abono que ya hiciste a esa cuenta por pagar **no se deshace solo**: avisa a Viridiana."
+   ],
+   "ayuda": "Si la compra ya se pagó y hay que recuperar dinero: Viridiana o José Manuel."
+  },
+  {
+   "id": "salida",
+   "titulo": "Registrar una salida de efectivo",
+   "cuando": "Cuando sale dinero en efectivo de la caja por un gasto: insumos, gasolina, un fondo a un operador, etc.",
+   "pasos": [
+    {
+     "t": "Entra a **Salidas**. Elige el **tipo** (1) y la **categoría** (2), escribe el **monto** (3), la **fuente** (4) y el **concepto** (5): qué se compró o para qué fue.",
+     "img": "11-salida-form.jpg",
+     "leyenda": "1 = tipo · 2 = categoría · 3 = monto · 4 = fuente (operativo o apartado) · 5 = concepto"
+    },
+    {
+     "t": "Llena **proveedor o lugar** y el **número de ticket o vale**. Si es gasolina o fondo, elige al operador; si es nómina, al empleado. Elige la **razón social** y si **se factura**."
+    },
+    {
+     "t": "Toca **Registrar salida** (1). Aparece en **Salidas de hoy** con el total del día (2) y la salida (3). Mientras aparezca como **pendiente**, **Viridiana todavía no la valida**.",
+     "img": "12-salida-lista.jpg",
+     "leyenda": "1 = Registrar salida · 2 = total de salidas de hoy · 3 = la salida registrada"
+    }
+   ],
+   "cuidado": [
+    "Las compras a proveedor **ya generan su salida sola**: no las captures aquí (en la captura se ve la salida de la compra CMP-001).",
+    "**Fuente:** \"Operativo\" es el efectivo de la operación diaria; \"Apartado\" sale del efectivo apartado (el sistema avisa si el apartado no alcanza).",
+    "**Cambio/Error de cobro:** devuelve efectivo a un cliente. Pide la referencia (folio de la nota o ticket) y el nombre del cliente.",
+    "Guarda el ticket o vale: Viridiana lo revisa al validar."
+   ],
+   "ayuda": "Salida mal capturada: avisa a Viridiana, que es quien la valida o la rechaza."
+  },
+  {
+   "id": "fondeo",
+   "titulo": "Pedir un fondeo (dinero para pagar compras)",
+   "cuando": "Cuando necesitas que José Manuel te mande dinero o autorice efectivo para pagar una compra.",
+   "pasos": [
+    {
+     "t": "Entra a **Fondeos**. Escribe el **monto** (1), indica si es **urgente** (2), la **razón social** que absorbe (3), la **forma de pago solicitada** (4) y el **motivo** (5): para qué compra es.",
+     "img": "13-fondeo-form.jpg",
+     "leyenda": "1 = monto · 2 = ¿urgente? · 3 = razón social · 4 = forma de pago · 5 = motivo"
+    },
+    {
+     "t": "Toca **Solicitar fondeo y notificar a José Manuel**. Se abre WhatsApp con la solicitud para él: envíala."
+    },
+    {
+     "t": "Tu solicitud aparece en **Mis fondeos** con su estado: **Pendiente**, **Aprobado** o **Rechazado**.",
+     "img": "14-fondeo-lista.jpg",
+     "leyenda": "1 = tus fondeos y su estado"
+    },
+    {
+     "t": "Cuando José Manuel aprueba y pediste efectivo, **Viridiana prepara el efectivo**."
+    }
+   ],
+   "cuidado": [
+    "Pon un motivo claro (pedido, proveedor, folio): es lo que José Manuel lee para decidir.",
+    "Si es urgente, marca **Sí, urgente**; el fondeo se señala en rojo."
+   ]
+  },
+  {
+   "id": "nc",
+   "titulo": "Hacer una nota de crédito (devolución o ajuste)",
+   "cuando": "Cuando un cliente devuelve material, hubo un error de cobro o un producto salió defectuoso.",
+   "pasos": [
+    {
+     "t": "Entra a **Notas de Crédito**. Busca al **cliente** (1) y, si se conoce, escribe el **folio de la cotización** (2). Elige el **tipo** (3), la **forma de liquidación** (4) y escribe el **motivo** (5).",
+     "img": "15-nc-datos.jpg",
+     "leyenda": "1 = cliente · 2 = folio de cotización · 3 = tipo de nota · 4 = forma de liquidación · 5 = motivo"
+    },
+    {
+     "t": "Si devuelven material, toca **+ Agregar producto** (1) y captura cantidad y precio. El **total** (2) se calcula solo.",
+     "img": "16-nc-guardar.jpg",
+     "leyenda": "1 = + Agregar producto · 2 = total · 3 = Guardar NC · 4 = Imprimir · 5 = WhatsApp"
+    },
+    {
+     "t": "Toca **Guardar NC** (3). Si quieres darle copia al cliente, usa **Imprimir** (4) o **WhatsApp** (5)."
+    }
+   ],
+   "cuidado": [
+    "Tu nota de crédito **queda pendiente**: Viridiana la aprueba o rechaza. Hasta que la apruebe no se devuelve nada ni se mueve inventario.",
+    "Las devoluciones siguen la regla: con la nota original y dentro de 5 días hábiles.",
+    "Sin conexión no se puede guardar: no repitas la nota hasta confirmar que no se guardó."
+   ],
+   "ayuda": "Devoluciones fuera de plazo o dudas del monto: Viridiana."
+  },
+  {
+   "id": "proveedores",
+   "titulo": "Buscar, agregar o editar un proveedor",
+   "cuando": "Antes de registrar una compra a un proveedor nuevo, o para actualizar sus datos.",
+   "pasos": [
+    {
+     "t": "Entra a **Proveedores**. Escribe el nombre (1) y toca el proveedor (2). Si no existe, **Agregar proveedor** (3).",
+     "img": "17-proveedores.jpg",
+     "leyenda": "1 = buscador · 2 = proveedor encontrado · 3 = Agregar proveedor"
+    },
+    {
+     "t": "En su ficha puedes **Editar** (1) sus datos y ver sus datos fiscales (RFC, razón social, régimen). **Borrar** (2) solo sirve para un proveedor duplicado o creado por error.",
+     "img": "18-proveedor-ficha.jpg",
+     "leyenda": "1 = Editar · 2 = Borrar · 3 = cuentas por pagar · 4 = forma de pago · 5 = monto a abonar · 6 = Abonar"
+    }
+   ],
+   "cuidado": [
+    "**Borrar un proveedor no se puede deshacer** y no revisa si tiene compras. Si ya se le compró, no lo borres: pregunta antes.",
+    "Antes de crear uno nuevo, búscalo: dos proveedores iguales separan su historial de compras y de pagos."
+   ]
+  },
+  {
+   "id": "abonos",
+   "titulo": "Abonar a un proveedor (cuentas por pagar)",
+   "cuando": "Cuando pagas, total o parcialmente, una compra que hiciste a crédito del proveedor.",
+   "pasos": [
+    {
+     "t": "Entra a **Cuentas**. En **Por pagar** (1) ves todo lo que se debe, ordenado por vencimiento. Lo **vencido sale en rojo** (2).",
+     "img": "19-cuentas-pagar.jpg",
+     "leyenda": "1 = Por pagar y total · 2 = una cuenta (rojo = vencida) · 3 = Ver proveedor"
+    },
+    {
+     "t": "Toca **Ver proveedor** (3). En su ficha, dentro de **Cuentas por pagar**, elige cómo pagas (4: efectivo, transferencia o tarjeta), escribe el **monto a abonar** (5) y toca **Abonar** (6)."
+    },
+    {
+     "t": "El abono baja el saldo y se registra como salida. Cuando el saldo llega a cero, la cuenta queda pagada."
+    }
+   ],
+   "cuidado": [
+    "**Elige bien la forma de pago.** Solo lo que se paga en efectivo resta del efectivo en caja en el Cierre del día; transferencia y tarjeta no.",
+    "Abona solo cuando el pago ya salió. No uses el abono para corregir una compra: para eso se cancela la compra.",
+    "Revisa **Por pagar** cada día: un pago vencido puede traer cargos o frenar un pedido."
+   ],
+   "ayuda": "Quién autoriza un pago grande o desde qué cuenta se paga: José Manuel."
+  },
+  {
+   "id": "ajuste",
+   "titulo": "Ajustar la existencia de un producto",
+   "cuando": "Cuando cuentas el material físico y no coincide con el sistema, o por una merma.",
+   "pasos": [
+    {
+     "t": "Entra a **Inventario** y busca el producto por clave o descripción. Debajo de cada producto hay botones (en la captura de ejemplo: Ajustar (2), Desactivar (3), Eliminar (4) e Historial (5)).",
+     "img": "20-inventario-botones.jpg",
+     "leyenda": "1 = Nuevo producto · 2 = Ajustar · 3 = Desactivar · 4 = Eliminar (solo con existencia 0) · 5 = Historial"
+    },
+    {
+     "t": "Toca **Ajustar**. Escribe la **existencia nueva** (1) tal como la contaste, elige el **tipo de movimiento** (2): ajuste inicial, merma, compra, devolución o ajuste operativo, y escribe un **comentario** (3). Toca **Guardar** (4).",
+     "img": "21-ajustar-existencia.jpg",
+     "leyenda": "1 = existencia nueva · 2 = tipo de movimiento · 3 = comentario · 4 = Guardar"
+    },
+    {
+     "t": "Para ver qué ha pasado con un producto, toca **Historial**: lista compras, ventas y ajustes con fecha, cantidad y quién lo hizo.",
+     "img": "23-historial-producto.jpg",
+     "leyenda": "1 = movimientos · 2 = entradas, salidas y existencia actual"
+    }
+   ],
+   "cuidado": [
+    "Cada ajuste queda guardado **con tu nombre**, la existencia anterior y la nueva.",
+    "Usa **Ajuste inicial** cuando estás levantando el inventario físico (se hace poco a poco, no de golpe). Usa **Merma** para material dañado o perdido.",
+    "Para sumar una compra **no ajustes**: registra la compra; así queda todo ligado a su proveedor y su salida."
+   ]
+  },
+  {
+   "id": "producto-nuevo",
+   "titulo": "Dar de alta un producto nuevo",
+   "cuando": "Cuando llega o se empieza a vender algo que no existe en el catálogo.",
+   "pasos": [
+    {
+     "t": "**Búscalo antes** en Inventario, por clave y por varias palabras: casi todos los duplicados nacen de no encontrar el producto existente."
+    },
+    {
+     "t": "Si de verdad no existe, toca **Nuevo producto**. Elige la **familia** (2); la **clave** y el **tipo** se asignan solos. Si es de Grupo Truper, toca **Es producto Grupo Truper** (1) y captura la clave de fábrica.",
+     "img": "22-nuevo-producto.jpg",
+     "leyenda": "1 = es producto Grupo Truper · 2 = familia · 3 = descripción · 4 = Crear producto"
+    },
+    {
+     "t": "Escribe la **descripción** (3) con este orden: **producto + especificación + medida + marca**. Llena marca, ubicación, mínimo y máximo, y toca **Crear producto** (4)."
+    }
+   ],
+   "cuidado": [
+    "Los productos de Concretos y los de escombro nacen como **servicio** (sin inventario): lo decide el sistema.",
+    "El producto nace con existencia 0: súbela con una compra o un ajuste."
+   ]
+  },
+  {
+   "id": "duplicado",
+   "titulo": "Eliminar o desactivar un producto duplicado",
+   "cuando": "Cuando descubres un producto repetido o creado por error.",
+   "pasos": [
+    {
+     "t": "Busca el producto en **Inventario** y compara los dos. Con **Historial** revisa cuál tiene movimientos: **ese se queda**."
+    },
+    {
+     "t": "En el duplicado, toca **Eliminar** (4 en la captura de Inventario). Solo aparece si su **existencia es 0**. El sistema revisa que **nunca haya tenido ventas ni compras** y que ningún otro producto lo use como insumo."
+    },
+    {
+     "t": "Si el producto ya tuvo ventas o compras, no se puede eliminar sin romper esas operaciones: el sistema te ofrece **Desactivarlo**. Desactivado ya no sale en los buscadores, pero el historial se conserva y se puede **Reactivar**."
+    }
+   ],
+   "cuidado": [
+    "Eliminar **no se puede deshacer**. Cada eliminación o desactivación queda en una bitácora con tu nombre, y lo eliminado conserva un respaldo de sus datos.",
+    "Un producto con existencia que no es 0 solo se puede desactivar: primero hay que ajustar o mover esa existencia."
+   ]
+  },
+  {
+   "id": "turno",
+   "titulo": "Cerrar mi turno (si cobraste algo en mostrador)",
+   "cuando": "Si cobraste tickets, notas de venta o abonos con tu usuario, al terminar tu turno.",
+   "pasos": [
+    {
+     "t": "Entra a **Corte de Caja**. Toca **Cerrar mi turno** (1). Si ya juntaste bastante efectivo, puedes entregar una parte antes con **Retiro previo de efectivo** (2).",
+     "img": "24-corte-turno.jpg",
+     "leyenda": "1 = Cerrar mi turno · 2 = Retiro previo de efectivo"
+    },
+    {
+     "t": "Revisa el resumen: arriba (1) lo que cobraste con tu usuario y abajo (2) el **efectivo a entregar** (ya descuenta tus retiros previos). Toca **Enviar resumen y cerrar turno** (3): se abre WhatsApp con el mensaje para Viridiana.",
+     "img": "25-turno-resumen.jpg",
+     "leyenda": "1 = ventas de mi turno · 2 = efectivo a entregar · 3 = Enviar resumen y cerrar turno"
+    },
+    {
+     "t": "Cuenta el efectivo: debe ser igual al \"efectivo a entregar\". Entrégalo a Viridiana."
+    }
+   ],
+   "cuidado": [
+    "Solo cuenta lo que tú registraste con tu nombre. Si no cobraste nada, dice \"No tienes cobros nuevos en este turno\": no hay nada que reportar.",
+    "El cierre **no resta las salidas ni compras en efectivo** que tú hayas registrado: avisa a Viridiana qué efectivo usaste."
+   ]
+  },
+  {
+   "id": "mostrador",
+   "titulo": "Apoyar en mostrador (cotizar, ticket o nota de venta)",
+   "cuando": "Cuando Ivette no está o hay mucho movimiento.",
+   "pasos": [
+    {
+     "t": "Entra a **Ventas**: **Cotizaciones** para cotizar, **Notas de Venta** para cobrar un pedido, **Tickets** para una venta rápida de mostrador."
+    },
+    {
+     "t": "Un **ticket** se hace con **Nuevo Ticket**: producto con la lupa, cantidad, precio y método de pago, y **Cobrar y crear ticket**. El ticket se imprime solo."
+    },
+    {
+     "t": "Para **cotizar**: **Nueva cotización**, elige o escribe el cliente, agrega productos con la lupa, **Guardar Cotización** y **Enviar cotización por WhatsApp**."
+    }
+   ],
+   "cuidado": [
+    "No damos crédito: si un cliente lo pide, pásalo con Viridiana.",
+    "Lo que cobres en efectivo entra a **tu** cierre de turno."
+   ],
+   "ayuda": "Cualquier duda de precios, descuentos o entregas: Ivette o Viridiana."
+  }
+ ],
+ "problemas": [
+  {
+   "p": "No encuentro al proveedor.",
+   "r": "Búscalo con otra parte del nombre. Si no existe, créalo con \"+ Nuevo Proveedor\" desde la misma pantalla de la compra."
+  },
+  {
+   "p": "El producto no aparece al registrar la compra.",
+   "r": "Búscalo por clave o con otra palabra. Si no existe, dalo de alta en Inventario. Si lo capturas a mano (sin catalogar) no sube el inventario."
+  },
+  {
+   "p": "Me equivoqué en una compra.",
+   "r": "Cancélala (Últimas compras registradas o Historial de compras), con motivo, y regístrala bien."
+  },
+  {
+   "p": "Registré una compra en efectivo y no sé si también debo registrar la salida.",
+   "r": "No: la compra ya crea su salida sola. Solo registra en Salidas los gastos que no son compras a proveedor."
+  },
+  {
+   "p": "Una salida mía sigue como pendiente.",
+   "r": "Todavía no la valida Viridiana. Avísale y entrégale el ticket o vale."
+  },
+  {
+   "p": "Dice \"Sin conexión\" o no guarda.",
+   "r": "Revisa el internet. Antes de repetir, revisa si ya se guardó (Últimas compras registradas, Salidas de hoy, Mis fondeos) para no duplicar."
+  },
+  {
+   "p": "El inventario de un producto quedó en negativo.",
+   "r": "Vendimos antes de registrar la compra. Registra la compra pendiente o ajusta la existencia con \"Ajuste inicial\" si hay un conteo físico."
+  },
+  {
+   "p": "Necesito pagar una compra y no hay dinero.",
+   "r": "Pide un fondeo (Fondeos): José Manuel lo aprueba y Viridiana prepara el efectivo."
+  }
+ ],
+ "por_confirmar": [
+  "SICAR vs. CRM: ¿qué se registra primero y qué es lo oficial? Hoy Erika captura las compras en los dos.",
+  "Razón social: ¿cuál absorbe cada tipo de compra? El formulario trae José Manuel Garín por defecto.",
+  "Fondeos: ¿cuándo se pide fondeo y cuándo se paga con tarjeta? ¿Hay un monto límite?",
+  "Abonos a proveedores: ¿quién los autoriza y desde qué cuenta se pagan? (Ahora el sistema pide la forma de pago para no restar de la caja lo que se pagó por transferencia o tarjeta.)",
+  "Compras a crédito: ¿qué proveedores dan crédito y a cuántos días? El sistema propone 30.",
+  "Mercancía recibida: ¿quién cuenta la mercancía contra la remisión y cuándo se registra la compra: al pedir o al recibir?",
+  "Papeles: ¿dónde se archivan facturas y remisiones físicas?"
+ ]
+}

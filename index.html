@@ -5100,7 +5100,7 @@ function registrarCompraProveedor(proveedorId, proveedor, total, vencimiento, co
 // El dinero de una compra a crédito sale hasta que se abona — por eso la
 // salida se registra aquí y no en guardarCompra(). Cada abono (aunque sea
 // parcial) es su propia salida real.
-function registrarAbonoProveedor(docId, monto) {
+function registrarAbonoProveedor(docId, monto, formaPago) {
   if(!db || !docId || !(monto > 0)) return;
   var ref = db.collection('cuentas_pagar').doc(docId);
   var cuentaData = null;
@@ -5131,6 +5131,7 @@ function registrarAbonoProveedor(docId, monto) {
       concepto: (cuentaData.compraId || '') + ' — ' + (cuentaData.proveedor || 'Proveedor'),
       proveedor: cuentaData.proveedor || '',
       registradoPor: currentUser ? currentUser.name : 'Desconocido',
+      formaPago: formaPago || 'efectivo',
       status: 'aprobado',
       cuentaPagarId: docId
     });
@@ -5499,6 +5500,16 @@ function sumarCobrosPorMetodo(pedidos, tickets, abonos) {
   return r;
 }
 
+// ¿Esta salida sacó efectivo de la caja? Las compras y gastos pagados por transferencia o tarjeta
+// también se registran como salidas, pero ese dinero nunca estuvo en el cajón. Las salidas viejas
+// sin formaPago se reconocen por su etiqueta.
+function salidaEsEfectivo(s) {
+  var fp = s.formaPago;
+  if(fp) return fp === 'efectivo' || fp === 'mixto';
+  if(/transferencia|tarjeta/i.test(s.tipoLabel || '')) return false;
+  return true;
+}
+
 function calcularCorteDelDia(fecha) {
   return Promise.all([
     db.collection('pedidos').where('fecha','==',fecha).get(),
@@ -5516,10 +5527,12 @@ function calcularCorteDelDia(fecha) {
 
     d.salidasPorCategoria = {};
     d.totalSalidasCategorias = 0;
+    d.salidasNoEfectivo = 0;   // pagadas con transferencia o tarjeta: no salen de la caja
     cortesDocs(res[3]).forEach(function(s){
       if(s.status === 'rechazado') return;
-      var cat = s.categoria || s.tipoLabel || 'Otro';
       var m = corteNum(s.monto);
+      if(!salidaEsEfectivo(s)) { d.salidasNoEfectivo += m; return; }
+      var cat = s.categoria || s.tipoLabel || 'Otro';
       d.salidasPorCategoria[cat] = (d.salidasPorCategoria[cat] || 0) + m;
       d.totalSalidasCategorias += m;
     });
@@ -5600,7 +5613,9 @@ function renderCorteAuto(d) {
     html += '</details>';
   }
   if(!cats.length && !nRet) html += '<div style="font-size:12px;color:var(--suave);">Sin salidas hoy</div>';
-  html += filaCorte('TOTAL SALIDAS', fmtResta(d.totalSalidas), { bold:true, borde:true }) + '</div>';
+  html += filaCorte('TOTAL SALIDAS', fmtResta(d.totalSalidas), { bold:true, borde:true });
+  if(d.salidasNoEfectivo > 0.004) html += '<div style="font-size:11px;color:var(--suave);padding-top:6px;">Aparte: ' + fmtMoney(d.salidasNoEfectivo) + ' pagados con transferencia o tarjeta — no salen de la caja.</div>';
+  html += '</div>';
 
   // CIERRE
   html += '<div style="background:#1A1A1A;border-radius:10px;padding:14px;color:#fff;">' +
@@ -5723,6 +5738,7 @@ function construirCierreDia(d, observaciones) {
     comisiones: d.comision,
     neto: d.neto,
     totalSalidas: d.totalSalidas,
+    salidasNoEfectivo: d.salidasNoEfectivo || 0,
     salidasPorCategoria: d.salidasPorCategoria,
     retiros: d.totalRetiros,
     efectivoCaja: d.efectivoCaja,
@@ -5858,6 +5874,7 @@ function imprimirCierreDia() {
   if(d.retirosDetalle.length) salidas += fila('Retiros parciales (' + d.retirosDetalle.length + ')', fmtResta(d.totalRetiros));
   if(!salidas) salidas = fila('Sin salidas', fmtMoney(0));
   salidas += fila('TOTAL SALIDAS', fmtResta(d.totalSalidas), 'subtotal');
+  if(d.salidasNoEfectivo > 0.004) salidas += fila('Pagos con transferencia/tarjeta (no salen de la caja)', fmtMoney(d.salidasNoEfectivo));
   var cierre = fila('Efectivo en caja', fmtMoney(d.efectivoCaja), 'subtotal') + fila('Efectivo apartado', fmtMoney(d.efectivoApartado)) + fila('Cartera pendiente', fmtMoney(d.cartera));
   var w = window.open('', '_blank', 'width=420,height=750');
   if(!w) { showToast('⚠️ El navegador bloqueó la ventana de impresión'); return; }
@@ -8267,6 +8284,7 @@ function renderCuentasPagarProveedor(proveedorId, cuentas) {
         (vencido ? '⚠️ Vencido: ' : 'Vence: ') + (venc || '—') + ' · Total: ' + fmtMoney(c.total||0) +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">' +
+        '<select id="pcp-metodo-' + c._docId + '" style="border:1.5px solid var(--borde);border-radius:8px;padding:7px 6px;font-size:12px;"><option value="efectivo">💵 Efectivo</option><option value="transferencia">🏦 Transferencia</option><option value="tarjeta">💳 Tarjeta</option></select>' +
         '<input type="number" id="pcp-abono-' + c._docId + '" placeholder="Monto a abonar" min="0" step="0.01" style="flex:1;min-width:100px;border:1.5px solid var(--borde);border-radius:8px;padding:7px 9px;font-family:\'Barlow\',sans-serif;font-size:12px;">' +
         '<button class="btn btn-naranja" onclick="abonarCuentaPagarFicha(\'' + c._docId + '\',\'' + proveedorId + '\')" style="font-size:11px;padding:7px 12px;">💸 Abonar</button>' +
         (esDirector ? '<button class="btn btn-gris" style="font-size:11px;padding:7px 12px;background:#FEE2E2;color:#DC2626;" onclick="eliminarCuentaPagar(\'' + c._docId + '\',\'' + proveedorId + '\')">🗑️ Eliminar</button>' : '') +
@@ -8287,7 +8305,8 @@ function abonarCuentaPagarFicha(docId, proveedorId) {
   var input = document.getElementById('pcp-abono-' + docId);
   var monto = parseFloat(input ? input.value : '');
   if(!(monto > 0)) { showToast('⚠️ Ingresa un monto válido'); return; }
-  registrarAbonoProveedor(docId, monto).then(function(){ cargarCuentasPagarProveedor(proveedorId); });
+  var metodoEl = document.getElementById('pcp-metodo-' + docId);
+  registrarAbonoProveedor(docId, monto, metodoEl ? metodoEl.value : 'efectivo').then(function(){ cargarCuentasPagarProveedor(proveedorId); });
 }
 
 function eliminarCuentaPagar(docId, proveedorId) {
@@ -8663,6 +8682,7 @@ function guardarCompra() {
           proveedor: compra.proveedor,
           ticket: compra.noRemision || compra.noFactura || '',
           tarjeta: compra.formaPago === 'tarjeta_credito' ? compra.tarjeta : null,
+          formaPago: compra.formaPago,
           rs: compra.razonSocial,
           rsNombre: compra.rsNombre,
           factura: compra.requiereFactura ? 'pendiente' : 'no',
@@ -11186,9 +11206,10 @@ function cargarHistoricoVentas() {
 //  JSON sale el PDF (python3 manual/build_pdf.py <depto>): se edita en un solo lugar.
 // ════════════════════════════════════════════
 var MANUALES_POR_ROL = { Ventas:'ventas', Compras:'compras', Operador:'entregas', Gerencia:'gerencia', Director:'gerencia' };
-var MANUALES_PUBLICADOS = { ventas: 'Ventas' };   // se agrega aquí cada manual al publicarlo
+var MANUALES_PUBLICADOS = { ventas: 'Ventas', compras: 'Compras' };   // se agrega aquí cada manual al publicarlo
 var manualesCache = {};
 var manualActual = null;
+var manualPedido = null;   // último manual solicitado: si llega tarde la respuesta de otro, no lo pisa
 
 function puedeVerManual(rol) {
   if(rol === 'Gerencia' || rol === 'Director') return true;
@@ -11219,6 +11240,7 @@ function cargarManual(clave) {
   var cont = document.getElementById('manual-contenido');
   if(!cont) return;
   if(!MANUALES_PUBLICADOS[clave]) { cont.innerHTML = '<div class="man-vacio">📖 Tu manual todavía está en preparación.</div>'; return; }
+  manualPedido = clave;
   if(manualesCache[clave]) { pintarManual(manualesCache[clave], clave); return; }
   cont.innerHTML = '<div class="man-vacio">Cargando manual...</div>';
   fetch('manual/' + clave + '.json').then(function(r){
@@ -11226,9 +11248,10 @@ function cargarManual(clave) {
     return r.json();
   }).then(function(m){
     manualesCache[clave] = m;
-    pintarManual(m, clave);
+    if(manualPedido === clave) pintarManual(m, clave);
   }).catch(function(e){
     console.log('Error cargando manual:', e);
+    if(manualPedido !== clave) return;
     cont.innerHTML = '<div class="man-vacio">⚠️ No se pudo cargar el manual. Revisa tu internet y vuelve a entrar.</div>';
   });
 }
