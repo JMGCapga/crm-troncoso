@@ -1895,6 +1895,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           </div>
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid #FFD8C0;font-size:11px;color:#888;">
             <div>Efectivo en caja: <strong id="dash-efectivo">$0</strong></div>
+            <div style="font-size:10px;margin-top:4px;">Es el mismo cálculo del Cierre del día: ventas cobradas hoy contra salidas no rechazadas.</div>
           </div>
         </div>
 
@@ -1935,6 +1936,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
               <div id="dash-nomina-sem" style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--naranja);margin-top:4px;">$0</div>
             </div>
           </div>
+          <div style="font-size:10px;color:#888;margin-top:10px;">Ventas = tickets + notas de venta. Utilidad = ventas − gastos − nómina en efectivo; <strong>no descuenta el costo de la mercancía</strong>, por eso el margen sale alto.</div>
         </div>
 
         <!-- MES ACTUAL -->
@@ -6539,16 +6541,20 @@ function cargarSalidasViri(filtro) {
 
   var hoy = fechaISOLocal();
   var query = db.collection('salidas');
+  var ordenPorFecha = false;
   if(filtro === 'hoy') query = query.where('fecha','==',hoy);
+  else if(filtro === 'semana') { query = query.where('fecha','>=',lunesDeEstaSemana()); ordenPorFecha = true; }   // antes no filtraba: traía las últimas 100 sin importar la fecha
   else if(filtro === 'pendientes') query = query.where('status','==','pendiente_validacion');
 
-  query.orderBy('timestamp','desc').limit(100).get().then(function(snap){
+  (ordenPorFecha ? query.orderBy('fecha','desc') : query.orderBy('timestamp','desc')).limit(100).get().then(function(snap){
     var salidas = []; var totales = {};
     snap.forEach(function(doc){ var d=doc.data(); d._id=doc.id; salidas.push(d);
       totales[d.tipo] = (totales[d.tipo]||0) + (d.monto||0);
     });
+    salidas.sort(function(x,y){ return (y.timestamp||0) - (x.timestamp||0); });
 
-    var granTotal = salidas.reduce(function(a,s){return a+(s.monto||0);},0);
+    // El total no cuenta las rechazadas (no son dinero que salió)
+    var granTotal = salidas.reduce(function(a,s){return a+(s.status==='rechazado' ? 0 : (s.monto||0));},0);
     resumen.innerHTML =
       '<div style="background:#1A1A1A;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#888;">TOTAL SALIDAS</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--naranja);">'+fmtMoney(granTotal)+'</div></div>'+
       '<div style="background:#F5F2EE;border-radius:8px;padding:12px;"><div style="font-size:10px;color:var(--suave);">REGISTROS</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;">'+salidas.length+'</div></div>'+
@@ -7217,7 +7223,7 @@ function validarNC(docId, status) {
       if(status === 'aprobada') {
         if(nc.formaPago === 'efectivo') {
           var salida = {
-            fecha: nc.fecha,
+            fecha: fechaISOLocal(),   // la devolución en efectivo sale el día que se aprueba, no el de la solicitud
             timestamp: Date.now(),
             tipo: 'devolucion',
             tipoLabel: '↩️ Devolución a cliente',
@@ -7613,7 +7619,7 @@ function marcarEfectivoEntregado(docId) {
       entregadoPor: currentUser ? currentUser.name : 'Viridiana'
     }).then(function(){
       var salida = {
-        fecha: f.fecha,
+        fecha: fechaISOLocal(),   // el efectivo sale hoy, no el día en que se pidió el fondeo (si no, caía en un cierre ya hecho)
         timestamp: Date.now(),
         tipo: 'fondo',
         tipoLabel: '💵 Fondo a operación',
@@ -10835,64 +10841,55 @@ async function cargarDashboard() {
     const primerStr = primerDiaDelMes();
     console.log('Buscando datos de:', hoyStr, lunesStr, primerStr);
 
-    // LIQUIDEZ DEL DÍA
+    // LIQUIDEZ DEL DÍA — sale del mismo cálculo que el Cierre del día (ya no de la colección vieja 'cortes',
+    // que dejó de llenarse cuando entró el cierre automático y por eso marcaba $0 y un neto negativo).
+    // Entradas = ventas cobradas hoy; Salidas = salidas no rechazadas (efectivo y no efectivo);
+    // Efectivo en caja = cobros en efectivo − salidas en efectivo − retiros parciales.
     let entradas = 0, salidas = 0, efectivo = 0;
-    const cortesSnap = await db.collection('cortes').get();
-    cortesSnap.forEach(doc => {
-      const data = doc.data();
-      const status = (data.status || '').toLowerCase();
-      const fecha = normalizarFecha(data.fecha || '');
-      if(status === 'aprobado' && fecha === hoyStr) {
-        entradas += data.granTotal || 0;
-        efectivo += data.efectivo || 0;
-      }
-    });
-    const salidasSnap = await db.collection('salidas').get();
-    salidasSnap.forEach(doc => {
-      const data = doc.data();
-      const status = (data.status || '').toLowerCase();
-      const fecha = normalizarFecha(data.fecha || '');
-      if(status === 'aprobado' && fecha === hoyStr) {
-        salidas += data.monto || 0;
-      }
-    });
+    try {
+      const corteHoy = await calcularCorteDelDia(fechaISOLocal());
+      entradas = corteHoy.totalVentas;
+      salidas = corteHoy.totalSalidasCategorias + corteHoy.salidasNoEfectivo;
+      efectivo = corteHoy.efectivoCaja;
+    } catch(errLiq) { console.log('Error calculando la liquidez del día:', errLiq); }
 
     document.getElementById('dash-entradas').textContent = '$' + fmtNumero(entradas);
     document.getElementById('dash-salidas').textContent = '$' + fmtNumero(salidas);
     document.getElementById('dash-neto').textContent = '$' + fmtNumero(entradas - salidas);
     document.getElementById('dash-efectivo').textContent = '$' + fmtNumero(efectivo);
 
-    // SEMANA ACTUAL
-    let ventasSem = 0, nominaSem = 0;
-    const cotizSnap = await db.collection('cotizaciones').get();
-    cotizSnap.forEach(doc => {
-      const data = doc.data();
-      const status = (data.status || '').toLowerCase();
-      const fecha = normalizarFecha(data.fecha || '');
-      if(status === 'cerrado' && fecha >= lunesStr && fecha <= hoyStr) {
-        ventasSem += data.total || 0;
-      }
-    });
-    const nominaSnap = await db.collection('nomina_semanas').get();
-    nominaSnap.forEach(doc => {
-      const data = doc.data();
-      const fecha = normalizarFecha(data.fecha || '');
-      if(fecha >= lunesStr && fecha <= hoyStr) {
-        nominaSem += data.totalEfectivo || 0;
-      }
+    // SEMANA Y MES ACTUALES — todo con fechas ISO (YYYY-MM-DD). Antes se comparaban fechas "d/m/yyyy" como texto
+    // (el 9 quedaba "mayor" que el 12) y las ventas salían de cotizaciones cerradas, así que el Dashboard
+    // marcaba muchísimo menos de lo vendido. Ahora las ventas son tickets + notas de venta, igual que el Histórico.
+    const hoyISO = fechaISOLocal();
+    const lunesISO = lunesDeEstaSemana();
+    const hoyDate = new Date();
+    const primerISO = fechaLocalISO(new Date(hoyDate.getFullYear(), hoyDate.getMonth(), 1));
+    const desdeISO = lunesISO < primerISO ? lunesISO : primerISO;
+
+    const opsVentas = await histLeerVentas(desdeISO, hoyISO);
+    let ventasSem = 0, acumulado = 0;
+    opsVentas.forEach(o => {
+      if(o.fecha >= lunesISO && o.fecha <= hoyISO) ventasSem += o.monto;
+      if(o.fecha >= primerISO && o.fecha <= hoyISO) acumulado += o.monto;
     });
 
+    // Nómina de la semana: la procesada con lunes = el de esta semana (hasta que se procesa marca $0)
+    let nominaSem = 0;
+    const nominaSnap = await db.collection('nomina_semanas').where('fechaInicio', '==', lunesISO).get();
+    nominaSnap.forEach(doc => {
+      const data = doc.data();
+      if(data.status === 'procesada' && !data.fueraDeTiempo) nominaSem += data.totalEfectivo || 0;
+    });
+
+    // Gastos de la semana: salidas que no son nómina ni compra de mercancía y no fueron rechazadas
     let gastosSem = 0;
-    const gastoSnap = await db.collection('salidas').get();
+    const gastoSnap = await db.collection('salidas').where('fecha', '>=', lunesISO).where('fecha', '<=', hoyISO).get();
     gastoSnap.forEach(doc => {
       const data = doc.data();
-      const fecha = normalizarFecha(data.fecha || '');
-      if(fecha >= lunesStr && fecha <= hoyStr) {
-        const tipo = (data.tipo || '').toLowerCase();
-        if(tipo !== 'nomina' && tipo !== 'compra') {
-          gastosSem += data.monto || 0;
-        }
-      }
+      if(data.status === 'rechazado') return;
+      const tipo = (data.tipo || '').toLowerCase();
+      if(tipo !== 'nomina' && tipo !== 'compra') gastosSem += data.monto || 0;
     });
 
     const utilidadSem = ventasSem - gastosSem - nominaSem;
@@ -10903,17 +10900,6 @@ async function cargarDashboard() {
     document.getElementById('dash-margen-sem').textContent = Math.round(margenSem) + '%';
     document.getElementById('dash-nomina-sem').textContent = '$' + fmtNumero(nominaSem);
 
-    // MES ACTUAL
-    let acumulado = 0;
-    cotizSnap.forEach(doc => {
-      const data = doc.data();
-      const fecha = normalizarFecha(data.fecha || '');
-      if(fecha >= primerStr && fecha <= hoyStr) {
-        acumulado += data.total || 0;
-      }
-    });
-
-    const hoyDate = new Date();
     const diaDelMes = hoyDate.getDate();
     const diasDelMes = new Date(hoyDate.getFullYear(), hoyDate.getMonth() + 1, 0).getDate();
     const meta = 800000;
@@ -10926,7 +10912,7 @@ async function cargarDashboard() {
 
     // EVALUACIONES DE SERVICIO — Solo si José Manuel está loggeado
     if(currentUser && (currentUser.pin === '9900' || currentUser.role === 'Director')) {
-      const encuestasSnap = await db.collection('encuestas').where('fecha', '>=', primerStr).get();
+      const encuestasSnap = await db.collection('encuestas').where('fecha', '>=', primerISO).get();   // las encuestas guardan la fecha como YYYY-MM-DD
       let totalEncuestas = 0, sumaPuntuacion = 0, llegaATiempo = 0, productosCorrectos = 0, conComentarios = 0;
       const encuestas = [];
 
@@ -10951,8 +10937,9 @@ async function cargarDashboard() {
       document.getElementById('dash-eval-comentarios').textContent = conComentarios;
 
       // Últimas evaluaciones
+      const msEncuesta = t => (t && t.toMillis) ? t.toMillis() : (t || 0);   // timestamp de Firestore o número
       const listHTML = encuestas
-        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+        .sort((a, b) => msEncuesta(b.timestamp) - msEncuesta(a.timestamp))
         .slice(0, 5)
         .map(e => `
           <div style="padding:8px;border-bottom:1px solid #FFD8C0;font-size:11px;">
@@ -11261,7 +11248,7 @@ function cargarHistoricoVentas() {
 //  JSON sale el PDF (python3 manual/build_pdf.py <depto>): se edita en un solo lugar.
 // ════════════════════════════════════════════
 var MANUALES_POR_ROL = { Ventas:'ventas', Compras:'compras', Operador:'entregas', Gerencia:'gerencia', Director:'gerencia' };
-var MANUALES_PUBLICADOS = { ventas: 'Ventas', compras: 'Compras', entregas: 'Entregas' };   // se agrega aquí cada manual al publicarlo
+var MANUALES_PUBLICADOS = { ventas: 'Ventas', compras: 'Compras', entregas: 'Entregas', gerencia: 'Gerencia' };   // se agrega aquí cada manual al publicarlo
 var manualesCache = {};
 var manualActual = null;
 var manualPedido = null;   // último manual solicitado: si llega tarde la respuesta de otro, no lo pisa

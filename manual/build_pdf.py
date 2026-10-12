@@ -31,7 +31,7 @@ AMARILLO = colors.HexColor('#FFF6E5')
 
 def limpio(txt):
     """Helvetica solo trae el juego de caracteres de Windows (cp1252): se quitan emojis y se cambian las flechas."""
-    txt = txt.replace('→', '>').replace('←', '<').replace('✓', 'v').replace('✂', '')
+    txt = txt.replace('→', '>').replace('←', '<').replace('✓', 'v').replace('✂', '').replace('−', '-')   # el signo menos matemático no existe en Helvetica
     return ''.join(c for c in txt if ord(c) < 0x10000 and _cp1252(c)).strip()
 
 

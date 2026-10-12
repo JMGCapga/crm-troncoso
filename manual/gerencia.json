@@ -1,0 +1,649 @@
+{
+ "departamento": "Gerencia",
+ "titulo": "Manual de Gerencia y Dirección",
+ "para": "Viridiana y José Manuel",
+ "actualizado": "Octubre 2026",
+ "url": "https://jmgcapga.github.io/crm-troncoso",
+ "intro": "Este manual explica, paso a paso, lo que haces tú en el CRM de Materiales Troncoso: leer el Dashboard, cuadrar y cerrar el día, validar salidas, compras, fondeos y notas de crédito, atender las notas de venta, pagar la nómina, revisar la flota, manejar permisos y los datos fiscales. Lo marcado con (Viridiana) o (José Manuel) es de una sola persona. Las capturas usan datos de ejemplo.",
+ "reglas_titulo": "Reglas que debes tener presentes",
+ "reglas": [
+  "José Manuel maneja las **transferencias y los fondeos**: solo él aprueba fondeos. Viridiana maneja el **efectivo**: valida salidas, compras en efectivo y notas de crédito, y entrega el efectivo de los fondeos.",
+  "Erika registra las compras (también en SICAR). Ivette atiende ventas y a los clientes.",
+  "Tarjeta Morada = Nu. Tarjeta Naranja = Afirme.",
+  "**No damos crédito a clientes.** Un saldo por cobrar solo existe por un anticipo parcial autorizado.",
+  "Un cobro por tarjeta debe ir a **IZZ-BBVA** siempre que se pueda. Mercado Pago es la más cara.",
+  "Todo se entrega a pie de carro; los operadores llaman al cliente antes de salir. Devoluciones con la nota original y dentro de 5 días hábiles.",
+  "**Nunca** subas al CRM archivos .cer, .key ni contraseñas del Sello Digital."
+ ],
+ "tareas": [
+  {
+   "id": "entrar",
+   "titulo": "Entrar al CRM y moverte entre pantallas",
+   "cuando": "Al empezar y al terminar el día.",
+   "pasos": [
+    {
+     "t": "Abre el CRM en el navegador: **jmgcapga.github.io/crm-troncoso**."
+    },
+    {
+     "t": "Escribe tu **PIN de 4 números**. Es personal: no lo compartas.",
+     "img": "01-pin.jpg",
+     "leyenda": "1 = puntos del PIN · 2 = teclado"
+    },
+    {
+     "t": "Entras directo al **Dashboard**. Arriba tienes todas las pestañas: Clientes, Ventas, Consultas, Corte de Caja, Salidas, Notas de Crédito, Fondeos, Compras, Proveedores, Cuentas, Nómina, Flota, Dashboard, Inventario, Fiscal y Manual."
+    },
+    {
+     "t": "Al terminar, toca **Salir**."
+    }
+   ],
+   "cuidado": [
+    "Viridiana entra como **Gerencia** y José Manuel como **Director**. Casi todas las pantallas son iguales, pero algunas acciones son de uno solo: en este manual lo marco con **(Viridiana)** o **(José Manuel)**.",
+    "Todo lo que hacen Ivette (Ventas) y Erika (Compras) también lo puedes hacer tú: cotizar, notas de venta, tickets, clientes, compras, proveedores, inventario. Para eso mira sus manuales.",
+    "Un **!** rojo en la pestaña **Ventas** quiere decir que hay entregas por revisar (ver la tarea \"Notas de venta: panel y entregas por revisar\")."
+   ],
+   "ayuda": "PIN olvidado: José Manuel."
+  },
+  {
+   "id": "dashboard",
+   "titulo": "Leer el Dashboard",
+   "cuando": "Cuando quieras saber cómo va el día, la semana o el mes.",
+   "pasos": [
+    {
+     "t": "Entra a **Dashboard** y toca **Actualizar** para traer los datos al momento."
+    },
+    {
+     "t": "**Liquidez del día** (1): **Entradas** = lo cobrado hoy (efectivo, tarjeta, transferencias y abonos). **Salidas** = las salidas de hoy que no fueron rechazadas, pagadas en efectivo o no. **Neto** = entradas − salidas. **Efectivo en caja** es el mismo número del Cierre del día. **Cuentas pendientes** (2): lo que te deben y lo que debes.",
+     "img": "02-dashboard-liquidez.jpg",
+     "leyenda": "1 = Liquidez del día · 2 = Cuentas pendientes"
+    },
+    {
+     "t": "**Semana actual** (3): **Ventas** = tickets + notas de venta de lunes a hoy, sin canceladas. **Utilidad** = ventas − gastos − nómina en efectivo. **Nómina** = la nómina procesada de esta semana. **Mes actual** (4): lo **acumulado**, el avance contra la **meta de $800,000** y la **proyección** al cierre del mes.",
+     "img": "03-dashboard-semana-mes.jpg",
+     "leyenda": "3 = Semana actual · 4 = Mes actual"
+    },
+    {
+     "t": "**Histórico de ventas:** elige el periodo (este mes, mes anterior, otro mes, este año u otro año) en (1). Abajo (2) ves el total, el método de pago más usado, tickets contra notas de venta, el mejor día, la comparación con el periodo anterior y la gráfica de ventas por día.",
+     "img": "04-dashboard-historico.jpg",
+     "leyenda": "1 = periodo · 2 = resultados"
+    },
+    {
+     "t": "**Evaluaciones de servicio (solo José Manuel):** promedio de estrellas, entregas a tiempo, productos correctos y las últimas encuestas del mes.",
+     "img": "36-evaluaciones.jpg",
+     "leyenda": "1 = Evaluaciones de servicio"
+    }
+   ],
+   "cuidado": [
+    "La **venta** cuenta el total de la nota aunque haya quedado a crédito. Lo que no se ha cobrado aparece en **Por cobrar**.",
+    "**La utilidad no descuenta el costo de la mercancía** (las compras no se restan), por eso el margen sale muy alto. Es utilidad después de gastos y nómina, no ganancia real.",
+    "La meta de $800,000 es fija en el sistema. Si cambia, hay que pedir que se cambie.",
+    "Las **evaluaciones** salen de la encuesta que contesta el cliente. Solo JMG la manda, así que son pocas."
+   ]
+  },
+  {
+   "id": "cierre",
+   "titulo": "Ver el Cierre del día",
+   "cuando": "Durante el día para ir cuadrando, y al final para cerrar.",
+   "pasos": [
+    {
+     "t": "Entra a **Corte de Caja**. El **Cierre del día** se calcula solo con lo que ya se registró hoy; no capturas nada para que salgan los números."
+    },
+    {
+     "t": "**Ventas del día** (1): efectivo, cada terminal de tarjeta, Mercado Pago y transferencias (con las que ya están **confirmadas**). Debajo: **total ventas**, **comisiones de terminal** y **neto**.",
+     "img": "05-cierre-ventas.jpg",
+     "leyenda": "1 = Ventas del día"
+    },
+    {
+     "t": "**Salidas** (1): por categoría, más los retiros parciales. Lo pagado con transferencia o tarjeta sale en una nota aparte, porque no sale de la caja. **Cierre** (2): **Efectivo en caja** = cobros en efectivo − salidas en efectivo − retiros parciales. También ves el **efectivo apartado** (ya incluido en la caja), el **operativo** (caja − apartado) y la **cartera pendiente**.",
+     "img": "06-cierre-salidas-caja.jpg",
+     "leyenda": "1 = Salidas · 2 = Cierre"
+    },
+    {
+     "t": "Si cambió algo, toca **Recalcular** para volver a leer todo."
+    }
+   ],
+   "cuidado": [
+    "Las salidas **pendientes** de validar ya restan de la caja; las **rechazadas** no.",
+    "El **Cerrar mi turno** de Ivette y Erika no aparece aquí: les llega a ti por WhatsApp. El Cierre del día se arma con lo registrado, no con esos mensajes.",
+    "Si el efectivo contado no coincide con \"Efectivo en caja\", revisa primero: salidas pendientes o mal capturadas, entregas del personal sin confirmar y retiros parciales."
+   ],
+   "ayuda": "Dudas del cálculo: José Manuel."
+  },
+  {
+   "id": "entregas-personal",
+   "titulo": "Recibir el efectivo que entregan Ivette y Erika",
+   "cuando": "Cuando Ivette o Erika te entregan efectivo (retiro previo o cierre de turno).",
+   "pasos": [
+    {
+     "t": "Ellas te avisan por WhatsApp y te dan el efectivo en mano."
+    },
+    {
+     "t": "En **Corte de Caja**, en el recuadro **Entregas de efectivo del personal** (1) aparece cada entrega con la hora, quién la hizo y el monto. Cuenta el efectivo y toca **Recibí** (2).",
+     "img": "07-cierre-entregas-botones.jpg",
+     "leyenda": "1 = Entregas de efectivo del personal · 2 = Recibí · 3 = Observaciones · 4 = Recalcular · 5 = Retiro parcial · 6 = Cerrar día"
+    },
+    {
+     "t": "La entrega pasa de **pendiente** a **recibida**, con tu nombre y la hora."
+    }
+   ],
+   "cuidado": [
+    "Esto **no modifica** el efectivo en caja: el efectivo ya estaba en la caja y solo cambió de manos.",
+    "Antes de **Cerrar día**, confirma todas las entregas: si quedan pendientes el sistema te pregunta si cierras así."
+   ]
+  },
+  {
+   "id": "retiro",
+   "titulo": "Retiro parcial (sacar efectivo de la caja)",
+   "cuando": "Cuando sacas efectivo de la caja durante el día, por ejemplo para depositarlo al banco.",
+   "pasos": [
+    {
+     "t": "En **Corte de Caja** toca **Retiro parcial** (5).",
+     "img": "07-cierre-entregas-botones.jpg",
+     "leyenda": "1 = Entregas de efectivo del personal · 2 = Recibí · 3 = Observaciones · 4 = Recalcular · 5 = Retiro parcial · 6 = Cerrar día"
+    },
+    {
+     "t": "Escribe **cuánto retiras** (1) y el **motivo** (2), por ejemplo \"Depósito banco\". Toca **Confirmar** (3).",
+     "img": "08-retiro-parcial.jpg",
+     "leyenda": "1 = monto · 2 = motivo · 3 = Confirmar"
+    }
+   ],
+   "cuidado": [
+    "El retiro **resta del efectivo en caja** y queda en la lista de Salidas del Cierre del día con la hora y quién lo hizo.",
+    "Haz el retiro **cuando sacas el dinero**, no después: así el cierre coincide con lo que hay en la caja."
+   ]
+  },
+  {
+   "id": "cerrar-dia",
+   "titulo": "Cerrar el día",
+   "cuando": "Al terminar la jornada, cuando los números ya cuadran.",
+   "pasos": [
+    {
+     "t": "Revisa el Cierre del día completo (ventas, salidas, efectivo en caja) y confirma las entregas del personal."
+    },
+    {
+     "t": "Si quieres, escribe **observaciones** del día (3): incidencias, comentarios. Es opcional.",
+     "img": "07-cierre-entregas-botones.jpg",
+     "leyenda": "1 = Entregas de efectivo del personal · 2 = Recibí · 3 = Observaciones · 4 = Recalcular · 5 = Retiro parcial · 6 = Cerrar día"
+    },
+    {
+     "t": "Toca **Cerrar día** (6). El sistema vuelve a calcular justo antes de guardar. Si entró un movimiento nuevo mientras revisabas, te avisa para que revises y toques otra vez."
+    },
+    {
+     "t": "Sale \"Día cerrado\". Queda guardado con la hora y quién lo cerró.",
+     "img": "09-dia-cerrado.jpg",
+     "leyenda": "1 = aviso de día cerrado"
+    },
+    {
+     "t": "Se abren **dos mensajes de WhatsApp** con el resumen: uno para Viridiana y otro para José Manuel. Si alguno no se abrió, tócalo en el recuadro verde (1). Abajo (2) ves los **Cierres anteriores**.",
+     "img": "10-cierre-respaldo-historial.jpg",
+     "leyenda": "1 = mensajes del cierre · 2 = Cierres anteriores"
+    }
+   ],
+   "cuidado": [
+    "Si cambió algo después de cerrar, puedes cerrar otra vez: el sistema pregunta, **reemplaza** el cierre de ese día y reenvía los mensajes.",
+    "**Imprimir** arma una hoja del cierre con espacio para firma de quien cerró y quien revisó.",
+    "Se muestran los últimos 10 cierres."
+   ]
+  },
+  {
+   "id": "cortes-viejos",
+   "titulo": "Validar cortes de caja anteriores (Viridiana)",
+   "cuando": "Solo si aparece un corte pendiente en Corte de Caja.",
+   "pasos": [
+    {
+     "t": "Abajo de los cierres, en **Validación de Corte de Caja**, aparecen cortes que se mandaron **antes** del cierre automático. Revisa efectivo, tarjetas, transferencias, operativo y apartado.",
+     "img": "11-corte-viejo-validacion.jpg",
+     "leyenda": "1 = corte pendiente · 2 = Aprobar corte · 3 = Hay diferencia"
+    },
+    {
+     "t": "Si cuadra, toca **Aprobar corte** (2). Si no, **Hay diferencia** (3). Queda en el historial con tu nombre."
+    }
+   ],
+   "cuidado": [
+    "Ya **no se generan cortes nuevos** de esa forma. Lo que veas ahí son pendientes viejos.",
+    "El Dashboard ya no usa esos cortes: ahora toma todo del Cierre del día."
+   ],
+   "ayuda": "¿Se aprueban o se descartan los cortes viejos que siguen pendientes? Pregunta a José Manuel."
+  },
+  {
+   "id": "salidas",
+   "titulo": "Validar salidas de efectivo (Viridiana)",
+   "cuando": "Todos los días, para revisar lo que Erika y los operadores sacaron de la caja.",
+   "pasos": [
+    {
+     "t": "Entra a **Salidas** y baja a **Validación de Salidas**. Los botones **Hoy**, **Esta semana** y **Pendientes** (1) cambian la lista. Arriba (2): total de salidas (sin contar rechazadas), cuántos registros y cuántos **pendientes**.",
+     "img": "12-salidas-validar.jpg",
+     "leyenda": "1 = filtros · 2 = resumen"
+    },
+    {
+     "t": "Toca **Pendientes**. Cada salida trae tipo, concepto, quién la registró, proveedor, ticket, razón social y si lleva factura. Compara contra el ticket o vale que te entregaron.",
+     "img": "12b-salidas-pendientes.jpg",
+     "leyenda": "1 = una salida pendiente · 2 = Aprobar · 3 = Rechazar"
+    },
+    {
+     "t": "Toca **Aprobar** (2) si es correcta o **Rechazar** (3) si no. La salida queda marcada con tu nombre."
+    }
+   ],
+   "cuidado": [
+    "Una **compra en efectivo** crea su salida sola. Valídala desde **Compras** (siguiente tarea): así se aprueban las dos a la vez.",
+    "Los gastos de gasolina y de flota ya entran como aprobados: no pasan por aquí.",
+    "José Manuel solo ve un **resumen** de salidas; no puede aprobar ni rechazar."
+   ]
+  },
+  {
+   "id": "compras-validar",
+   "titulo": "Validar compras en efectivo (Viridiana)",
+   "cuando": "Cuando Erika registra una compra pagada en efectivo.",
+   "pasos": [
+    {
+     "t": "Entra a **Compras**. Abajo de \"Últimas compras registradas\" está **Validar Compras en Efectivo** (1) con las compras pendientes. Los botones **Hoy**, **Esta semana** (últimos 7 días) y **Pendientes** cambian la lista.",
+     "img": "13-validar-compras.jpg",
+     "leyenda": "1 = título · 2 = una compra pendiente · 3 = Validar · 4 = Rechazar"
+    },
+    {
+     "t": "Compara folio, proveedor y monto contra la factura o remisión. Toca **Validar** (3) o **Rechazar** (4)."
+    },
+    {
+     "t": "Al validar, la compra pasa a **validada** y su salida a **aprobada**. Al rechazar, la compra queda **rechazada** y su salida también."
+    }
+   ],
+   "cuidado": [
+    "**Rechazar no regresa el inventario.** Si la compra no procede, pídele a Erika que la **Cancele** (así sí se revierte la existencia).",
+    "Solo Viridiana valida compras: José Manuel no tiene estos botones."
+   ]
+  },
+  {
+   "id": "fondeo-aprobar",
+   "titulo": "Aprobar o rechazar un fondeo (José Manuel)",
+   "cuando": "Cuando Erika pide dinero para pagar una compra.",
+   "pasos": [
+    {
+     "t": "Erika manda su solicitud por WhatsApp. El mensaje trae enlaces para **aprobar** o **rechazar** sin PIN: abre el enlace y confirma. También puedes entrar a **Fondeos** en el CRM."
+    },
+    {
+     "t": "En **Fondeos pendientes de aprobación** (1) ves folio, quién pidió, motivo, razón social, forma de pago y monto. Los urgentes salen en rojo. Toca **Aprobar** (2) o **Rechazar** (3); al rechazar te pide el motivo (opcional).",
+     "img": "34-fondeos-director.jpg",
+     "leyenda": "1 = fondeo pendiente · 2 = Aprobar · 3 = Rechazar · 4 = total del mes por razón social"
+    },
+    {
+     "t": "Al aprobar se abre un WhatsApp para Viridiana con el aviso. Si el fondeo es en **efectivo** o **mixto**, le pide preparar el efectivo; si es transferencia o tarjeta, solo es informativo."
+    }
+   ],
+   "cuidado": [
+    "Solo **José Manuel** aprueba fondeos. Si Viridiana lo intenta, el sistema le dice que no tiene permiso.",
+    "Abajo ves el **total del mes** por razón social y el historial de fondeos."
+   ]
+  },
+  {
+   "id": "fondeo-entregar",
+   "titulo": "Entregar el efectivo de un fondeo (Viridiana)",
+   "cuando": "Cuando José Manuel aprobó un fondeo en efectivo.",
+   "pasos": [
+    {
+     "t": "Entra a **Fondeos**. En **Fondeos aprobados — preparar efectivo** (1) solo salen los que de verdad requieren efectivo (efectivo o mixto) y aún no se entregan.",
+     "img": "14-fondeos-viri.jpg",
+     "leyenda": "1 = fondeo aprobado en efectivo · 2 = Efectivo entregado · 3 = historial"
+    },
+    {
+     "t": "Prepara el efectivo, entrégaselo a quien lo pidió y toca **Efectivo entregado** (2)."
+    },
+    {
+     "t": "El sistema registra una **salida** \"Fondo a operación\" aprobada, con la fecha de **hoy**, y el fondeo pasa al historial (3)."
+    }
+   ],
+   "cuidado": [
+    "Toca el botón **solo cuando el dinero ya salió de tus manos**: la salida resta de la caja en ese momento.",
+    "Los fondeos por transferencia o tarjeta no aparecen aquí: no hay efectivo que entregar."
+   ]
+  },
+  {
+   "id": "nc",
+   "titulo": "Validar notas de crédito (Viridiana)",
+   "cuando": "Cuando Erika crea una nota de crédito.",
+   "pasos": [
+    {
+     "t": "Entra a **Notas de Crédito** y baja a **Validación de Notas de Crédito**. Cada una trae cliente, tipo, motivo, forma de liquidación, razón social y monto.",
+     "img": "15-validar-nc.jpg",
+     "leyenda": "1 = NC pendiente · 2 = Aprobar · 3 = Rechazar · 4 = historial"
+    },
+    {
+     "t": "Revisa el motivo contra la nota original. Toca **Aprobar** (2) o **Rechazar** (3)."
+    }
+   ],
+   "cuidado": [
+    "Al **aprobar**: los productos devueltos **regresan al inventario**; si se liquida en **efectivo** se registra la salida (con fecha de hoy); y se ajusta la cuenta por cobrar o el saldo a favor del cliente. Al **rechazar** no pasa nada de eso.",
+    "Las notas de crédito que crean **tú o José Manuel** se aprueban solas al guardar.",
+    "Respeta la regla: devoluciones con la nota original y dentro de 5 días hábiles.",
+    "José Manuel ve un resumen del mes por tipo y las últimas 20, sin botones de validar."
+   ]
+  },
+  {
+   "id": "nv-panel",
+   "titulo": "Notas de venta: panel y entregas por revisar",
+   "cuando": "Para ver cómo van los pedidos y atender lo que dejaron los operadores.",
+   "pasos": [
+    {
+     "t": "Entra a **Ventas → Notas de Venta**. Si hay entregas incompletas o confirmadas sin foto, arriba sale el recuadro **Entregas por revisar** (1), con la etiqueta (INCOMPLETA o SIN FOTO) y la nota del operador.",
+     "img": "16-nv-panel-alertas.jpg",
+     "leyenda": "1 = Entregas por revisar · 2 = resumen (abajo)"
+    },
+    {
+     "t": "Llama al cliente: si faltó material, coordina cómo se completa; si fue sin foto, confirma que recibió su pedido. Luego toca **Marcar resuelta**."
+    },
+    {
+     "t": "Abajo del recuadro: el **resumen** (1: total de notas, pendientes de entregar, entregados, monto), los filtros **Hoy / Esta semana / Todos** (2) y la lista (3). Cada fila tiene **NC** (para hacer una nota de crédito de esa venta) y **Cancelar**.",
+     "img": "17-nv-panel-lista.jpg",
+     "leyenda": "1 = resumen · 2 = filtros de fecha · 3 = una nota"
+    },
+    {
+     "t": "Toca una fila para abrir su detalle: **En ruta** (1) y **Entregado** (2) cambian el estado, **Reasignar** (3) cambia el operador, **Facturar** (4) y **Historial** (5) muestran los cambios de estado.",
+     "img": "18-nv-detalle.jpg",
+     "leyenda": "1 = En ruta · 2 = Entregado · 3 = Reasignar · 4 = Facturar · 5 = Historial"
+    }
+   ],
+   "cuidado": [
+    "**Cancelar** pide el motivo, regresa los productos al inventario y cancela la cuenta por cobrar ligada. Funciona aunque la nota ya esté entregada: úsalo solo si el material de verdad regresó.",
+    "**Reasignar** pide el nombre del operador (Francisco, Agustín Lara o Carlos J. Escobar) y abre un WhatsApp para avisarle.",
+    "El **!** rojo de la pestaña Ventas se actualiza solo cada par de minutos y desaparece cuando todas están resueltas."
+   ]
+  },
+  {
+   "id": "facturar",
+   "titulo": "Preparar una factura de una nota de venta",
+   "cuando": "Cuando un cliente pide factura.",
+   "pasos": [
+    {
+     "t": "En el detalle de la nota toca **Facturar**. Si el cliente no tiene RFC capturado, el sistema te avisa: primero llena sus datos fiscales en **Clientes**."
+    },
+    {
+     "t": "Toca **Copiar datos para facturar** (1): copia los datos del emisor y del cliente para pegarlos en la plataforma de esa razón social (Factura Total, Timbrame o el Portal SAT).",
+     "img": "19-facturar.jpg",
+     "leyenda": "1 = Copiar datos · 2 = folio de factura · 3 = fecha · 4 = Ya se facturó · 5 = Guardar"
+    },
+    {
+     "t": "Cuando ya timbraste, escribe el **folio de factura** (2) y la **fecha** (3), marca **Ya se facturó** (4) y toca **Guardar** (5)."
+    }
+   ],
+   "cuidado": [
+    "El CRM **no timbra**: solo deja los datos listos y guarda el estado de cada nota (facturada o no).",
+    "Cemcoya (CEM) se factura en el Portal SAT, sin API: captura manual."
+   ],
+   "ayuda": "Quién timbra las facturas: José Manuel."
+  },
+  {
+   "id": "cuentas",
+   "titulo": "Cuentas por cobrar y por pagar",
+   "cuando": "Para cobrar saldos de clientes y pagar a proveedores.",
+   "pasos": [
+    {
+     "t": "Entra a **Cuentas**. A la izquierda **Por cobrar** (cada saldo con sus días pendientes; en rojo lo vencido) y a la derecha **Por pagar** (con fecha de vencimiento).",
+     "img": "20-cuentas.jpg",
+     "leyenda": "1 = monto a abonar · 2 = método de pago · 3 = Registrar pago · 4 = Ver proveedor"
+    },
+    {
+     "t": "**Cobrar:** escribe el **monto a abonar** (1), elige el **método** (2: efectivo, tarjeta o transferencia), y si quieres anota quién lo trajo. Toca **Registrar pago** (3). **WhatsApp** manda un recordatorio al cliente."
+    },
+    {
+     "t": "**Pagar a un proveedor:** toca **Ver proveedor** (4). En su ficha, en **Cuentas por pagar**, elige cómo pagas (efectivo, transferencia o tarjeta), el monto y toca **Abonar**."
+    }
+   ],
+   "cuidado": [
+    "Un abono de cliente en efectivo entra al efectivo en caja del día; en tarjeta o transferencia, no.",
+    "Un abono a proveedor en efectivo resta de la caja; en transferencia o tarjeta, no. **Elige la forma real.**",
+    "No damos crédito: un saldo por cobrar solo existe por un anticipo parcial autorizado."
+   ]
+  },
+  {
+   "id": "nomina",
+   "titulo": "Nómina semanal",
+   "cuando": "Una vez por semana, para pagar a los empleados.",
+   "pasos": [
+    {
+     "t": "Entra a **Nómina**. La pestaña **Config. Empleados** (1) tiene a cada empleado (2) con **sueldo semanal**, si lleva **IMSS** y cuánto, **caja de ahorro**, **descuento fijo** y **días por semana**. Cambia lo que haga falta y toca **Guardar Configuración**. **+ Nuevo Empleado** (3) agrega uno.",
+     "img": "21-nomina-config.jpg",
+     "leyenda": "1 = pestañas de Nómina · 2 = empleados · 3 = Nuevo empleado"
+    },
+    {
+     "t": "Pasa a **Nueva Nómina** (1). Arriba ves la **semana**, el **lunes** y el **sábado de pago**.",
+     "img": "22-nomina-semana.jpg",
+     "leyenda": "1 = semana · 2 = Nómina fuera de tiempo (solo Viridiana)"
+    },
+    {
+     "t": "En el **detalle** captura por empleado: **faltas**, **otros descuentos** y **bonos**. El adelanto o préstamo semanal y los descuentos fijos se calculan solos. Con **Editar descuentos** (1) puedes ajustar los descuentos de un empleado.",
+     "img": "23-nomina-detalle.jpg",
+     "leyenda": "1 = Editar descuentos · 2 = tabla de empleados"
+    },
+    {
+     "t": "Abajo (1) están los **totales**: nómina, IMSS, transferencia y **efectivo**. Puedes **Guardar borrador** (2) para seguir después, **Imprimir nómina** o **Procesar nómina** (3).",
+     "img": "24-nomina-totales.jpg",
+     "leyenda": "1 = totales · 2 = Guardar borrador · 3 = Procesar nómina"
+    },
+    {
+     "t": "Al **procesar** el sistema pide confirmar, registra la salida **\"Pago nómina semanal\"** por el total en efectivo, con fecha del sábado, y **descuenta** los préstamos activos."
+    }
+   ],
+   "cuidado": [
+    "Procesar es el paso que registra el pago: revisa totales antes. Viridiana y José Manuel pueden corregir una nómina ya procesada desde el **Historial** con **Editar**.",
+    "A la salida de nómina entra solo el **efectivo**; la parte por transferencia y el IMSS no se registran como salida en efectivo.",
+    "En el Dashboard, la **Nómina** de la semana marca $0 hasta que la proceses."
+   ]
+  },
+  {
+   "id": "prestamos",
+   "titulo": "Préstamos y adelantos a empleados",
+   "cuando": "Cuando José Manuel autoriza un adelanto o un préstamo.",
+   "pasos": [
+    {
+     "t": "En **Nómina → Préstamos** ves los **préstamos activos** (1: **+ Nuevo Préstamo**; 2: cada préstamo con su saldo, % pagado y descuento semanal). **Liquidar** (3) lo da por terminado.",
+     "img": "25-prestamos-lista.jpg",
+     "leyenda": "1 = Nuevo préstamo · 2 = un préstamo activo · 3 = Liquidar"
+    },
+    {
+     "t": "Para uno nuevo toca **+ Nuevo Préstamo**. Elige el **tipo** (1): **Adelanto de nómina** (se descuenta completo esta semana) o **Préstamo fijo** (cuotas semanales hasta liquidar). Elige el **empleado** (2), el **monto total** (3) y la **cuota semanal** (4). Toca **Guardar préstamo** (5).",
+     "img": "26-prestamo-form.jpg",
+     "leyenda": "1 = tipo · 2 = empleado · 3 = monto total · 4 = cuota semanal · 5 = Guardar préstamo"
+    }
+   ],
+   "cuidado": [
+    "Las cuotas se descuentan **solas** en cada nómina procesada hasta llegar a cero.",
+    "**Autoriza José Manuel.** El sistema guarda quién lo registró."
+   ]
+  },
+  {
+   "id": "nomina-tarde",
+   "titulo": "Nómina fuera de tiempo (solo Viridiana)",
+   "cuando": "Cuando se pagó una semana pasada y no se capturó a tiempo.",
+   "pasos": [
+    {
+     "t": "En **Nómina → Nueva Nómina**, en el recuadro **Nómina fuera de tiempo** (2 en la captura de Nueva Nómina), elige **cualquier fecha de la semana** que quieres capturar y, si se pagó otro día, la **fecha en que se pagó** (si la dejas vacía usa el sábado de esa semana)."
+    },
+    {
+     "t": "Toca **Cargar esa semana**. Aparece un aviso naranja \"NÓMINA FUERA DE TIEMPO\" con el rango de la semana y la fecha de pago."
+    },
+    {
+     "t": "Captura los datos igual que una nómina normal y toca **Procesar nómina**. La salida de efectivo se registra con la **fecha de pago** y solo cuentan los préstamos que ya existían esa semana."
+    },
+    {
+     "t": "Para regresar a la semana actual toca **Volver a esta semana**."
+    }
+   ],
+   "cuidado": [
+    "La fecha **no puede ser futura**, y la fecha de pago debe estar entre el lunes de esa semana y hoy.",
+    "Si esa semana ya fue procesada, el sistema te avisa y te manda a corregirla con **Editar** en el Historial.",
+    "Las nóminas fuera de tiempo **no** cuentan en la \"Nómina\" de la semana del Dashboard.",
+    "Este recuadro **solo lo ve y usa Viridiana**."
+   ]
+  },
+  {
+   "id": "nomina-historial",
+   "titulo": "Historial de nóminas y correcciones",
+   "cuando": "Para revisar una nómina pagada o corregirla.",
+   "pasos": [
+    {
+     "t": "En **Nómina → Historial** (filtros **Todas / Este mes / Este trimestre**, 1) está cada semana pagada con su fecha, empleados y total (2).",
+     "img": "27-nomina-historial.jpg",
+     "leyenda": "1 = filtros · 2 = nóminas (Ver, Editar, Borrar)"
+    },
+    {
+     "t": "**Ver** muestra el detalle. **Editar** abre la nómina para corregir sueldo, descuentos, préstamo, caja de ahorro, bonos o transferencia. **Borrar** la elimina."
+    }
+   ],
+   "cuidado": [
+    "**Borrar** elimina el registro de la nómina y **no se puede deshacer**. No revierte la salida de efectivo ni los descuentos de préstamos que ya se aplicaron.",
+    "Una nómina procesada se corrige con **Editar**, no procesando otra vez la misma semana. Editar recalcula y deja registro de qué cambió."
+   ]
+  },
+  {
+   "id": "flota",
+   "titulo": "Flota: resumen, alertas y unidades",
+   "cuando": "Para saber cómo están las unidades y qué se vence.",
+   "pasos": [
+    {
+     "t": "Entra a **Flota**. Arriba (1): **unidades**, **en ruta hoy**, **en taller** y el **gasto de flota de la semana** (gasolina + mantenimiento). Debajo (2) las **alertas**: documentos que vencen en 30 días o menos (tarjeta de circulación, seguro, verificación), servicio próximo (a 500 km o menos) y daños sin resolver.",
+     "img": "28-flota-resumen.jpg",
+     "leyenda": "1 = resumen · 2 = alertas"
+    },
+    {
+     "t": "Cada **unidad** (1) muestra placas, km, operador asignado y próximo servicio, con su estado (2). **Editar** (3) cambia modelo, placas, color, km, operador, vencimientos de documentos y notas; **+Servicio** (4) fija el km del próximo servicio; **+Taller** (5) la marca como en taller (y **Sacar de taller** la regresa).",
+     "img": "29-flota-unidades.jpg",
+     "leyenda": "1 = una unidad · 2 = estado · 3 = Editar · 4 = +Servicio · 5 = +Taller"
+    },
+    {
+     "t": "Más abajo está el **Historial de gasolinas** con filtro de fechas: litros, monto, estación y forma de pago de cada carga."
+    }
+   ],
+   "cuidado": [
+    "Los operadores registran su gasolina y sus daños desde su celular; tú los ves aquí.",
+    "**José Manuel** agrega unidades nuevas con la tarjeta **Agregar unidad** (modelo, año, placas, color, km, operador y vencimientos)."
+   ]
+  },
+  {
+   "id": "flota-gasto",
+   "titulo": "Registrar un gasto de flota",
+   "cuando": "Cuando se paga una talacha, refacción, llanta o servicio.",
+   "pasos": [
+    {
+     "t": "En **Flota**, en la tarjeta **Registrar gasto**: marca (1) si **aplica a todas las unidades** o elige la **unidad** (2). Elige la **categoría** (3: talacha, refacción, llanta, servicio, insumo operativo u otro), describe el trabajo (4), el **costo** (5) y la **forma de pago** (6). Revisa la fecha y toca **Registrar gasto**.",
+     "img": "30-flota-gasto.jpg",
+     "leyenda": "1 = ¿aplica a todas las unidades? · 2 = unidad · 3 = categoría · 4 = descripción · 5 = costo · 6 = forma de pago"
+    }
+   ],
+   "cuidado": [
+    "Se crea solo la **salida** del gasto, ya aprobada, con la forma de pago y la fecha que elegiste. **No la captures otra vez en Salidas.**",
+    "Elige la forma de pago real: solo lo pagado en efectivo (o mixto) resta de la caja en el Cierre del día."
+   ]
+  },
+  {
+   "id": "permisos",
+   "titulo": "Permisos por rol y bitácora de borrados",
+   "cuando": "Cuando quieres decidir quién puede qué en Inventario y Clientes, o ver quién borró algo.",
+   "pasos": [
+    {
+     "t": "Entra a **Inventario** y baja a **Permisos por rol** (1). Marca o desmarca por rol: **Agregar producto**, **Agregar Truper**, **Editar**, **Borrar/desactivar productos**, **Borrar/desactivar clientes** y **Ajustar existencia**. Toca **Guardar permisos** (2). El Director siempre tiene todo.",
+     "img": "31-permisos.jpg",
+     "leyenda": "1 = matriz de permisos · 2 = Guardar permisos · 3 = Bitácora de borrados"
+    },
+    {
+     "t": "Abajo está la **Bitácora de borrados** (3): quién eliminó, desactivó o reactivó un producto o cliente, con fecha, hora y el motivo. Lo eliminado conserva un respaldo de sus datos."
+    }
+   ],
+   "cuidado": [
+    "Los cambios de permisos aplican la **próxima vez que cada persona entre** al CRM.",
+    "Lo más seguro es dar poco e ir abriendo permisos conforme hagan falta."
+   ]
+  },
+  {
+   "id": "fiscal",
+   "titulo": "Fiscal: razones sociales, terminales e impresión",
+   "cuando": "Cuando cambia un dato fiscal, un folio o una cuenta, o para copiar datos del emisor.",
+   "pasos": [
+    {
+     "t": "Entra a **Fiscal**. Arriba está el **Expediente Fiscal** de cada razón social (JMG, IZZ y CEM): razón social, RFC, tipo de persona, régimen, CP, domicilio fiscal, plataforma de factura, serie, **folio actual**, vigencia de la **opinión 32-D** y las **cuentas bancarias** (la ⭐ es la principal).",
+     "img": "32-fiscal.jpg",
+     "leyenda": "1 = razón social JMG"
+    },
+    {
+     "t": "Cambia lo que haga falta y toca **Guardar** (1). **Copiar datos de emisor** (2) copia los datos para pegarlos al facturar. Debajo puedes subir la **constancia de situación fiscal** y la **opinión de cumplimiento (32-D)** en PDF.",
+     "img": "33-fiscal-botones.jpg",
+     "leyenda": "1 = Guardar · 2 = Copiar datos de emisor"
+    },
+    {
+     "t": "Más abajo: **Terminales y comisiones** (la tasa de cada terminal) y **Configuración de impresión**, con los datos que salen en el ticket y en cada nota de venta de cada razón social (nombre comercial, dirección, teléfonos, mensaje de pie y logo)."
+    }
+   ],
+   "cuidado": [
+    "Si la opinión 32-D está vencida, la tarjeta lo marca con una etiqueta roja. Una razón social **sin API** se factura con captura manual.",
+    "**Nunca subas al CRM archivos .cer, .key ni contraseñas del Sello Digital.**",
+    "Usa **IZZ-BBVA** para cobros grandes con tarjeta; **Mercado Pago es la más cara**, úsala solo si no hay otra.",
+    "Los datos fiscales de **clientes** se capturan en Clientes y los de **proveedores** en Proveedores."
+   ]
+  },
+  {
+   "id": "compras-director",
+   "titulo": "Dashboard de Compras (José Manuel)",
+   "cuando": "Para ver cuánto se compra, qué vence y a quién.",
+   "pasos": [
+    {
+     "t": "Entra a **Compras** y baja a **Dashboard de Compras**: **total del mes** y número de compras (1), **próximos vencimientos** de compras a crédito de los siguientes 7 días (2) y el **top 5 de proveedores** por monto comprado (3).",
+     "img": "35-compras-director.jpg",
+     "leyenda": "1 = resumen · 2 = vencimientos · 3 = top proveedores"
+    },
+    {
+     "t": "Más abajo están las **últimas 20 compras**, con filtro por razón social y el botón **Cancelar compra**."
+    }
+   ],
+   "cuidado": [
+    "**Cancelar compra** regresa la existencia al inventario, rechaza la salida y cancela la cuenta por pagar. Pide el motivo.",
+    "Los vencimientos salen de las compras a **crédito del proveedor** que siguen pendientes."
+   ]
+  }
+ ],
+ "problemas": [
+  {
+   "p": "El Cierre del día no coincide con el efectivo que tengo.",
+   "r": "Revisa: salidas pendientes o mal capturadas, entregas del personal sin confirmar (no cambian la caja, pero conviene confirmarlas), retiros parciales y que las compras por transferencia o tarjeta no cuentan como salida de caja. Toca Recalcular."
+  },
+  {
+   "p": "Cerré el día y después entró una venta o una salida.",
+   "r": "Toca Recalcular y Cerrar día otra vez: el sistema pregunta, reemplaza el cierre de ese día y reenvía los mensajes."
+  },
+  {
+   "p": "No se abrió el WhatsApp del cierre.",
+   "r": "En el recuadro verde de abajo hay un botón por persona (Viridiana y José Manuel). Tócalo."
+  },
+  {
+   "p": "Dice \"No tienes permisos para aprobar fondeos\".",
+   "r": "Solo José Manuel aprueba fondeos. Viridiana solo entrega el efectivo cuando ya están aprobados."
+  },
+  {
+   "p": "Rechacé una compra y el inventario siguió subiendo.",
+   "r": "Rechazar solo cambia el estado y la salida. Para revertir la existencia hay que Cancelar la compra (Compras o el Dashboard de Compras)."
+  },
+  {
+   "p": "No veo la nómina fuera de tiempo.",
+   "r": "Ese recuadro es solo de Viridiana. José Manuel puede procesar la nómina normal y corregir en el Historial."
+  },
+  {
+   "p": "El Dashboard marca la utilidad muy alta.",
+   "r": "La utilidad no descuenta la mercancía; es ventas menos gastos menos nómina. Úsala solo como referencia."
+  },
+  {
+   "p": "Un abono salió como efectivo y fue transferencia.",
+   "r": "El abono solo resta de la caja si se registró en efectivo. Si la forma de pago estuvo mal, avísale a José Manuel para corregirlo."
+  },
+  {
+   "p": "Aparece un ! rojo en Ventas.",
+   "r": "Hay entregas incompletas o sin foto por revisar: Ventas → Notas de Venta → Entregas por revisar."
+  }
+ ],
+ "por_confirmar": [
+  "Solo Viridiana ve las listas para validar salidas, compras en efectivo, notas de crédito y cortes; José Manuel solo ve resúmenes. ¿Quién valida cuando Viridiana no está?",
+  "Solo José Manuel aprueba fondeos. ¿Quién los aprueba cuando él no está? Hoy no hay otra vía.",
+  "Hay cortes viejos pendientes de validar (5, 7 y 8 de octubre). ¿Se aprueban o se descartan?",
+  "El Cerrar mi turno de Ivette y Erika solo llega por WhatsApp; el Cierre del día no lo muestra. ¿Quieres verlo ahí para cuadrar con lo que te entregan?",
+  "La utilidad del Dashboard no resta el costo de la mercancía. ¿Quieres una utilidad real con costo de ventas? ¿Sigue vigente la meta de $800,000?",
+  "Rechazar una compra en efectivo no regresa el inventario. ¿Preferimos que Rechazar también cancele la compra?",
+  "Nómina: al procesar solo se registra la parte en efectivo como salida. ¿La parte por transferencia y el IMSS se registran en otro lado?",
+  "Evaluaciones: solo hay una encuesta registrada (13 de julio). ¿Se están mandando las encuestas después de cada entrega de JMG?",
+  "Fiscal: ¿quién captura la opinión 32-D vigente y quién da seguimiento cuando vence?"
+ ]
+}
