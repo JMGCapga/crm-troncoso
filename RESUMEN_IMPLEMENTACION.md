@@ -101,7 +101,7 @@ crm-troncoso-real/index.html
 
 ### 4. **Control de Acceso** ✅
 
-- ✅ Solo **Viridiana (5678)** y **José Manuel (9900)** pueden ver el módulo
+- ✅ Solo **Viridiana** y **José Manuel** pueden ver el módulo
 - ✅ Otros usuarios ven: ⚠️ "No tienes permisos"
 - ✅ Validación en `iniciarNomina()`
 
@@ -137,7 +137,7 @@ Se entregaron **3 documentos de documentación:**
 ```bash
 1. Abre http://localhost:8000/index.html
 
-2. Ingresa PIN: 5678 (Viridiana)
+2. Entra como Viridiana (nombre + PIN personal)
 
 3. Haz clic en tab "👷 Nómina"
    ✓ Deberías ver "⚙️ Config. Empleados" abierto
@@ -200,7 +200,7 @@ Ver: **PRUEBA_MODULO_NOMINA.md** (guía detallada con 8 pasos)
    ```
 
 4. **Usar en la próxima semana**
-   - Accede como Viridiana (5678)
+   - Accede como Viridiana
    - Ve a "👷 Nómina"
    - Sigue el flujo: Configurar → Crear → Procesar
 

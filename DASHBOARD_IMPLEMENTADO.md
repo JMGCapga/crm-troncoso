@@ -9,8 +9,8 @@ El Dashboard Financiero Ejecutivo ha sido implementado completamente con todas l
 ## 📋 QUÉ SE IMPLEMENTÓ
 
 ### 1. Sistema de Autenticación
-- ✅ José Manuel (PIN: 9900) → ve Dashboard completo
-- ✅ Viridiana (PIN: 5678) → ve Dashboard completo
+- ✅ José Manuel (Director) → ve Dashboard completo
+- ✅ Viridiana (Gerencia) → ve Dashboard completo
 - ✅ Otros usuarios → ven lista de entregas normalmente
 - ✅ Redirección automática al Dashboard para usuarios autorizados
 
@@ -133,8 +133,8 @@ cd crm-troncoso
 ```
 
 ### PINs de prueba
-- **9900** → José Manuel (Director) - Dashboard
-- **5678** → Viridiana (Gerencia) - Dashboard
+- José Manuel (Director) - Dashboard
+- Viridiana (Gerencia) - Dashboard
 - **1111** → Ivette (Ventas) - Lista de entregas
 - **3333** → Francisco (Operador) - Lista de entregas
 - **4444** → Agustín (Operador) - Lista de entregas

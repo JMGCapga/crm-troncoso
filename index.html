@@ -28,7 +28,13 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
 .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
 .pbtn{touch-action:manipulation;height:50px;border-radius:10px;border:1px solid #2a2e3a;background:#1a1d26;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:20px;cursor:pointer;}
 .pbtn:active{background:var(--naranja);}
-.lerr{text-align:center;font-size:11px;color:#ff4d4d;height:14px;}
+.lerr{text-align:center;font-size:11px;color:#ff4d4d;min-height:14px;}
+.lpers{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.lpbtn{touch-action:manipulation;min-height:54px;border-radius:10px;border:1px solid #2a2e3a;background:#1a1d26;color:#fff;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;padding:8px 6px;line-height:1.2;}
+.lpbtn small{display:block;font-size:9px;font-weight:600;color:#888;letter-spacing:.8px;text-transform:uppercase;margin-top:3px;}
+.lpbtn:active{background:var(--naranja);}
+.lvolver{display:block;margin:0 auto 10px;background:transparent;border:none;color:#9aa;font-size:11px;cursor:pointer;text-decoration:underline;}
+.lwho{text-align:center;color:#fff;font-weight:700;font-size:15px;margin-bottom:14px;}
 /* APP */
 #app{display:none;min-height:100vh;}
 .hdr{background:var(--gris-oscuro);padding:14px 20px;display:flex;align-items:center;gap:12px;border-bottom:3px solid var(--naranja);position:sticky;top:0;z-index:50;}
@@ -213,10 +219,15 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <div class="llogo">
       <div style="font-size:26px;margin-bottom:6px;text-align:center;">🏗️</div>
       <div class="lbrand" style="text-align:center;">TRONCOSO <span>CRM</span></div>
-      <div class="ltag" style="text-align:center;">Ingresa tu PIN</div>
+      <div class="ltag" style="text-align:center;" id="ltag">¿Quién eres?</div>
     </div>
-    <div class="pdots"><div class="pdot" id="pd0"></div><div class="pdot" id="pd1"></div><div class="pdot" id="pd2"></div><div class="pdot" id="pd3"></div></div>
-    <div class="pgrid" id="pingrid"></div>
+    <div id="login-quien"><div class="lpers" id="lpers"></div></div>
+    <div id="login-pin" style="display:none;">
+      <div class="lwho" id="lwho"></div>
+      <div class="pdots" id="pdots"></div>
+      <div class="pgrid" id="pingrid"></div>
+      <button class="lvolver" onclick="volverAQuien()">← No soy yo</button>
+    </div>
     <div class="lerr" id="lerr"></div>
     <div id="login-timeout-msg" style="display:none;text-align:center;margin-top:16px;padding:14px;background:#FEF3C7;border-radius:10px;color:#92400E;font-size:13px;font-weight:600;">
       ⚠️ Conexión lenta. Verifica tu señal e intenta de nuevo.
@@ -259,6 +270,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
     <div class="hdr-mod">CRM</div>
     <div class="sync-badge"><div class="sync-dot" id="syncdot"></div><span id="syncstat">Conectando...</span></div>
     <div class="hdr-user" id="hdr-user"></div>
+    <button class="hdr-out" onclick="abrirCambiarPin()" title="Cambiar mi PIN" aria-label="Cambiar mi PIN">🔑</button>
     <button class="hdr-out" onclick="logout()">Salir</button>
   </div>
 
@@ -1563,7 +1575,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         </div>
       </div>
 
-      <!-- VISTA MECÁNICO (PIN 2024) -->
+      <!-- VISTA MECÁNICO (Taller Ynurrigarro) -->
       <div id="flota-mecanico" style="display:none;">
         <div class="card">
           <div class="card-title">🚛 Unidades y su historial</div>
@@ -2050,40 +2062,46 @@ try {
   storage = firebase.storage();
 } catch(e) { console.log('Firebase error:', e); }
 
-// ════ AUTH ANÓNIMA — requerida por las reglas de Firestore/Storage ════
-// No cambia el sistema de PINes: solo autentica la conexión antes de
-// que cualquier función (teclado de PIN, magic link de fondeos) toque Firestore.
-// En datos móviles con mala señal, signInAnonymously() puede quedarse
-// colgado sin éxito ni error — el teclado de PIN nunca aparece y no hay
-// ninguna pista de qué pasó. Si a los 10s no conectó, se avisa y se
-// ofrece recargar en vez de dejar la pantalla en blanco.
-var _authConectada = false;
-firebase.auth().onAuthStateChanged(function(user) {
-  if (user) {
-    _authConectada = true;
-    document.getElementById('login-timeout-msg').style.display = 'none';
-    buildPinGrid();
-    checkMagicLinkFondeo();
-  }
-});
-firebase.auth().signInAnonymously().catch(function(e) {
-  console.log('Error de autenticación anónima:', e);
-});
-setTimeout(function(){
-  if(!_authConectada) document.getElementById('login-timeout-msg').style.display = 'block';
-}, 10000);
+// ════ SESIÓN — cada persona entra con SU cuenta de Firebase (nombre + PIN) ════
+// Ya no se usa sesión anónima: las reglas de Firestore/Storage solo dejan pasar a las
+// cuentas del personal. Los dos accesos sin cuenta (encuesta del cliente y link de WhatsApp
+// de fondeos) están acotados en las reglas (carpeta seguridad/).
+// SESSION = la sesión vive mientras la pestaña esté abierta; al cerrarla hay que volver a entrar.
+var _persistenciaLista = Promise.resolve();
+try { _persistenciaLista = firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(function(e){ console.log('Persistencia de sesión:', e); }); } catch(e) { console.log(e); }
 
-// ════ USUARIOS — mismo sistema de PIN que Sistema Troncoso ════
+function idPorCorreo(email) {
+  var mail = String(email || '').toLowerCase();
+  var hallado = null;
+  Object.keys(USERS).forEach(function(id){ if(USERS[id].email === mail) hallado = id; });
+  return hallado;
+}
+firebase.auth().onAuthStateChanged(function(user) {
+  if(!user) return;
+  if(user.isAnonymous) { if(!leerParamsFondeo()) firebase.auth().signOut(); return; }   // sesión anónima heredada de la versión anterior
+  var id = idPorCorreo(user.email);
+  if(!id) { firebase.auth().signOut(); return; }   // una cuenta que no es del personal no entra
+  if(leerParamsFondeo()) return;                   // la pantalla de aprobar fondeo no abre el CRM
+  if(currentUser && currentPin === id) return;
+  entrarComo(id);
+});
+
+// ════ USUARIOS ════
+// Las llaves ('1111', '9900'...) son IDS INTERNOS del sistema (candados por rol, turnos guardados
+// en el teléfono). YA NO son claves de acceso: cada persona entra con su cuenta de Firebase
+// (correo interno + PIN que solo ella conoce). Los teléfonos viven en Firestore (config_contactos).
+// pinLen: Director y Gerencia usan PIN de 8 dígitos (ven nómina y finanzas).
 const USERS = {
-  '1111':{name:'Ivette',role:'Ventas'},
-  '2222':{name:'Erika',role:'Compras'},
-  '3333':{name:'Francisco',role:'Operador',tel:'525640045544'},
-  '4444':{name:'Agustín Lara',role:'Operador',tel:'525610618450'},
-  '5555':{name:'Carlos J. Escobar',role:'Operador',tel:'525640058084'},
-  '5678':{name:'Viridiana',role:'Gerencia'},
-  '9900':{name:'Jose Manuel',role:'Director',tel:'525585736084'},
-  '2024':{name:'Taller Ynurrigarro',role:'Mecanico'}
+  '1111':{name:'Ivette',role:'Ventas',email:'ivette@troncoso-crm.com',pinLen:6},
+  '2222':{name:'Erika',role:'Compras',email:'erika@troncoso-crm.com',pinLen:6},
+  '3333':{name:'Francisco',role:'Operador',email:'francisco@troncoso-crm.com',pinLen:6},
+  '4444':{name:'Agustín Lara',role:'Operador',email:'agustin@troncoso-crm.com',pinLen:6},
+  '5555':{name:'Carlos J. Escobar',role:'Operador',email:'carlos@troncoso-crm.com',pinLen:6},
+  '5678':{name:'Viridiana',role:'Gerencia',email:'viridiana@troncoso-crm.com',pinLen:8},
+  '9900':{name:'Jose Manuel',role:'Director',email:'josemanuel@troncoso-crm.com',pinLen:8},
+  '2024':{name:'Taller Ynurrigarro',role:'Mecanico',email:'taller@troncoso-crm.com',pinLen:6}
 };
+const ORDEN_LOGIN = ['1111','2222','3333','4444','5555','5678','9900','2024'];
 
 const RAZONES = {
   JMG: { nombre: 'José Manuel Garín', rfc: 'GACM860923FB3' },
@@ -2152,50 +2170,9 @@ var terminalesCache = [];
 var proveedoresDirCache = [];
 var proveedoresDirCargados = false;
 
-const RAZONES_SOCIALES_SEED = {
-  JMG: {
-    rfc: 'GACM860923FB3', razonSocial: 'JOSE MANUEL GARIN CAPOTE',
-    tipoPersona: 'fisica', regimenFiscal: '612',
-    regimenDesc: 'Personas Físicas con Actividades Empresariales y Profesionales',
-    cpFiscal: '08620',
-    domicilioFiscal: 'Francisco del Paso y Troncoso 943, Los Reyes, Iztacalco, CDMX',
-    plataformaFactura: 'Factura Total', tieneAPI: true,
-    serieFactura: 'FAC', folioActual: 14558,
-    cuentas: [
-      {banco:'BANAMEX', sucursal:'7018', cuenta:'0003248', clabe:'002180701800032482', principal:true},
-      {banco:'BANCO AZTECA', cuenta:'27400138009007', clabe:'127180001380090079', principal:false},
-      {banco:'BBVA', cuenta:'0477247818', clabe:'012180004772478188', principal:false},
-      {banco:'BBVA', cuenta:'0104035283', clabe:'012180001040352832', principal:false}
-    ]
-  },
-  IZZ: {
-    rfc: 'IEZI860901AW2', razonSocial: 'ITZAYANA ILLESCAS ZAMUDIO',
-    tipoPersona: 'fisica', regimenFiscal: '612',
-    regimenDesc: 'Personas Físicas con Actividades Empresariales y Profesionales',
-    cpFiscal: '08000',
-    domicilioFiscal: 'Sur 183 No. 2001 Local 1, Gabriel Ramos Millán Secc Bramadero, Iztacalco, CDMX',
-    plataformaFactura: 'Timbrame', tieneAPI: true,
-    serieFactura: '', folioActual: 165,
-    cuentas: [
-      {banco:'BBVA', cuenta:'0483575136', clabe:'012180004835751360', principal:true},
-      {banco:'BANCA MIFEL', cuenta:'01600551929', clabe:'042180016005519293', principal:false},
-      {banco:'MERCADO PAGO', cuenta:'01040763825', clabe:'722969010407638251', principal:false}
-    ]
-  },
-  CEM: {
-    rfc: 'ACE230216MR0', razonSocial: 'ABASTECEDORA CEMCOYA',
-    tipoPersona: 'moral', regimenFiscal: '626',
-    regimenDesc: 'Régimen Simplificado de Confianza',
-    cpFiscal: '08800',
-    domicilioFiscal: 'Playa Nizuc 24, Santiago Sur, Iztacalco, CDMX',
-    plataformaFactura: 'Portal SAT', tieneAPI: false,
-    serieFactura: '', folioActual: 463,
-    cuentas: [
-      {banco:'BBVA', cuenta:'0120547689', clabe:'012180001205476896', principal:true},
-      {banco:'SANTANDER', cuenta:'65509721252', clabe:'014180655097212528', principal:false}
-    ]
-  }
-};
+// Los datos fiscales y bancarios (CLABEs, cuentas) YA NO viven en el código: son públicos en GitHub.
+// La fuente única es la colección razones_sociales de Firestore (solo la editan Director/Gerencia).
+const RAZONES_SOCIALES_SEED = {};
 
 const TERMINALES_SEED = [
   {rs:'IZZ', banco:'BBVA',         tasaDebito:0.0085, tasaCredito:0.0085, iva:0.16, activa:true},
@@ -2409,7 +2386,47 @@ var productos = [], inventarioCache = [];
 var productosIndex = Object.create(null);
 var productosCargados = false;
 
-// ════ PIN LOGIN ════
+// ════ LOGIN — tocar tu nombre y teclear tu PIN ════
+var idElegido = null, _validandoPin = false;
+var ETIQUETA_ROL = { Ventas:'Ventas', Compras:'Compras', Operador:'Operador', Gerencia:'Gerencia', Director:'Director', Mecanico:'Mecánico' };
+
+function pinLenActual(){
+  var u = idElegido ? USERS[idElegido] : null;
+  return (u && u.pinLen) ? u.pinLen : 6;
+}
+function renderLoginPersonal(){
+  var cont = document.getElementById('lpers');
+  if(!cont) return;
+  cont.innerHTML = '';
+  ORDEN_LOGIN.forEach(function(id){
+    var u = USERS[id];
+    var b = document.createElement('button');
+    b.className = 'lpbtn';
+    b.type = 'button';
+    var nombre = document.createElement('span'); nombre.textContent = u.name;
+    var rol = document.createElement('small'); rol.textContent = ETIQUETA_ROL[u.role] || u.role;
+    b.appendChild(nombre); b.appendChild(rol);
+    b.addEventListener('click', function(){ elegirPersona(id); });
+    cont.appendChild(b);
+  });
+}
+function elegirPersona(id){
+  idElegido = id; pinBuf = '';
+  document.getElementById('lerr').textContent = '';
+  document.getElementById('login-timeout-msg').style.display = 'none';
+  document.getElementById('lwho').textContent = USERS[id].name;
+  document.getElementById('ltag').textContent = 'Ingresa tu PIN de ' + pinLenActual() + ' dígitos';
+  document.getElementById('login-quien').style.display = 'none';
+  document.getElementById('login-pin').style.display = 'block';
+  updateDots();
+}
+function volverAQuien(){
+  idElegido = null; pinBuf = ''; _validandoPin = false;
+  document.getElementById('lerr').textContent = '';
+  document.getElementById('ltag').textContent = '¿Quién eres?';
+  document.getElementById('login-pin').style.display = 'none';
+  document.getElementById('login-quien').style.display = 'block';
+}
 function buildPinGrid(){
   var g = document.getElementById('pingrid');
   var keys = ['1','2','3','4','5','6','7','8','9','del','0'];
@@ -2421,24 +2438,73 @@ function buildPinGrid(){
     btn.style.gridColumn = k==='0' ? '2' : '';
     btn.addEventListener('pointerdown', function(e){
       e.preventDefault();
-      if(k==='del'){ pinBuf = pinBuf.slice(0,-1); } 
-      else if(pinBuf.length < 4){ pinBuf += k; }
+      if(_validandoPin || !idElegido) return;
+      if(k==='del'){ pinBuf = pinBuf.slice(0,-1); }
+      else if(pinBuf.length < pinLenActual()){ pinBuf += k; }
       updateDots();
-      if(pinBuf.length === 4) setTimeout(checkPin, 200);
+      if(pinBuf.length === pinLenActual()) setTimeout(checkPin, 150);
     });
     g.appendChild(btn);
   });
 }
 function updateDots(){
-  for(var i=0;i<4;i++){
-    document.getElementById('pd'+i).className = 'pdot' + (i<pinBuf.length?' f':'');
+  var cont = document.getElementById('pdots');
+  var n = pinLenActual();
+  if(cont.children.length !== n){
+    cont.innerHTML = '';
+    for(var j=0;j<n;j++){ var d = document.createElement('div'); d.className = 'pdot'; cont.appendChild(d); }
+  }
+  for(var i=0;i<n;i++){
+    cont.children[i].className = 'pdot' + (i<pinBuf.length?' f':'');
   }
 }
+function errorLogin(msg){
+  var cont = document.getElementById('pdots');
+  for(var i=0;i<cont.children.length;i++) cont.children[i].className = 'pdot e';
+  document.getElementById('lerr').textContent = msg;
+  setTimeout(function(){ pinBuf=''; updateDots(); document.getElementById('lerr').textContent=''; _validandoPin = false; }, 1400);
+}
+// Comprueba el PIN con Firebase. Si es correcto, onAuthStateChanged (arriba) abre el CRM.
 function checkPin(){
-  var u = USERS[pinBuf];
+  var u = idElegido ? USERS[idElegido] : null;
+  if(!u || _validandoPin) return;
+  _validandoPin = true;
+  var aviso = setTimeout(function(){ document.getElementById('login-timeout-msg').style.display = 'block'; }, 10000);
+  _persistenciaLista.then(function(){
+    return firebase.auth().signInWithEmailAndPassword(u.email, pinBuf);
+  }).then(function(){
+    clearTimeout(aviso);
+    _validandoPin = false;
+  }).catch(function(e){
+    clearTimeout(aviso);
+    var c = (e && e.code) || '';
+    console.log('Login:', c);
+    if(c === 'auth/network-request-failed') errorLogin('Sin conexión. Revisa tu señal');
+    else if(c === 'auth/too-many-requests') errorLogin('Demasiados intentos. Espera unos minutos');
+    else if(c === 'auth/user-not-found' || c === 'auth/operation-not-allowed' || c === 'auth/user-disabled') errorLogin('Tu cuenta no está activa. Avisa a José Manuel');
+    else errorLogin('PIN incorrecto');
+  });
+}
+// Teléfonos del personal: viven en Firestore (config_contactos/staff), no en el código público.
+function cargarContactosStaff(){
+  if(!db) return;
+  db.collection('config_contactos').doc('staff').get().then(function(doc){
+    if(!doc.exists) return;
+    var c = doc.data() || {};
+    if(c.josemanuel) JOSE_MANUEL_WHATSAPP = c.josemanuel;
+    if(c.viridiana) VIRIDIANA_WHATSAPP = c.viridiana;
+    Object.keys(USERS).forEach(function(id){
+      var clave = USERS[id].email.split('@')[0];
+      if(c[clave]) USERS[id].tel = c[clave];
+    });
+  }).catch(function(e){ console.log('Error cargando contactos del personal:', e); });
+}
+function entrarComo(id){
+  var u = USERS[id];
   if(u){
     currentUser = u;
-    currentPin = pinBuf;
+    currentPin = id;
+    cargarContactosStaff();
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('hdr-user').textContent = u.name + ' · ' + u.role;
@@ -2493,7 +2559,7 @@ function checkPin(){
       verificarAlertasCuentasPorPagar();
     }
     // Si es Director o Gerencia, mostrar Dashboard automáticamente
-    if(pinBuf === '9900' || pinBuf === '5678') {
+    if(id === '9900' || id === '5678') {
       setTimeout(() => switchTab('dashboard'), 500);
     }
     // Si es Operador, mandar directo a Pedidos (candado: no ve ni puede tocar cotizaciones)
@@ -2504,22 +2570,88 @@ function checkPin(){
     if(u.role === 'Mecanico') {
       setTimeout(() => switchTab('flota', document.getElementById('tab-flota-btn')), 300);
     }
-  } else {
-    for(var i=0;i<4;i++) document.getElementById('pd'+i).className = 'pdot e';
-    document.getElementById('lerr').textContent = 'PIN incorrecto';
-    setTimeout(function(){ pinBuf=''; updateDots(); document.getElementById('lerr').textContent=''; }, 1200);
   }
 }
 function logout(){
   if(alertasEntregaTimer) { clearInterval(alertasEntregaTimer); alertasEntregaTimer = null; }
   alertasEntregaConteo = null;
   quitarBadgeAlertasPedidos();   // el ! de la sesión anterior no debe quedarse para el siguiente usuario
-  pinBuf=''; currentUser=null;
+  pinBuf=''; currentUser=null; currentPin=null;
+  try { firebase.auth().signOut(); } catch(e) { console.log(e); }
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
+  volverAQuien();
 }
-// buildPinGrid() y checkMagicLinkFondeo() ahora se disparan desde
-// firebase.auth().onAuthStateChanged() arriba, no sueltos aquí.
+
+// ════ CAMBIAR MI PIN — cada persona puede cambiar el suyo (el inicial lo asigna el Director) ════
+function pinDebil(p){
+  if(/^(\d)\1+$/.test(p)) return true;                       // 000000, 11111111
+  var asc = '01234567890123456789', desc = '98765432109876543210';
+  return asc.indexOf(p) !== -1 || desc.indexOf(p) !== -1;      // 123456, 654321
+}
+function abrirCambiarPin(){
+  if(!currentUser) return;
+  var existente = document.getElementById('modal-cambiar-pin');
+  if(existente) existente.remove();
+  var n = currentUser.pinLen || 6;
+  var m = document.createElement('div');
+  m.id = 'modal-cambiar-pin';
+  m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+  var campo = 'width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:18px;letter-spacing:6px;text-align:center;margin-bottom:10px;';
+  m.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:22px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:4px;">🔑 CAMBIAR MI PIN</div>' +
+      '<div style="font-size:12px;color:#777;margin-bottom:14px;">Son ' + n + ' dígitos. No lo compartas con nadie.</div>' +
+      '<input type="password" inputmode="numeric" autocomplete="off" maxlength="' + n + '" id="cp-actual" placeholder="PIN actual" style="' + campo + '">' +
+      '<input type="password" inputmode="numeric" autocomplete="off" maxlength="' + n + '" id="cp-nuevo" placeholder="PIN nuevo" style="' + campo + '">' +
+      '<input type="password" inputmode="numeric" autocomplete="off" maxlength="' + n + '" id="cp-repite" placeholder="Repite el PIN nuevo" style="' + campo + '">' +
+      '<div id="cp-error" style="color:#DC2626;font-size:12px;min-height:16px;margin-bottom:8px;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button onclick="document.getElementById(\'modal-cambiar-pin\').remove()" style="flex:1;padding:12px;border:1px solid #ddd;background:#fff;border-radius:8px;font-weight:700;cursor:pointer;">Cancelar</button>' +
+        '<button id="cp-guardar" onclick="guardarCambioPin()" style="flex:1;padding:12px;border:none;background:#E8500A;color:#fff;border-radius:8px;font-weight:700;cursor:pointer;">Guardar</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(m);
+  document.getElementById('cp-actual').focus();
+}
+function guardarCambioPin(){
+  var n = currentUser.pinLen || 6;
+  var actual = document.getElementById('cp-actual').value;
+  var nuevo = document.getElementById('cp-nuevo').value;
+  var repite = document.getElementById('cp-repite').value;
+  var err = document.getElementById('cp-error');
+  var fu = firebase.auth().currentUser;
+  if(!fu) { err.textContent = 'Tu sesión se cerró. Entra de nuevo.'; return; }
+  if(actual.length !== n) { err.textContent = 'Escribe tu PIN actual (' + n + ' dígitos).'; return; }
+  if(!/^\d+$/.test(nuevo) || nuevo.length !== n) { err.textContent = 'El PIN nuevo debe ser de ' + n + ' dígitos, solo números.'; return; }
+  if(nuevo === actual) { err.textContent = 'El PIN nuevo debe ser distinto al actual.'; return; }
+  if(pinDebil(nuevo)) { err.textContent = 'Muy fácil de adivinar (111111, 123456...). Elige otro.'; return; }
+  if(nuevo !== repite) { err.textContent = 'Los dos PIN nuevos no coinciden.'; return; }
+  var btn = document.getElementById('cp-guardar');
+  btn.disabled = true; btn.textContent = 'Guardando...'; err.textContent = '';
+  var cred = firebase.auth.EmailAuthProvider.credential(fu.email, actual);
+  fu.reauthenticateWithCredential(cred).then(function(){
+    return fu.updatePassword(nuevo);
+  }).then(function(){
+    document.getElementById('modal-cambiar-pin').remove();
+    showToast('✅ PIN cambiado. Úsalo la próxima vez que entres.');
+  }).catch(function(e){
+    console.log('Cambiar PIN:', e && e.code);
+    btn.disabled = false; btn.textContent = 'Guardar';
+    var c = (e && e.code) || '';
+    err.textContent = (c === 'auth/wrong-password' || c === 'auth/invalid-credential' || c === 'auth/invalid-login-credentials') ? 'Tu PIN actual no es correcto.' :
+                      c === 'auth/too-many-requests' ? 'Demasiados intentos. Espera unos minutos.' :
+                      c === 'auth/network-request-failed' ? 'Sin conexión. Intenta de nuevo.' : 'No se pudo cambiar el PIN. Intenta de nuevo.';
+  });
+}
+
+// El login y el link de WhatsApp de fondeos se arrancan cuando ya se cargó TODO el script
+// (antes se disparaban desde la sesión anónima).
+document.addEventListener('DOMContentLoaded', function(){
+  renderLoginPersonal();
+  buildPinGrid();
+  checkMagicLinkFondeo();
+});
 
 // ════ INIT APP — carga clientes y cotizaciones de Firestore ════
 function initApp(){
@@ -2703,36 +2835,14 @@ function netoTerminal(monto, rsCode, banco, tipoTarjeta) {
 }
 
 function cargarRazonesSociales(cb) {
-  if(!db) { razonesSocialesCache = JSON.parse(JSON.stringify(RAZONES_SOCIALES_SEED)); if(cb) cb(); return; }
-  db.collection('razones_sociales').limit(1).get().then(function(snap){
-    if(snap.empty) {
-      subirRazonesSocialesSeed(cb);
-    } else {
-      db.collection('razones_sociales').get().then(function(snap2){
-        razonesSocialesCache = {};
-        snap2.forEach(function(doc){ razonesSocialesCache[doc.id] = doc.data(); });
-        if(cb) cb();
-      });
-    }
-  }).catch(function(e){
-    console.log('Error Firestore razones_sociales, usando datos locales:', e);
-    razonesSocialesCache = JSON.parse(JSON.stringify(RAZONES_SOCIALES_SEED));
-    if(cb) cb();
-  });
-}
-
-function subirRazonesSocialesSeed(cb) {
-  var batch = db.batch();
-  Object.keys(RAZONES_SOCIALES_SEED).forEach(function(codigo){
-    var ref = db.collection('razones_sociales').doc(codigo);
-    batch.set(ref, RAZONES_SOCIALES_SEED[codigo]);
-  });
-  batch.commit().then(function(){
-    razonesSocialesCache = JSON.parse(JSON.stringify(RAZONES_SOCIALES_SEED));
+  if(!db) { razonesSocialesCache = {}; if(cb) cb(); return; }
+  db.collection('razones_sociales').get().then(function(snap){
+    razonesSocialesCache = {};
+    snap.forEach(function(doc){ razonesSocialesCache[doc.id] = doc.data(); });
     if(cb) cb();
   }).catch(function(e){
-    console.log('Error subiendo razones_sociales:', e);
-    razonesSocialesCache = JSON.parse(JSON.stringify(RAZONES_SOCIALES_SEED));
+    console.log('Error cargando razones_sociales:', e);
+    razonesSocialesCache = {};
     if(cb) cb();
   });
 }
@@ -7294,8 +7404,9 @@ function cargarResumenNCDirector() {
 // ════ FONDEOS — solicitud con aprobación por WhatsApp (link mágico) ════
 var fondeos = [];
 var folioFondeoActual = 1;
-var JOSE_MANUEL_WHATSAPP = '525585736084';
-var VIRIDIANA_WHATSAPP = '525534665197';
+// Los teléfonos ya no van en el código (repo público): se cargan de Firestore al entrar (cargarContactosStaff)
+var JOSE_MANUEL_WHATSAPP = '';
+var VIRIDIANA_WHATSAPP = '';
 var CRM_BASE_URL = 'https://jmgcapga.github.io/crm-troncoso/';
 
 function labelFormaPagoFondeo(fp) {
@@ -7396,8 +7507,10 @@ function solicitarFondeo() {
 
 function abrirWhatsAppSolicitudFondeo(fondeo) {
   var fechaTexto = new Date(fondeo.timestamp).toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
-  var urlAprobar = CRM_BASE_URL + '?fondeo=' + fondeo.folio + '|token=' + fondeo.tokenAprobacion + '|accion=aprobar|confirm=1';
-  var urlRechazar = CRM_BASE_URL + '?fondeo=' + fondeo.folio + '|token=' + fondeo.tokenAprobacion + '|accion=rechazar|confirm=1';
+  // El link lleva el id del documento (20 caracteres al azar): las reglas dejan abrir UN fondeo por su id, no buscarlos por folio.
+  var idLink = fondeo._docId || fondeo.folio;
+  var urlAprobar = CRM_BASE_URL + '?fondeo=' + idLink + '|token=' + fondeo.tokenAprobacion + '|accion=aprobar|confirm=1';
+  var urlRechazar = CRM_BASE_URL + '?fondeo=' + idLink + '|token=' + fondeo.tokenAprobacion + '|accion=rechazar|confirm=1';
   var msg =
     '💰 *SOLICITUD DE FONDEO — MATERIALES TRONCOSO*\n\n'+
     '📋 Folio: '+fondeo.folio+'\n'+
@@ -7657,17 +7770,24 @@ function renderFondeosStatus() {
 // ════ FONDEOS — link mágico de aprobación (sin PIN) ════
 var magicLinkFondeo = null, magicLinkAccion = null;
 
-function checkMagicLinkFondeo() {
+// Lee los parámetros del link de WhatsApp; null si la página no se abrió desde uno.
+function leerParamsFondeo() {
   var rawSearch = window.location.search.substring(1);
   var paramMap = {};
   rawSearch.split('|').forEach(function(p){ var kv=p.split('='); if(kv[0]) paramMap[kv[0]]=decodeURIComponent(kv[1]||''); });
   var folio = paramMap['fondeo'];
   var token = paramMap['token'];
   var accion = paramMap['accion'];
-  if(!folio || !token || !accion) return;
-  if(accion !== 'aprobar' && accion !== 'rechazar') return;
-  var confirmParam = paramMap['confirm'];
-  if(!confirmParam) return;
+  if(!folio || !token || !accion) return null;
+  if(accion !== 'aprobar' && accion !== 'rechazar') return null;
+  if(!paramMap['confirm']) return null;
+  return { folio: folio, token: token, accion: accion };
+}
+
+function checkMagicLinkFondeo() {
+  var params = leerParamsFondeo();
+  if(!params) return;
+  var folio = params.folio, token = params.token, accion = params.accion;
 
   magicLinkAccion = accion;
   document.getElementById('login-screen').style.display = 'none';
@@ -7678,18 +7798,29 @@ function checkMagicLinkFondeo() {
     return;
   }
 
-  db.collection('fondeos').where('folio','==',folio).limit(1).get().then(function(snap){
-    if(snap.empty) { mostrarErrorMagicLink('No se encontró el fondeo ' + folio + '.'); return; }
-    var doc = snap.docs[0];
-    var f = doc.data(); f._docId = doc.id;
-    if(f.status !== 'pendiente' || f.tokenUsado) { mostrarErrorMagicLink('Este fondeo ya fue procesado.'); return; }
-    if(f.tokenAprobacion !== token) { mostrarErrorMagicLink('Enlace inválido.'); return; }
-    magicLinkFondeo = f;
-    mostrarConfirmacionMagicLink(f, accion);
-  }).catch(function(e){
-    console.log(e);
-    mostrarErrorMagicLink('Error al cargar el fondeo.');
-  });
+  // Enlaces de la versión anterior traían el folio (FND-007): ya no se pueden abrir sin cuenta.
+  if(/^FND-/i.test(folio)) {
+    mostrarErrorMagicLink('Este enlace es de la versión anterior. Entra al CRM con tu PIN y aprueba desde la pestaña Fondeos.');
+    return;
+  }
+
+  // Sin cuenta: las reglas solo dejan abrir UN fondeo por su id. (Mientras las reglas viejas sigan puestas
+  // se intenta una sesión anónima; si ya está desactivada, se sigue sin ella.)
+  function abrirFondeo() {
+    db.collection('fondeos').doc(folio).get().then(function(doc){
+      if(!doc.exists) { mostrarErrorMagicLink('No se encontró el fondeo.'); return; }
+      var f = doc.data(); f._docId = doc.id;
+      if(f.status !== 'pendiente' || f.tokenUsado) { mostrarErrorMagicLink('Este fondeo ya fue procesado.'); return; }
+      if(f.tokenAprobacion !== token) { mostrarErrorMagicLink('Enlace inválido.'); return; }
+      magicLinkFondeo = f;
+      mostrarConfirmacionMagicLink(f, accion);
+    }).catch(function(e){
+      console.log(e);
+      mostrarErrorMagicLink('Error al cargar el fondeo.');
+    });
+  }
+  if(firebase.auth().currentUser) abrirFondeo();
+  else firebase.auth().signInAnonymously().then(abrirFondeo, abrirFondeo);
 }
 
 function mostrarErrorMagicLink(msg) {

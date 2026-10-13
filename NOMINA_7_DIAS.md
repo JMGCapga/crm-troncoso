@@ -142,7 +142,7 @@ Neto = 3,200 - 757.14 + 0 = $2,442.86
 ### Quick Test:
 ```
 1. Abre http://localhost:8000/index.html
-2. PIN: 5678
+2. Entra como Viridiana (nombre + PIN personal)
 3. 👷 Nómina → ⚙️ Config. Empleados
 4. Verifica que todos muestren "7" en columna "Días/Sem"
 5. 📝 Nueva Nómina

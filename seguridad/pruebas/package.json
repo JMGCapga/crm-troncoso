@@ -1,0 +1,13 @@
+{
+  "name": "pruebas-reglas-troncoso",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "cd .. && firebase emulators:exec --project demo-troncoso --only firestore,storage \"node pruebas/test_rules.mjs\""
+  },
+  "dependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase": "^10.14.1"
+  }
+}

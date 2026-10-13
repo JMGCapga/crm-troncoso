@@ -3,11 +3,11 @@
 ## Acceso
 
 ### Para José Manuel (Director)
-- **PIN:** `9900`
+- **PIN:** personal (ya no se documenta aquí)
 - **Esperado:** Al entrar, ve directamente el Dashboard Financiero (no la lista de entregas)
 
 ### Para Viridiana (Gerencia)
-- **PIN:** `5678`
+- **PIN:** personal (ya no se documenta aquí)
 - **Esperado:** Al entrar, ve el Dashboard Financiero Ejecutivo
 
 ### Para otros operadores
@@ -147,8 +147,8 @@ Ventas de cada mes del 2026.
 
 ## 🎯 CHECKLIST DE VERIFICACIÓN
 
-- [ ] José Manuel entra con PIN 9900 → ve Dashboard
-- [ ] Viridiana entra con PIN 5678 → ve Dashboard
+- [ ] José Manuel entra con su PIN personal → ve Dashboard
+- [ ] Viridiana entra con su PIN personal → ve Dashboard
 - [ ] Otros operadores entran → ven lista de entregas (no dashboard)
 - [ ] Liquidez del Día carga y muestra números reales
 - [ ] Semana Actual calcula utilidad y margen correctamente
@@ -168,7 +168,7 @@ Ventas de cada mes del 2026.
 
 1. **Firebase:** Todos los datos vienen en tiempo real desde la BD. No necesita refrescar la página.
 2. **Sin librerías externas:** Las gráficas se dibujan con SVG puro, sin Chart.js
-3. **Seguridad:** Solo Jose Manuel (9900) y Viridiana (5678) ven el dashboard completo
+3. **Seguridad:** Solo Jose Manuel y Viridiana ven el dashboard completo
 4. **Móvil:** Optimizado para pantalla de José Manuel (responsive design)
 5. **Sin listeners:** No usa `onSnapshot()`, solo `get()` para no gastar cuota de Firebase
 
@@ -195,7 +195,7 @@ Si algo no funciona:
      - `compras.total`
 
 4. **No entra al dashboard:**
-   - Revisar que la lógica de login esté correcta (PINs 9900 y 5678)
+   - Revisar que la lógica de login esté correcta (cuentas de Director y Gerencia)
    - Ver consola del navegador (F12) para errores
 
 ---

@@ -6,10 +6,10 @@ Sigue estos pasos para verificar que el módulo de Nómina funciona correctament
 
 ---
 
-## 🔐 Paso 1: Acceder como Viridiana (5678)
+## 🔐 Paso 1: Acceder como Viridiana
 
 1. Abre http://localhost:8000/index.html (o la URL del CRM)
-2. Ingresa el PIN: **5678** (Viridiana - Gerencia)
+2. Entra como Viridiana (Gerencia) con tu PIN personal
 3. Verifica que veas el nuevo tab **👷 Nómina** en la barra de tabs
 
 **Resultado esperado:** Deberías ver los tabs incluyendo "👷 Nómina" junto a "🛒 Compras"
@@ -119,10 +119,10 @@ Sigue estos pasos para verificar que el módulo de Nómina funciona correctament
 
 ---
 
-## 👀 Paso 6: Ver como José Manuel (9900)
+## 👀 Paso 6: Ver como José Manuel
 
 1. Haz clic en **"Salir"**
-2. Ingresa el PIN: **9900** (José Manuel - Director)
+2. Entra como José Manuel (Director) con tu PIN personal
 3. Haz clic en el tab **👷 Nómina**
 
 **Resultado esperado:**

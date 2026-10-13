@@ -40,7 +40,7 @@ README_NOMINA.md                  → Este archivo
 
 ```
 1. Abre: http://localhost:8000/index.html (o tu URL del CRM)
-2. Ingresa PIN: 5678 (Viridiana) o 9900 (José Manuel)
+2. Entra como Viridiana o José Manuel (nombre + PIN personal)
 3. Haz clic en el tab "👷 Nómina"
 ```
 
@@ -210,13 +210,13 @@ Seguimiento de préstamos activos:
 ## 👥 Control de Acceso
 
 **Solo pueden usar el módulo:**
-- **Viridiana (5678)** - Rol: Gerencia
+- **Viridiana** - Rol: Gerencia
   - Captura sueldos
   - Registra faltas y descuentos
   - Procesa nómina
   - Ve historial completo
 
-- **José Manuel (9900)** - Rol: Director
+- **José Manuel** - Rol: Director
   - Ve resumen de IMSS
   - Ve historial de nóminas
   - (En futuras versiones: dashboard ejecutivo)
@@ -235,14 +235,14 @@ Sigue la guía completa: **PRUEBA_MODULO_NOMINA.md**
 
 Resumen rápido:
 ```
-1. Accede como Viridiana (5678)
+1. Accede como Viridiana
 2. Ve el tab "👷 Nómina"
 3. Configura empleados con sueldos
 4. Crea nueva nómina (automática para esta semana)
 5. Registra 1 falta en Ivette → verifica descuento automático
 6. Crea un préstamo de $1000 con $200 semanal
 7. Procesa nómina → verifica que se cree en "Salidas"
-8. Accede como José Manuel (9900) → ve la nómina
+8. Accede como José Manuel → ve la nómina
 9. Limpia datos de prueba en Firebase
 ```
 
@@ -301,7 +301,7 @@ El total de efectivo de nómina se resta del corte del sábado.
 ## 🐛 Troubleshooting
 
 ### "No tienes permisos para acceder"
-→ Solo Viridiana (5678) y José Manuel (9900) pueden ver el módulo
+→ Solo Viridiana y José Manuel pueden ver el módulo
 
 ### "Sin conexión a Firebase"
 → Verifica que el badge de sincronización (header) esté verde
@@ -397,4 +397,4 @@ Ideas para mejorar:
 
 **¡Listo para usar! 🎉**
 
-Para comenzar: Abre el CRM, accede como Viridiana (5678), haz clic en "👷 Nómina" y sigue la guía de pruebas.
+Para comenzar: Abre el CRM, accede como Viridiana, haz clic en "👷 Nómina" y sigue la guía de pruebas.

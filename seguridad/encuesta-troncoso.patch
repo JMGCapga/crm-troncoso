@@ -1,0 +1,72 @@
+diff --git a/index.html b/index.html
+index fd7c167..b940ca0 100644
+--- a/index.html
++++ b/index.html
+@@ -13,7 +13,7 @@
+     <!-- Firebase -->
+     <script type="module">
+         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+-        import { getFirestore, collection, addDoc, query, where, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
++        import { getFirestore, collection, doc, getDoc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+ 
+         const firebaseConfig = {
+@@ -29,12 +29,15 @@
+         const db = getFirestore(app);
+         const auth = getAuth(app);
+ 
+-        // Reglas de Firestore requieren auth != null — misma estrategia que el CRM.
++        // Las reglas de Firestore ya NO piden sesión para esta página: solo dejan CREAR la evaluación
++        // y preguntar por UN folio (encuestas_respondidas/{folio}); no se puede leer ni listar nada más.
++        // La sesión anónima se intenta solo por compatibilidad con las reglas anteriores (máx. 6 s de espera).
+         window.firebaseDb = db;
+-        window.firebaseQueryHelpers = { collection, addDoc, query, where, limit, getDocs, serverTimestamp };
+-        window.firebaseAuthReady = signInAnonymously(auth).catch(function(e){
+-            console.error('Error de autenticación anónima:', e);
+-        });
++        window.firebaseQueryHelpers = { collection, doc, getDoc, writeBatch, serverTimestamp };
++        window.firebaseAuthReady = Promise.race([
++            signInAnonymously(auth).catch(function(e){ console.log('Sin sesión anónima (no hace falta):', e && e.code); }),
++            new Promise(function(r){ setTimeout(r, 6000); })
++        ]);
+     </script>
+ 
+     <style>
+@@ -686,12 +689,16 @@
+                 .forEach(function(s) { document.getElementById(s).classList.add('embedded'); });
+         }
+ 
+-        // Consulta Firestore si ya existe una evaluación para este pedidoId
++        // El folio sirve de id del documento "ya respondió": sin diagonales ni espacios
++        function idMarca(id) {
++            return String(id).replace(/[\/\s]+/g, '_').slice(0, 100);
++        }
++
++        // Pregunta por UN folio (encuestas_respondidas/{folio}); ya no se puede consultar la colección de evaluaciones
+         async function yaFueRespondido(id) {
+-            const { collection, query, where, limit, getDocs } = window.firebaseQueryHelpers;
+-            const q = query(collection(window.firebaseDb, 'encuestas'), where('pedidoId', '==', id), limit(1));
+-            const snap = await getDocs(q);
+-            return !snap.empty;
++            const { doc, getDoc } = window.firebaseQueryHelpers;
++            const snap = await getDoc(doc(window.firebaseDb, 'encuestas_respondidas', idMarca(id)));
++            return snap.exists();
+         }
+ 
+         // Verifica duplicado y decide qué pantalla mostrar
+@@ -776,8 +783,13 @@
+                     dejóResena: false
+                 };
+ 
+-                const { collection, addDoc } = window.firebaseQueryHelpers;
+-                await addDoc(collection(window.firebaseDb, 'encuestas'), datos);
++                // Evaluación + marca de "este folio ya respondió", en un solo lote
++                const { collection, doc, writeBatch } = window.firebaseQueryHelpers;
++                const marca = idMarca(pedidoId);
++                const lote = writeBatch(window.firebaseDb);
++                lote.set(doc(collection(window.firebaseDb, 'encuestas')), datos);
++                lote.set(doc(window.firebaseDb, 'encuestas_respondidas', marca), { pedidoId: marca, timestamp: Date.now() });
++                await lote.commit();
+ 
+                 // Mostrar pantalla de agradecimiento
+                 mostrarPantalla('thank-you-screen');

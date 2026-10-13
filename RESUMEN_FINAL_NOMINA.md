@@ -197,7 +197,7 @@ Efectivo = 2,600 - 500 transf. = $2,100
 ### Paso 1: Acceder
 ```
 http://localhost:8000/index.html
-PIN: 5678 (Viridiana)
+Entra como Viridiana (nombre + PIN personal)
 Click: 👷 Nómina
 ```
 
@@ -251,7 +251,7 @@ Guardar
 
 ```bash
 1. Abre: http://localhost:8000/index.html
-2. PIN: 5678
+2. Entra como Viridiana (nombre + PIN personal)
 3. 👷 Nómina → ⚙️ Config.
 4. Ivette: Caja $100 → Guarda
 5. 📝 Nueva Nómina

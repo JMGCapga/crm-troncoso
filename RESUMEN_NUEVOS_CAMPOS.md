@@ -108,7 +108,7 @@ Efectivo = Neto - IMSS - Transferencia
 
 ```bash
 1. Abre http://localhost:8000/index.html
-2. PIN: 5678 (Viridiana)
+2. Entra como Viridiana (nombre + PIN personal)
 3. Click: 👷 Nómina
 
 4. ⚙️ Config. Empleados:

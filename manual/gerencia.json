@@ -25,7 +25,12 @@
      "t": "Abre el CRM en el navegador: **jmgcapga.github.io/crm-troncoso**."
     },
     {
-     "t": "Escribe tu **PIN de 4 números**. Es personal: no lo compartas.",
+     "t": "Toca **tu nombre** en la lista: **Viridiana** (1) o **Jose Manuel** (2).",
+     "img": "01-quien.jpg",
+     "leyenda": "1 = Viridiana · 2 = José Manuel"
+    },
+    {
+     "t": "Escribe tu **PIN de 8 números** (Gerencia y Dirección usan 8, porque ven nómina y finanzas). Es personal: no lo compartas. Si te equivocaste de persona, toca **No soy yo**.",
      "img": "01-pin.jpg",
      "leyenda": "1 = puntos del PIN · 2 = teclado"
     },
@@ -37,11 +42,12 @@
     }
    ],
    "cuidado": [
+    "Puedes cambiar tu PIN cuando quieras: toca el botón de la **llave** (arriba, junto a Salir). Elige uno que nadie adivine (nada de 12345678 ni 11111111).",
     "Viridiana entra como **Gerencia** y José Manuel como **Director**. Casi todas las pantallas son iguales, pero algunas acciones son de uno solo: en este manual lo marco con **(Viridiana)** o **(José Manuel)**.",
     "Todo lo que hacen Ivette (Ventas) y Erika (Compras) también lo puedes hacer tú: cotizar, notas de venta, tickets, clientes, compras, proveedores, inventario. Para eso mira sus manuales.",
     "Un **!** rojo en la pestaña **Ventas** quiere decir que hay entregas por revisar (ver la tarea \"Notas de venta: panel y entregas por revisar\")."
    ],
-   "ayuda": "PIN olvidado: José Manuel."
+   "ayuda": "PIN olvidado: José Manuel genera uno nuevo (para el de José Manuel, se pide al soporte técnico del sistema)."
   },
   {
    "id": "dashboard",

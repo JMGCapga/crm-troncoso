@@ -191,8 +191,8 @@ totalEfectivo = SUM(efectivoViri para todos)
 ## 🔐 Control de Acceso
 
 **Solo pueden ver/usar el módulo:**
-- `role: 'Gerencia'` → Viridiana (5678)
-- `role: 'Director'` → José Manuel (9900)
+- `role: 'Gerencia'` → Viridiana
+- `role: 'Director'` → José Manuel
 
 Los demás usuarios ven: ⚠️ "No tienes permisos para acceder a este módulo"
 

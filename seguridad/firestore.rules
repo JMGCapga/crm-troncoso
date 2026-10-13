@@ -1,0 +1,135 @@
+rules_version = '2';
+// ════ REGLAS DE FIRESTORE — Materiales Troncoso CRM ════
+// Solo entran las cuentas del personal (correo+PIN). Las sesiones anónimas y las
+// personas sin sesión NO leen ni escriben nada, salvo los dos casos públicos de abajo:
+// 1) la encuesta post-entrega del cliente  2) el link de WhatsApp para aprobar un fondeo.
+// OJO: en Firestore las reglas de una misma ruta se SUMAN (OR). Por eso no hay comodín
+// general: cada colección se declara una por una.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function conSesion() {
+      return request.auth != null
+        && request.auth.token.get('firebase', {}).get('sign_in_provider', '') == 'password'
+        && request.auth.token.get('email', '') != '';
+    }
+    function esAdmin() {
+      return conSesion() && request.auth.token.get('email', '') in [
+        'josemanuel@troncoso-crm.com',
+        'viridiana@troncoso-crm.com'
+      ];
+    }
+    function esStaff() {
+      return conSesion() && request.auth.token.get('email', '') in [
+        'ivette@troncoso-crm.com',
+        'erika@troncoso-crm.com',
+        'francisco@troncoso-crm.com',
+        'agustin@troncoso-crm.com',
+        'carlos@troncoso-crm.com',
+        'viridiana@troncoso-crm.com',
+        'josemanuel@troncoso-crm.com',
+        'taller@troncoso-crm.com'
+      ];
+    }
+
+    // ── Solo Director y Gerencia: nómina, empleados, préstamos ──
+    match /empleados/{id} { allow read, write: if esAdmin(); }
+    match /nomina_semanas/{id} { allow read, write: if esAdmin(); }
+    match /prestamos/{id} { allow read, write: if esAdmin(); }
+
+    // ── Datos fiscales/bancarios: el personal los lee (para compartir datos de pago), solo Director y Gerencia los cambian ──
+    match /razones_sociales/{id} {
+      allow read: if esStaff();
+      allow write: if esAdmin();
+    }
+    // ── Teléfonos del personal (para los WhatsApp del CRM): fuera del código público ──
+    match /config_contactos/{id} {
+      allow read: if esStaff();
+      allow write: if esAdmin();
+    }
+    // ── La matriz de permisos solo la edita Director/Gerencia ──
+    match /permisos_roles/{id} {
+      allow read: if esStaff();
+      allow write: if esAdmin();
+    }
+
+    // ── Fondeos: el personal trabaja normal; el link de WhatsApp (sin sesión) solo puede abrir UN fondeo
+    //    por su id (20 caracteres al azar) y cerrarlo una vez como aprobado/rechazado ──
+    match /fondeos/{id} {
+      allow read, write: if esStaff();
+      allow get: if true;
+      allow update: if resource.data.status == 'pendiente'
+        && resource.data.tokenUsado == false
+        && request.resource.data.status in ['aprobado', 'rechazado']
+        && request.resource.data.tokenUsado == true
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'aprobadoPor', 'timestampAprobacion', 'tokenUsado', 'motivoRechazo']);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['whatsappViriEnviado']);
+    }
+
+    // ── Encuesta post-entrega (página pública del cliente): solo puede CREAR, nunca leer ──
+    match /encuestas/{id} {
+      allow read, update, delete: if esStaff();
+      allow create: if esStaff() || (
+        request.resource.data.keys().hasOnly(['pedidoId', 'cliente', 'fecha', 'timestamp',
+          'llegóATiempo', 'productosCorrectos', 'cantidadesCorrectas', 'descargaSinDanos',
+          'atencionBuena', 'comentarios', 'puntuacion', 'dejóResena'])
+        && request.resource.data.pedidoId is string
+        && request.resource.data.pedidoId.size() > 0 && request.resource.data.pedidoId.size() < 80
+        && request.resource.data.cliente is string && request.resource.data.cliente.size() < 200
+        && request.resource.data.comentarios is string && request.resource.data.comentarios.size() < 1500
+        && request.resource.data.puntuacion is number
+        && request.resource.data['dejóResena'] == false
+      );
+    }
+    // Marca "este folio ya respondió": se puede preguntar por UN folio, no listar
+    match /encuestas_respondidas/{pedidoId} {
+      allow get: if true;
+      allow list: if esStaff();
+      allow create: if esStaff() || (
+        request.resource.data.keys().hasOnly(['pedidoId', 'timestamp'])
+        && request.resource.data.pedidoId == pedidoId
+      );
+      allow update, delete: if esStaff();
+    }
+
+    // ── Todo lo demás: solo personal con cuenta ──
+    match /alertas/{id} { allow read, write: if esStaff(); }
+    match /caja_apartada/{id} { allow read, write: if esStaff(); }
+    match /cierres_dia/{id} { allow read, write: if esStaff(); }
+    match /cierres_turno/{id} { allow read, write: if esStaff(); }
+    match /clientes/{id} { allow read, write: if esStaff(); }
+    match /cobros_cuentas_cobrar/{id} { allow read, write: if esStaff(); }
+    match /compras/{id} { allow read, write: if esStaff(); }
+    match /config_impresion/{id} { allow read, write: if esStaff(); }
+    match /cortes/{id} { allow read, write: if esStaff(); }
+    match /cotizaciones/{id} { allow read, write: if esStaff(); }
+    match /cuentas_cobrar/{id} { allow read, write: if esStaff(); }
+    match /cuentas_pagar/{id} { allow read, write: if esStaff(); }
+    match /danos/{id} { allow read, write: if esStaff(); }
+    match /entregas_efectivo/{id} { allow read, write: if esStaff(); }
+    match /gasolinas/{id} { allow read, write: if esStaff(); }
+    match /historial/{id} { allow read, write: if esStaff(); }
+    match /historial_ediciones/{id} { allow read, write: if esStaff(); }
+    match /kilometraje/{id} { allow read, write: if esStaff(); }
+    match /mantenimiento/{id} { allow read, write: if esStaff(); }
+    match /movimientos_apartado/{id} { allow read, write: if esStaff(); }
+    match /movimientos_inventario/{id} { allow read, write: if esStaff(); }
+    match /movimientos_saldo_favor/{id} { allow read, write: if esStaff(); }
+    match /notas_credito/{id} { allow read, write: if esStaff(); }
+    match /pedidos/{id} { allow read, write: if esStaff(); }
+    match /precios_cliente/{id} { allow read, write: if esStaff(); }
+    match /precios_volumen/{id} { allow read, write: if esStaff(); }
+    match /productos/{id} { allow read, write: if esStaff(); }
+    match /proveedores/{id} { allow read, write: if esStaff(); }
+    match /remisiones/{id} { allow read, write: if esStaff(); }
+    match /retiros_parciales/{id} { allow read, write: if esStaff(); }
+    match /saldos_favor/{id} { allow read, write: if esStaff(); }
+    match /salidas/{id} { allow read, write: if esStaff(); }
+    match /terminales/{id} { allow read, write: if esStaff(); }
+    match /tickets/{id} { allow read, write: if esStaff(); }
+    match /transferencias/{id} { allow read, write: if esStaff(); }
+    match /unidades/{id} { allow read, write: if esStaff(); }
+    match /bitacora_borrados/{id} { allow read, write: if esStaff(); }
+  }
+}

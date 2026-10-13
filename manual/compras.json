@@ -24,7 +24,12 @@
      "t": "Abre el CRM en el navegador: **jmgcapga.github.io/crm-troncoso**."
     },
     {
-     "t": "Escribe tu **PIN de 4 números**. El PIN es personal: no lo compartas.",
+     "t": "Toca **tu nombre** (1) en la lista.",
+     "img": "01-quien.jpg",
+     "leyenda": "1 = tu nombre"
+    },
+    {
+     "t": "Escribe tu **PIN de 6 números**. El PIN es personal: no lo compartas. Si te equivocaste de persona, toca **No soy yo**.",
      "img": "01-pin.jpg",
      "leyenda": "1 = puntos del PIN · 2 = teclado"
     },
@@ -41,9 +46,11 @@
     }
    ],
    "cuidado": [
-    "Si dice \"PIN incorrecto\", espera un segundo y vuelve a escribirlo."
+    "Si dice \"PIN incorrecto\", espera un segundo y vuelve a escribirlo.",
+    "Si dice \"Demasiados intentos\", espera unos minutos y vuelve a intentar.",
+    "Puedes cambiar tu PIN cuando quieras: toca el botón de la **llave** (arriba, junto a Salir) y escribe el actual y el nuevo. Elige uno que nadie adivine (nada de 123456 ni 111111)."
    ],
-   "ayuda": "PIN olvidado o bloqueado: Viridiana."
+   "ayuda": "PIN olvidado o bloqueado: avisa a José Manuel (te da uno nuevo)."
   },
   {
    "id": "compra",

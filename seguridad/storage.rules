@@ -1,0 +1,37 @@
+rules_version = '2';
+// ════ REGLAS DE STORAGE — constancias fiscales (PDF) ════
+service firebase.storage {
+  match /b/{bucket}/o {
+    function conSesion() {
+      return request.auth != null
+        && request.auth.token.get('firebase', {}).get('sign_in_provider', '') == 'password'
+        && request.auth.token.get('email', '') != '';
+    }
+    function esAdmin() {
+      return conSesion() && request.auth.token.get('email', '') in [
+        'josemanuel@troncoso-crm.com',
+        'viridiana@troncoso-crm.com'
+      ];
+    }
+    function esStaff() {
+      return conSesion() && request.auth.token.get('email', '') in [
+        'ivette@troncoso-crm.com',
+        'erika@troncoso-crm.com',
+        'francisco@troncoso-crm.com',
+        'agustin@troncoso-crm.com',
+        'carlos@troncoso-crm.com',
+        'viridiana@troncoso-crm.com',
+        'josemanuel@troncoso-crm.com',
+        'taller@troncoso-crm.com'
+      ];
+    }
+    match /fiscal/razones_sociales/{ruta=**} {
+      allow read: if esStaff();
+      allow write: if esAdmin() && request.resource.size < 15 * 1024 * 1024;
+    }
+    match /fiscal/clientes/{ruta=**} {
+      allow read: if esStaff();
+      allow write: if esStaff() && request.resource.size < 15 * 1024 * 1024;
+    }
+  }
+}
