@@ -2063,7 +2063,7 @@ try {
 } catch(e) { console.log('Firebase error:', e); }
 
 // ════ SESIÓN — cada persona entra con SU cuenta de Firebase (nombre + PIN) ════
-// Ya no se usa sesión anónima: las reglas de Firestore/Storage solo dejan pasar a las
+// Ya no se usa sesión anónima (el proveedor está desactivado en Firebase): las reglas de Firestore/Storage solo dejan pasar a las
 // cuentas del personal. Los dos accesos sin cuenta (encuesta del cliente y link de WhatsApp
 // de fondeos) están acotados en las reglas (carpeta seguridad/).
 // SESSION = la sesión vive mientras la pestaña esté abierta; al cerrarla hay que volver a entrar.
@@ -7804,8 +7804,7 @@ function checkMagicLinkFondeo() {
     return;
   }
 
-  // Sin cuenta: las reglas solo dejan abrir UN fondeo por su id. (Mientras las reglas viejas sigan puestas
-  // se intenta una sesión anónima; si ya está desactivada, se sigue sin ella.)
+  // Sin cuenta ni sesión anónima: las reglas solo dejan abrir UN fondeo por su id.
   function abrirFondeo() {
     db.collection('fondeos').doc(folio).get().then(function(doc){
       if(!doc.exists) { mostrarErrorMagicLink('No se encontró el fondeo.'); return; }
@@ -7819,8 +7818,7 @@ function checkMagicLinkFondeo() {
       mostrarErrorMagicLink('Error al cargar el fondeo.');
     });
   }
-  if(firebase.auth().currentUser) abrirFondeo();
-  else firebase.auth().signInAnonymously().then(abrirFondeo, abrirFondeo);
+  abrirFondeo();
 }
 
 function mostrarErrorMagicLink(msg) {
@@ -13792,21 +13790,50 @@ function limpiarFirma() {
   if(canvas._firmaReiniciar) canvas._firmaReiniciar();
 }
 
+// Reduce la foto del celular antes de guardarla. Una foto cruda pesa varios MB y Firestore rechaza
+// cualquier documento de más de 1 MB: por eso "Iniciar turno" y las evidencias de entrega marcaban error.
+// Queda en ~100-250 KB (lado largo máx. 1280 px, JPEG) y cabe aunque el mismo documento lleve dos fotos.
+var FOTO_MAX_CARACTERES = 280000;
+function comprimirFotoArchivo(file, cb) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var original = e.target.result;
+    var img = new Image();
+    img.onload = function() {
+      var lado = 1280, calidad = 0.7, out = original;
+      try {
+        for(var intento = 0; intento < 6; intento++) {
+          var esc = Math.min(1, lado / Math.max(img.width, img.height));
+          var c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(img.width * esc));
+          c.height = Math.max(1, Math.round(img.height * esc));
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          out = c.toDataURL('image/jpeg', calidad);
+          if(out.length <= FOTO_MAX_CARACTERES) break;
+          if(calidad > 0.45) calidad -= 0.1; else lado = Math.round(lado * 0.8);
+        }
+      } catch(err) { console.log('No se pudo reducir la foto:', err); out = original; }
+      cb(out);
+    };
+    img.onerror = function() { cb(original); };
+    img.src = original;
+  };
+  reader.readAsDataURL(file);
+}
+
 function previsualizarFoto(input) {
   var file = input.files[0];
   if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
+  comprimirFotoArchivo(file, function(fotoUrl) {
     var img = document.getElementById('foto-preview');
-    img.src = e.target.result;
+    img.src = fotoUrl;
     img.style.display = 'block';
     // Solo se cambia el texto: reemplazar todo el contenido borraba el input y ya no se podía repetir la foto
     var lab = document.getElementById('foto-label');
     if(lab.firstChild && lab.firstChild.nodeType === 3) lab.firstChild.nodeValue = '✅ Foto tomada — toca para cambiarla\n          '; else lab.textContent = '✅ Foto tomada';
-    window._fotoBase64 = e.target.result;
+    window._fotoBase64 = fotoUrl;
     if(window._sinFoto) alternarSinFoto();
-  };
-  reader.readAsDataURL(file);
+  });
 }
 
 function confirmarEntregaFinal(docId) {
@@ -13865,7 +13892,15 @@ function confirmarEntregaFinal(docId) {
     db.collection('pedidos').doc(docId).update(update).catch(function(e){ console.log(e); });
     db.collection('remisiones').add(remision).then(function(ref){
       db.collection('pedidos').doc(docId).update({ remisionId: ref.id }).catch(function(e){ console.log(e); });
-    }).catch(function(e){ console.log(e); });
+    }).catch(function(e){
+      console.log('Error guardando la remisión:', e);
+      // Casi siempre es una foto demasiado pesada: se guarda la remisión con la firma y sin la foto, y se avisa.
+      var respaldo = Object.assign({}, remision, { fotoBase64: null, fotoNoGuardada: true });
+      db.collection('remisiones').add(respaldo).then(function(ref2){
+        db.collection('pedidos').doc(docId).update({ remisionId: ref2.id }).catch(function(e2){ console.log(e2); });
+        showToast('⚠️ La foto no se pudo guardar; la entrega y la firma sí. Avisa a Ventas.');
+      }).catch(function(e2){ console.log(e2); showToast('⚠️ No se pudo guardar la remisión. Avisa a Ventas.'); });
+    });
   }
 
   document.getElementById('modal-entrega').remove();
@@ -14202,13 +14237,11 @@ function poblarSelectOperadoresFlota(){
 function previsualizarFotoFlota(input, key){
   var file = input.files[0];
   if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e){
-    window['_flotaFoto'+key] = e.target.result;
+  comprimirFotoArchivo(file, function(fotoUrl){
+    window['_flotaFoto'+key] = fotoUrl;
     var prev = document.getElementById('flota-foto-preview-'+key);
-    if(prev){ prev.src = e.target.result; prev.style.display = 'block'; }
-  };
-  reader.readAsDataURL(file);
+    if(prev){ prev.src = fotoUrl; prev.style.display = 'block'; }
+  });
 }
 
 // ── Vista Operador ──
@@ -14250,7 +14283,7 @@ function iniciarTurnoFlota(){
     document.getElementById('flota-op-foto-odometro').value = '';
     document.getElementById('flota-foto-preview-odometro').style.display = 'none';
     renderTurnoActivoFlota();
-  }).catch(function(e){ console.log(e); showToast('⚠️ Error al iniciar turno'); });
+  }).catch(function(e){ console.log(e); showToast('⚠️ Error al iniciar turno' + (e && e.code ? ' (' + e.code + ')' : '') + '. Toma la foto otra vez e intenta de nuevo.'); });
 }
 
 function finalizarTurnoFlota(){
