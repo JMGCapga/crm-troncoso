@@ -85,10 +85,10 @@
     {
      "t": "Toca **Ventas** (1). Se abre **Notas de Venta**. Si hay pedidos nuevos sin chofer, la pestaña muestra un **número rojo** con cuántos hay disponibles.",
      "img": "16-pedidos-disponibles-aviso.jpg",
-     "leyenda": "1 = pestaña Ventas con el número de pedidos disponibles · 2 = Notas de venta disponibles · 3 = Tomar este pedido"
+     "leyenda": "1 = pestaña Ventas con el número de pedidos · 2 = aviso del orden · 3 = cuánto lleva esperando · 4 = Tomar este pedido"
     },
     {
-     "t": "**Notas de venta disponibles** (2): pedidos confirmados, con dirección de entrega, que todavía no tienen chofer. Los **más recientes** salen primero; los de hace más de 4 días quedan detrás del botón **Ver anteriores**. Si vas a llevar uno, toca **Tomar este pedido** (3) y confirma. Pasa a tu lista."
+     "t": "**Notas de venta disponibles**: pedidos confirmados, con dirección de entrega, que todavía no tienen chofer. Salen **del más antiguo al más nuevo**: el de arriba, en verde con **Sigue en la fila**, es el que sigue. Cada tarjeta dice cuánto **lleva esperando** (3). Toma el de arriba con **Tomar este pedido** (4) y confirma. Pasa a tu lista. Los de hace más de 4 días quedan detrás del botón **Ver anteriores**."
     },
     {
      "t": "**Mis entregas**: tus pedidos, los que te asignaron o los que tomaste. Cada tarjeta trae el **folio**, el **cliente**, la **dirección**, el **material**, el botón para **llamar al cliente** y su estado."
@@ -96,10 +96,12 @@
    ],
    "cuidado": [
     "**Aviso de pedido nuevo:** mientras tengas el CRM **abierto**, cada minuto revisa si hay pedidos nuevos. Cuando llega uno, el celular **suena y vibra**, sale un aviso arriba y el número rojo de la pestaña **Ventas** sube. Si el CRM está cerrado o el celular bloqueado, **no avisa**: por eso Ventas también manda el aviso por **WhatsApp**.",
-    "**El primero que lo toma se lo lleva.** Si dos choferes lo tocan al mismo tiempo, el sistema se lo da al primero y al otro le sale \"Ya lo tomó …\". Pónganse de acuerdo entre ustedes quién toma cada uno.",
-    "Toma solo los que **tú** vas a entregar: cuando lo tomas, es tu responsabilidad confirmarlo en el CRM.",
+    "**El más antiguo sale primero.** Los pedidos se entregan en el orden en que cayeron, sin importar de quién es el cliente ni cuánto compró: el cliente que pidió antes lleva más tiempo esperando. Empieza por el de arriba de la lista.",
+    "Si tomas uno más nuevo **saltándote uno más antiguo**, el sistema te avisa (\"Hay pedidos más antiguos sin tomar\") y te deja continuar, pero queda registrado como **fuera de orden**. José Manuel y Viridiana lo ven en su tablero. Si hay una razón (urgencia o ruta por zona), **pide autorización a Viridiana o a José Manuel antes**: solo ellos autorizan cambiar el orden.",
+    "Si dos choferes tocan el mismo pedido al mismo tiempo, solo se lo queda uno y al otro le sale \"Ya lo tomó …\".",
     "Aquí solo salen los pedidos **Confirmados** y **En ruta**. Al entregar uno, desaparece de la lista. Las notas sin dirección (recoge en mostrador) no salen aquí.",
-    "Cuando Ivette o Viridiana te asignan un pedido directamente, te llega un WhatsApp con folio, cliente, dirección y material, y el pedido aparece solo en tu lista."
+    "Cuando Ivette o Viridiana te asignan un pedido directamente, te llega un WhatsApp con folio, cliente, dirección y material, y el pedido aparece solo en tu lista.",
+    "Toma solo los que **tú** vas a entregar, en orden: cuando lo tomas, es tu responsabilidad confirmarlo en el CRM."
    ],
    "ayuda": "Si un pedido no aparece o no es tuyo: Ivette o Viridiana."
   },
@@ -379,6 +381,6 @@
   "Entrega marcada por error: el operador no puede deshacerla. ¿Quién la corrige y cómo?",
   "Entregas incompletas o sin foto: ¿qué sigue después (segunda entrega, nota de crédito, descuento, llamada al cliente) y quién lo atiende? Hoy el sistema avisa a Ivette y Viridiana y se marca como resuelta.",
   "Encuesta: el mensaje sale del WhatsApp personal de cada operador. ¿Está bien así o debe salir de un número del negocio?",
-  "Asignación: ahora los pedidos nuevos se avisan a todos los choferes y el primero que lo toma se lo lleva. ¿Está bien así o Ivette/Viridiana deben asignar los pedidos grandes a un chofer en particular?"
+  "Orden de entrega: las excepciones por urgencia o por zona las autorizan Viridiana y José Manuel. ¿Cómo se les pide en el momento (llamada, WhatsApp) y qué se hace si ninguno contesta?"
  ]
 }

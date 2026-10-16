@@ -1996,7 +1996,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             <select id="dash-choferes-mes" onchange="cargarTableroChoferes()" style="border:1.5px solid var(--borde);border-radius:8px;padding:6px 10px;font-size:12px;font-family:'Barlow',sans-serif;background:#fff;"></select>
           </div>
           <div id="dash-choferes-contenido"><div style="padding:14px;color:#888;font-size:12px;">Cargando...</div></div>
-          <div style="font-size:10px;color:#888;margin-top:10px;line-height:1.5;">Esquema propuesto de bono: se cobra solo si el chofer tiene <b>al menos 90%</b> de sus entregas con firma y foto; después, cada <b>5 encuestas de 5 estrellas</b> = 1 bloque (máximo 2). Los montos los defines tú. Solo cuentan entregas registradas en el CRM.</div>
+          <div style="font-size:10px;color:#888;margin-top:10px;line-height:1.5;">Esquema propuesto de bono: se cobra solo si el chofer tiene <b>al menos 90%</b> de sus entregas con firma y foto; después, cada <b>5 encuestas de 5 estrellas</b> = 1 bloque (máximo 2). Los montos los defines tú. Solo cuentan entregas registradas en el CRM. <b>Fuera de orden</b> = pedidos que el chofer tomó saltándose uno más antiguo que seguía sin chofer (el más antiguo sale primero).</div>
         </div>
 
         <!-- EVALUACIONES DE SERVICIO — Solo para José Manuel -->
@@ -11264,7 +11264,7 @@ async function cargarTableroChoferes() {
     function claveChofer(p){ return choferes.indexOf(p.entregadoPor) !== -1 ? p.entregadoPor : TABLERO_SIN_CHOFER; }
     var grupos = {};
     choferes.concat([TABLERO_SIN_CHOFER]).forEach(function(n){
-      grupos[n] = { entregas: 0, evidencia: 0, sinFoto: 0, sinRemision: 0, incompletas: 0, elegibles: 0, pedidas: 0, enc: 0, positivas: 0, suma: 0 };
+      grupos[n] = { esperaSuma: 0, esperaN: 0, fuera: 0, entregas: 0, evidencia: 0, sinFoto: 0, sinRemision: 0, incompletas: 0, elegibles: 0, pedidas: 0, enc: 0, positivas: 0, suma: 0 };
     });
     var porFolio = {};
     creadas.concat(entregadas).forEach(function(p){ if(p.id) porFolio[p.id] = p; });
@@ -11277,10 +11277,18 @@ async function cargarTableroChoferes() {
       if(sinFoto) g.sinFoto++;
       if(tieneRem && !sinFoto) g.evidencia++;
       if(p.entregaCompleta === false) g.incompletas++;
+      if(p.timestampEntrega && p.timestamp && p.timestampEntrega >= p.timestamp) { g.esperaSuma += p.timestampEntrega - p.timestamp; g.esperaN++; }
       if((p.razonSocial || p.rs || 'JMG') === 'JMG' && p.entregaCompleta !== false && String(p.telefono || '').replace(/[^0-9]/g, '')) {
         g.elegibles++;
         if(p.valoracionPedida && p.valoracionVia !== 'no_aplica') g.pedidas++;
       }
+    });
+    // pedidos que el chofer tomó saltándose uno más antiguo
+    var vistosOrden = {};
+    creadas.concat(entregadas).forEach(function(p){
+      if(!p._docId || vistosOrden[p._docId]) return;
+      vistosOrden[p._docId] = true;
+      if(p.fueraDeOrden && grupos[p.tomadoPor]) grupos[p.tomadoPor].fuera++;
     });
     // encuestas: si la nota no vino en las consultas del mes, se busca por folio
     var faltan = [];
@@ -11323,6 +11331,8 @@ async function cargarTableroChoferes() {
         fila('Sin foto o foto no guardada', g.sinFoto, g.sinFoto ? '#B45309' : '') +
         fila('Sin remisión (sin firma ni foto)', g.sinRemision, g.sinRemision ? '#DC2626' : '') +
         fila('Entregas incompletas', g.incompletas, g.incompletas ? '#B45309' : '') +
+        fila('Espera promedio (de la nota a la entrega)', g.esperaN ? textoEspera(g.esperaSuma / g.esperaN) : '—') +
+        fila('Pedidos tomados fuera de orden', g.fuera, g.fuera ? '#B45309' : '') +
         fila('Valoraciones pedidas', g.elegibles ? (g.pedidas + ' de ' + g.elegibles) : '—') +
         fila('Encuestas contestadas · promedio', g.enc + ' · ' + prom) +
         fila('Encuestas positivas (' + ENCUESTA_POSITIVA_MIN + ' de 5)', g.positivas, g.positivas ? '#15803D' : '') +
@@ -13938,7 +13948,7 @@ function pedidoCardOperador(p) {
 }
 
 // ════ PEDIDOS — autoasignación (pedidos sin operador) ════
-// ════ PEDIDO NUEVO → CHOFERES — el primero que lo toma se lo lleva ════
+// ════ PEDIDO NUEVO → CHOFERES — se entrega en orden: el más antiguo sale primero ════
 var DISPONIBLES_DIAS = 4;          // en "Disponibles" solo se muestran las notas de los últimos días; las anteriores quedan tras un botón
 var PEDIDOS_NUEVOS_HORAS = (DISPONIBLES_DIAS + 1) * 24;   // ventana que consulta el aviso del chofer (luego se filtra igual que la lista)
 var PEDIDOS_NUEVOS_SEG = 60;       // cada cuánto revisa si hay pedidos nuevos (solo mientras el CRM esté abierto en su celular)
@@ -13953,7 +13963,7 @@ function mensajeAvisoChoferes(pedido) {
     '📍 ' + (pedido.direccion || 'Ver en el CRM') + '\n' +
     (material ? '📦 ' + material + '\n' : '') +
     (pedido.fecha ? '🗓️ ' + pedido.fecha + (pedido.h ? ' ' + pedido.h : '') + '\n' : '') +
-    '\nEl primero que lo tome en el CRM se lo lleva (Ventas → 🙋 Tomar este pedido):\n👉 ' + CRM_BASE_URL;
+    '\nSe entrega en orden: el más antiguo sale primero. Revísalo en el CRM (Ventas → Notas de venta disponibles):\n👉 ' + CRM_BASE_URL;
 }
 function avisarChoferesWhatsApp(pedido) {
   window.open('https://wa.me/?text=' + encodeURIComponent(mensajeAvisoChoferes(pedido)), '_blank');
@@ -13975,7 +13985,7 @@ function ofrecerAvisoChoferes(pedido) {
   c.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:9998;background:#fff;border:2px solid #E8500A;border-radius:12px;padding:12px 14px;max-width:300px;box-shadow:0 10px 30px rgba(0,0,0,0.25);';
   c.innerHTML =
     '<div style="font-weight:700;font-size:13px;margin-bottom:4px;">📣 La nota ' + htmlSeguro(pedido.id || '') + ' no tiene chofer</div>' +
-    '<div style="font-size:11px;color:#6B6560;margin-bottom:8px;">Avísales por WhatsApp: el primero que la tome en el CRM se la lleva.</div>' +
+    '<div style="font-size:11px;color:#6B6560;margin-bottom:8px;">Avísales por WhatsApp para que la vean en el CRM. Se entrega en orden: el más antiguo sale primero.</div>' +
     '<div style="display:flex;gap:6px;">' +
       '<button class="btn btn-verde" onclick="avisarChoferesWhatsApp(window._avisoChoferesPedido)" style="font-size:11px;padding:7px 12px;flex:1;">📱 Avisar a los choferes</button>' +
       '<button class="btn btn-gris" onclick="document.getElementById(\'aviso-choferes-flotante\').remove()" style="font-size:11px;padding:7px 12px;">Ahora no</button>' +
@@ -14036,7 +14046,7 @@ function revisarPedidosNuevos() {
     ponerBadgeDisponibles(libres.length);
     if(!tituloOriginalCRM) tituloOriginalCRM = document.title;
     document.title = libres.length ? '(' + libres.length + ') Pedidos disponibles · Troncoso' : tituloOriginalCRM;
-    if(primera && libres.length) showToast('🆕 Hay ' + libres.length + ' pedido' + (libres.length === 1 ? '' : 's') + ' disponible' + (libres.length === 1 ? '' : 's') + ': tómalo en Ventas');
+    if(primera && libres.length) showToast('🆕 Hay ' + libres.length + ' pedido' + (libres.length === 1 ? '' : 's') + ' disponible' + (libres.length === 1 ? '' : 's') + '. Empieza por el más antiguo.');
     if(nuevos.length) {
       showToast('🆕 Pedido nuevo disponible: ' + (nuevos[0].id || '') + (nuevos[0].direccion ? ' · ' + String(nuevos[0].direccion).slice(0, 40) : ''));
       reproducirAvisoPedido();
@@ -14064,45 +14074,71 @@ function alternarDisponiblesViejos() {
   renderPedidosDisponibles();
 }
 
-function renderPedidosDisponibles() {
+// Pedidos libres (confirmados, sin chofer, con dirección), del más antiguo al más nuevo: ese es el orden de entrega.
+function listaDisponibles(incluirViejos) {
   var libres = pedidosCache.filter(function(p){
     var estado = normStatusPedido(p);
     var ch = (p.operador || p.ch || '').trim();
     return estado === 'confirmado' && (ch === '' || ch === 'Sin asignar') && String(p.direccion || '').trim();   // sin dirección = recoge en mostrador, no es para chofer
   });
-  var cont = document.getElementById('ped-lista-disponibles');
-  if(!cont) return;
   var corte = new Date(); corte.setDate(corte.getDate() - DISPONIBLES_DIAS);
   var corteISO = fechaLocalISO(corte);
-  var recientes = libres.filter(function(p){ return (p.fecha || '') >= corteISO; });
-  var anteriores = libres.length - recientes.length;
-  var lista = verDisponiblesViejos ? libres : recientes;
-  var html = lista.length ? lista.map(pedidoCardDisponible).join('') : '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">No hay notas de venta disponibles</div>';
+  var lista = incluirViejos ? libres : libres.filter(function(p){ return (p.fecha || '') >= corteISO; });
+  return lista.sort(function(a, b){ return (a.timestamp || 0) - (b.timestamp || 0); });
+}
+function textoEspera(ms) {
+  var min = Math.max(0, Math.round(ms / 60000));
+  if(min < 60) return min + ' min';
+  var h = min / 60;
+  if(h < 48) return (Math.round(h * 10) / 10) + ' h';
+  return (Math.round(h / 24 * 10) / 10) + ' días';
+}
+// Pedidos más antiguos que este que siguen sin chofer (los que "se le están saltando")
+function pedidosMasAntiguosSinTomar(docId) {
+  var p = pedidosCache.find(function(x){ return x._docId === docId; });
+  if(!p) return [];
+  return listaDisponibles(false).filter(function(x){ return x._docId !== docId && (x.timestamp || 0) < (p.timestamp || 0); });
+}
+
+function renderPedidosDisponibles() {
+  var cont = document.getElementById('ped-lista-disponibles');
+  if(!cont) return;
+  var recientes = listaDisponibles(false);
+  var todos = listaDisponibles(true);
+  var anteriores = todos.length - recientes.length;
+  var lista = verDisponiblesViejos ? todos : recientes;
+  window._disponiblePrimeroId = lista.length ? lista[0]._docId : null;
+  var html = lista.length ? '<div style="padding:10px 14px;background:#FEF3C7;color:#92400E;font-size:12px;font-weight:700;border-bottom:1px solid #F3E3B3;">🔢 Se entrega en orden: el más antiguo sale primero.</div>' + lista.map(pedidoCardDisponible).join('') : '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">No hay notas de venta disponibles</div>';
   if(anteriores) html += '<div style="padding:12px;text-align:center;"><button class="btn btn-gris" onclick="alternarDisponiblesViejos()" style="font-size:11px;padding:7px 14px;">' + (verDisponiblesViejos ? 'Ocultar las anteriores' : 'Ver ' + anteriores + ' anteriores sin asignar (de hace más de ' + DISPONIBLES_DIAS + ' días)') + '</button></div>';
   cont.innerHTML = html;
 }
 
 function pedidoCardDisponible(p) {
-  return `
-    <div class="cot-list-item">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div>
-          <div class="cot-cliente">${p.id||''} · ${p.cliente||p.c||''}</div>
-          <div class="cot-meta">${p.direccion||''}</div>
-          <div class="cot-meta">${p.p||''}</div>
-        </div>
-      </div>
-      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn btn-naranja" onclick="tomarPedido('${p._docId}')" style="font-size:11px;padding:8px 14px;">🙋 Tomar este pedido</button>
-      </div>
-    </div>
-  `;
+  var espera = p.timestamp ? Date.now() - p.timestamp : 0;
+  var color = espera > 48 * 3600000 ? '#DC2626' : (espera > 24 * 3600000 ? '#B45309' : '#6B6560');
+  var primero = window._disponiblePrimeroId === p._docId;
+  return '<div class="cot-list-item"' + (primero ? ' style="background:#F0FDF4;border-left:4px solid #22C55E;"' : '') + '>' +
+    (primero ? '<div style="font-size:10px;font-weight:700;color:#15803D;margin-bottom:4px;">⬆ SIGUE EN LA FILA</div>' : '') +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div>' +
+      '<div class="cot-cliente">' + htmlSeguro(p.id || '') + ' · ' + htmlSeguro(p.cliente || p.c || '') + '</div>' +
+      '<div class="cot-meta">' + htmlSeguro(p.direccion || '') + '</div>' +
+      '<div class="cot-meta">' + htmlSeguro(p.p || '') + '</div>' +
+      (espera ? '<div class="cot-meta" style="color:' + color + ';font-weight:700;">⏱ Lleva ' + textoEspera(espera) + ' esperando</div>' : '') +
+    '</div></div>' +
+    '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">' +
+      '<button class="btn btn-naranja" onclick="tomarPedido(\'' + p._docId + '\')" style="font-size:11px;padding:8px 14px;">🙋 Tomar este pedido</button>' +
+    '</div></div>';
 }
 
 function tomarPedido(docId) {
   if(!currentUser || currentUser.role !== 'Operador') return;
   var nombre = currentUser.name;
-  if(!confirm('¿Tomar este pedido como ' + nombre + '?')) return;
+  var antiguos = pedidosMasAntiguosSinTomar(docId);
+  var textoConfirmar = antiguos.length
+    ? '⚠️ Hay pedidos más antiguos sin tomar: ' + antiguos.slice(0, 3).map(function(x){ return x.id || ''; }).join(', ') + (antiguos.length > 3 ? ' y ' + (antiguos.length - 3) + ' más' : '') + '.\nEl más antiguo sale primero.\n\nSolo se hace con autorización de Viridiana o José Manuel (urgencia o zona).\n¿Tomar este de todos modos?'
+    : '¿Tomar este pedido como ' + nombre + '?';
+  if(!confirm(textoConfirmar)) return;
+  var extraOrden = antiguos.length ? { fueraDeOrden: true, saltoPedidos: antiguos.slice(0, 10).map(function(x){ return x.id || x._docId; }) } : {};
   var idx = pedidosCache.findIndex(function(p){ return p._docId === docId; });
   if(idx < 0) return;
   if(!db) {
@@ -14121,13 +14157,13 @@ function tomarPedido(docId) {
       var d = doc.data();
       var actual = String(d.operador || d.ch || '').trim();
       if(actual && actual !== 'Sin asignar') { var e2 = new Error('ya-tomado'); e2.motivo = 'ya-tomado'; e2.tomadoPor = actual; throw e2; }
-      tx.update(ref, {
+      tx.update(ref, Object.assign({
         operador: nombre,
         ch: nombre,
         tomadoPor: nombre,
         timestampAsignacion: Date.now(),
-        historial: firebase.firestore.FieldValue.arrayUnion({ status: 'asignado', user: nombre, timestamp: Date.now() })
-      });
+        historial: firebase.firestore.FieldValue.arrayUnion({ status: 'asignado', user: nombre, timestamp: Date.now(), fueraDeOrden: !!extraOrden.fueraDeOrden })
+      }, extraOrden));
     });
   }).then(function(){
     pedidosCache[idx].operador = nombre;

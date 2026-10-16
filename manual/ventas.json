@@ -241,7 +241,7 @@
      "leyenda": "1 = Avisar a los choferes · 2 = Ahora no"
     },
     {
-     "t": "Se abre **WhatsApp** con el mensaje listo (folio, dirección, material y fecha). **Elige el grupo de los choferes** y toca **Enviar**. El mensaje dice que el primero que lo tome en el CRM se lo lleva."
+     "t": "Se abre **WhatsApp** con el mensaje listo (folio, dirección, material y fecha). **Elige el grupo de los choferes** y toca **Enviar**. El mensaje les recuerda que **se entrega en orden: el más antiguo sale primero**."
     },
     {
      "t": "Si cerraste la tarjeta o más tarde quieres avisar de nuevo, abre la nota en **Notas de Venta** y toca **Avisar a los choferes** (1).",
@@ -250,10 +250,12 @@
     }
    ],
    "cuidado": [
+    "Los choferes ven los pedidos **del más antiguo al más nuevo** y el sistema les avisa si se saltan uno. Tu trabajo es capturar bien la **dirección**: sin dirección, la nota no les aparece.",
     "Además del WhatsApp, a los choferes que tengan el CRM abierto **les suena y vibra el celular** y les sale el aviso en cuanto entra la nota (revisa cada minuto). El WhatsApp sirve para los que no lo tengan abierto.",
     "Si quieres que **un chofer en especial** lleve el pedido, no avises al grupo: elige su nombre en **Operador** al hacer la nota, o usa **Reasignar** en el detalle. A ese chofer le llega un WhatsApp con el pedido.",
     "La tarjeta no sale en notas **sin dirección** (recoge en mostrador).",
-    "Los datos del cliente (teléfono) **no** van en el mensaje del grupo: el chofer los ve en el CRM cuando toma el pedido."
+    "Los datos del cliente (teléfono) **no** van en el mensaje del grupo: el chofer los ve en el CRM cuando toma el pedido.",
+    "Si un chofer te pide cambiar el orden de entrega por **urgencia o por zona**, no lo autorices tú: pásalo a **Viridiana o José Manuel**, que son quienes lo autorizan."
    ],
    "ayuda": "Si ningún chofer toma una nota, avisa a Viridiana."
   },
