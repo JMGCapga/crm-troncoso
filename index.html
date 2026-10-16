@@ -13535,6 +13535,11 @@ function pagoNormDeRegistro(pago, tipoTarjeta, metodoPago) {
   return pago || '';
 }
 
+// Director y Gerencia consultan lo administrativo (notas de venta y tickets): las cotizaciones no les salen.
+function consultasIncluyeCotizaciones() {
+  return !(currentPin === '9900' || currentPin === '5678');
+}
+
 function iniciarConsultas() {
   if(consultasCargadas) { buscarConsultas(); return; }
   cargarConsultas();
@@ -13544,7 +13549,7 @@ function iniciarConsultas() {
 function armarConsultasCache(cotSnap, pedSnap, tkSnap) {
   consultasCache = [];
 
-  cotSnap.forEach(function(doc){
+  if(cotSnap) cotSnap.forEach(function(doc){
     var c = doc.data();
     consultasCache.push({
       tipo: 'COT', docId: doc.id, folio: 'COT-' + String(c.folio).padStart(3,'0'),
@@ -13602,18 +13607,21 @@ function cargarConsultas() {
   var hasta = document.getElementById('cons-hasta').value;
   var solicitud = ++consultasSolicitud;
   var consultas;
+  var conCot = consultasIncluyeCotizaciones();
+  var colecciones = conCot ? ['cotizaciones','pedidos','tickets'] : ['pedidos','tickets'];
   if(!desde && !hasta) {
-    consultas = ['cotizaciones','pedidos','tickets'].map(function(n){ return db.collection(n).orderBy('timestamp','desc').limit(300).get(); });
+    consultas = colecciones.map(function(n){ return db.collection(n).orderBy('timestamp','desc').limit(300).get(); });
   } else {
     var t0 = desde ? new Date(desde + 'T00:00:00').getTime() : 0;
     var t1 = hasta ? new Date(hasta + 'T23:59:59.999').getTime() : Date.now() + 86400000;
-    consultas = ['cotizaciones','pedidos','tickets'].map(function(n){
+    consultas = colecciones.map(function(n){
       return db.collection(n).where('timestamp','>=',t0).where('timestamp','<=',t1).orderBy('timestamp','desc').limit(3000).get();
     });
   }
   Promise.all(consultas).then(function(results){
     if(solicitud !== consultasSolicitud) return;   // ya eligieron otro período
-    armarConsultasCache(results[0], results[1], results[2]);
+    if(conCot) armarConsultasCache(results[0], results[1], results[2]);
+    else armarConsultasCache(null, results[0], results[1]);
     consultasCargadas = true;
     buscarConsultas();
   }).catch(function(e){ console.log('Error cargando consultas:', e); if(solicitud === consultasSolicitud) cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);">Error al cargar</div>'; });
@@ -13685,7 +13693,9 @@ function buscarConsultas() {
   var estado = document.getElementById('cons-estado').value;
   var pago = document.getElementById('cons-pago').value;
 
+  var conCot = consultasIncluyeCotizaciones();
   var res = consultasCache.filter(function(r){
+    if(r.tipo === 'COT' && !conCot) return false;
     if(texto && r.texto.indexOf(texto) === -1) return false;
     if(desde && r.fecha && r.fecha < desde) return false;
     if(hasta && r.fecha && r.fecha > hasta) return false;
