@@ -1403,6 +1403,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <div class="card-title">📄 Gestión de Notas de Venta</div>
           <button class="btn btn-naranja" onclick="abrirNuevaNotaVenta()" style="width:100%;margin-bottom:12px;">🎯 Nueva Nota de Venta</button>
           <div id="ped-alertas-incompletas"></div>
+          <div id="ped-valoraciones"></div>
           <div style="font-size:12px;color:var(--suave);margin-bottom:12px;" id="pedidos-resumen-ventas"></div>
           <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
             <button class="btn btn-naranja" onclick="filtrarPedidosFecha('hoy')" id="ped-f-hoy" style="font-size:11px;padding:7px 14px;">Hoy</button>
@@ -1438,6 +1439,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <div class="card-title">📊 Panel de Notas de Venta</div>
           <button class="btn btn-naranja" onclick="abrirNuevaNotaVenta()" style="width:100%;margin-bottom:12px;">🎯 Nueva Nota de Venta</button>
           <div id="ped-alertas-incompletas-jm"></div>
+          <div id="ped-valoraciones-jm"></div>
           <div id="ped-resumen-jm" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"></div>
           <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
             <button class="btn btn-naranja" onclick="filtrarPedidosFecha('hoy')" id="ped-jm-f-hoy" style="font-size:11px;padding:7px 14px;">Hoy</button>
@@ -1987,6 +1989,16 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           <div id="hist-contenido"><div style="padding:14px;color:#888;font-size:12px;">Cargando...</div></div>
         </div>
 
+        <!-- DESEMPEÑO POR CHOFER — Director y Gerencia -->
+        <div id="dash-choferes-section" style="background:#F5F8FF;border:1px solid #C7D7F5;border-radius:10px;padding:16px;margin-top:16px;display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;">🚚 DESEMPEÑO POR CHOFER</div>
+            <select id="dash-choferes-mes" onchange="cargarTableroChoferes()" style="border:1.5px solid var(--borde);border-radius:8px;padding:6px 10px;font-size:12px;font-family:'Barlow',sans-serif;background:#fff;"></select>
+          </div>
+          <div id="dash-choferes-contenido"><div style="padding:14px;color:#888;font-size:12px;">Cargando...</div></div>
+          <div style="font-size:10px;color:#888;margin-top:10px;line-height:1.5;">Esquema propuesto de bono: se cobra solo si el chofer tiene <b>al menos 90%</b> de sus entregas con firma y foto; después, cada <b>5 encuestas de 5 estrellas</b> = 1 bloque (máximo 2). Los montos los defines tú. Solo cuentan entregas registradas en el CRM.</div>
+        </div>
+
         <!-- EVALUACIONES DE SERVICIO — Solo para José Manuel -->
         <div id="dash-evaluaciones-section" style="background:#FFF8F5;border:1px solid #FFD8C0;border-radius:10px;padding:16px;margin-top:16px;display:none;">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;margin-bottom:12px;letter-spacing:1px;">⭐ EVALUACIONES DE SERVICIO — Este mes</div>
@@ -2281,6 +2293,109 @@ function mensajeCotizacionWA(cot) {
     'pedidostroncoso@gmail.com';
 }
 
+// ════ VALORACIÓN EN GOOGLE — QR para el chofer (en la entrega) y para el mostrador ════
+// El link abre directo el formulario de reseña de CONSTRURAMA MATERIALES TRONCOSO (el cliente solo debe tener sesión de Google).
+// El QR es fijo (mismo link), por eso va incrustado: funciona sin internet y sin librerías.
+// OJO: no ofrecer regalos ni descuentos por la reseña — Google lo prohíbe y puede borrar las reseñas del negocio.
+var GOOGLE_RESENA_URL = 'https://search.google.com/local/writereview?placeid=ChIJKQCmbY_-0YURf27EduOM-WI';
+var QR_RESENA_SVG = '<svg style="width:100%;height:auto;display:block;" viewBox="0 0 41 41" class="segno"><path fill="#fff" d="M0 0h41v41h-41z"/><path class="qrline" stroke="#000" d="M2 2.5h7m2 0h1m1 0h1m1 0h2m1 0h1m1 0h2m2 0h1m4 0h2m1 0h7m-37 1h1m5 0h1m2 0h2m2 0h3m1 0h2m1 0h3m2 0h4m1 0h1m5 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h5m1 0h1m1 0h3m3 0h2m2 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h4m1 0h1m1 0h3m1 0h2m3 0h4m2 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m1 0h2m5 0h5m1 0h1m4 0h1m1 0h1m1 0h3m1 0h1m-37 1h1m5 0h1m1 0h4m2 0h2m4 0h1m4 0h1m1 0h1m2 0h1m5 0h1m-37 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-29 1h6m1 0h1m3 0h3m1 0h1m2 0h1m1 0h1m-29 1h1m1 0h5m2 0h2m3 0h3m5 0h2m1 0h2m1 0h1m1 0h5m-35 1h4m1 0h1m4 0h2m1 0h3m1 0h1m2 0h1m4 0h1m1 0h3m3 0h1m1 0h1m-36 1h2m1 0h1m2 0h1m1 0h1m3 0h2m1 0h2m1 0h1m1 0h1m1 0h1m2 0h4m1 0h1m2 0h1m1 0h2m-35 1h1m2 0h1m2 0h3m1 0h1m2 0h1m3 0h4m1 0h1m1 0h1m2 0h1m1 0h1m4 0h1m-36 1h3m1 0h2m1 0h1m1 0h2m3 0h1m1 0h1m1 0h2m1 0h5m2 0h8m-33 1h2m3 0h1m6 0h1m2 0h3m1 0h1m1 0h1m5 0h1m3 0h1m-36 1h5m1 0h4m1 0h1m3 0h3m2 0h1m1 0h1m3 0h2m1 0h1m1 0h3m1 0h2m-36 1h2m2 0h1m2 0h2m1 0h1m1 0h3m3 0h3m1 0h2m1 0h2m1 0h4m2 0h1m-35 1h1m2 0h3m4 0h1m2 0h1m4 0h1m5 0h2m2 0h2m1 0h1m1 0h2m-36 1h2m1 0h1m3 0h1m1 0h1m3 0h1m1 0h2m1 0h1m1 0h1m1 0h1m2 0h1m1 0h2m1 0h2m2 0h2m-36 1h1m1 0h1m2 0h3m1 0h2m1 0h1m7 0h3m1 0h4m1 0h3m1 0h1m1 0h2m-34 1h3m1 0h1m1 0h1m2 0h1m1 0h1m1 0h1m1 0h1m1 0h2m2 0h1m1 0h1m2 0h2m1 0h1m3 0h1m-37 1h2m4 0h3m1 0h5m2 0h1m4 0h1m1 0h3m2 0h2m1 0h3m-35 1h1m1 0h3m3 0h1m1 0h1m3 0h1m1 0h4m1 0h1m1 0h1m4 0h1m4 0h1m1 0h1m-34 1h2m2 0h5m4 0h1m2 0h1m5 0h2m1 0h2m1 0h4m2 0h1m-36 1h2m1 0h2m3 0h2m2 0h2m1 0h1m3 0h2m1 0h1m5 0h1m1 0h2m2 0h1m-34 1h1m1 0h6m2 0h5m1 0h3m2 0h1m2 0h2m1 0h2m1 0h1m1 0h3m-37 1h1m3 0h1m4 0h3m2 0h2m2 0h3m1 0h3m1 0h3m2 0h1m1 0h1m-34 1h1m2 0h1m1 0h3m7 0h2m5 0h1m2 0h4m1 0h2m3 0h2m-37 1h1m1 0h3m2 0h4m1 0h1m1 0h2m4 0h3m3 0h2m1 0h3m3 0h1m-36 1h1m2 0h2m1 0h1m1 0h2m2 0h1m2 0h3m4 0h5m1 0h8m-28 1h7m1 0h1m2 0h3m1 0h3m1 0h2m3 0h2m1 0h1m-36 1h7m5 0h1m2 0h2m1 0h1m1 0h1m1 0h1m5 0h1m1 0h1m1 0h1m1 0h3m-37 1h1m5 0h1m1 0h1m2 0h3m1 0h2m1 0h1m2 0h2m3 0h1m1 0h1m3 0h2m1 0h2m-37 1h1m1 0h3m1 0h1m1 0h1m2 0h2m2 0h1m2 0h1m2 0h2m1 0h1m1 0h7m1 0h3m-37 1h1m1 0h3m1 0h1m1 0h2m3 0h1m1 0h2m1 0h4m1 0h8m1 0h2m2 0h1m-37 1h1m1 0h3m1 0h1m1 0h4m1 0h2m2 0h2m1 0h1m5 0h2m1 0h1m4 0h3m-37 1h1m5 0h1m5 0h3m1 0h1m1 0h1m1 0h4m3 0h1m4 0h1m3 0h1m-37 1h7m1 0h1m1 0h1m2 0h2m2 0h1m4 0h5m3 0h1m1 0h5"/></svg>';
+
+function mensajeValoracionWA() {
+  return '⭐ *MATERIALES TRONCOSO*\n'+
+    'Gracias por su compra. Si tiene 30 segundos, su reseña en Google nos ayuda a que más personas nos encuentren:\n'+
+    '👉 '+GOOGLE_RESENA_URL+'\n\n'+
+    '📞 5555906802\n'+
+    'materialestroncoso.com';
+}
+
+// origen: 'chofer' (al confirmar una entrega) o 'mostrador' (desde la nota de venta)
+function abrirPedirValoracion(pedido, origen) {
+  var existente = document.getElementById('modal-valoracion');
+  if(existente) existente.remove();
+  window._valoracionPedido = pedido || null;
+  window._valoracionOrigen = origen;
+  var esChofer = origen === 'chofer';
+  var nombre = currentUser ? String(currentUser.name).split(' ')[0] : '';
+  var tel = String((pedido && pedido.telefono) || '').replace(/[^0-9]/g, '');
+  var cliente = pedido ? (pedido.cliente || pedido.c || '') : '';
+  var frase = esChofer
+    ? '«¿Nos ayuda con una reseña en Google? Son 30 segundos. Si puede, mencione a ' + nombre + '.»'
+    : '«¿Nos ayuda con una reseña en Google? Son 30 segundos y nos ayuda mucho.»';
+  var m = document.createElement('div');
+  m.id = 'modal-valoracion';
+  m.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.85);display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow-y:auto;';
+  m.innerHTML =
+    '<div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:420px;margin:auto;">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;letter-spacing:1px;color:#1A1A1A;">⭐ PÍDELE SU VALORACIÓN</div>' +
+      '<div style="font-size:12px;color:#6B6560;margin-bottom:12px;">' + (pedido && pedido.id ? pedido.id + ' · ' : '') + cliente + '</div>' +
+      '<div style="background:#fff;border:2px solid #1A1A1A;border-radius:12px;padding:10px;width:250px;max-width:100%;margin:0 auto 10px;">' + QR_RESENA_SVG + '</div>' +
+      '<div style="text-align:center;font-size:13px;font-weight:700;color:#1A1A1A;margin-bottom:10px;">Que abra la cámara de su celular y apunte al código.</div>' +
+      '<div style="background:#FEF3C7;border-radius:10px;padding:10px 12px;font-size:12px;color:#92400E;margin-bottom:12px;"><b>Dile:</b> ' + frase + '</div>' +
+      (pedido && pedido._docId ? '<button onclick="valoracionYaPedida()" class="btn btn-verde" style="width:100%;padding:13px;margin-bottom:6px;">✅ Ya se la pedí al cliente</button>' +
+        '<div style="font-size:10px;color:#9A938C;margin-bottom:10px;">Tócalo cuando ya se la pediste: así Ventas no se la vuelve a pedir por WhatsApp.</div>' : '') +
+      (tel ? '<button onclick="valoracionPorWhatsApp(' + (esChofer ? 'true' : 'false') + ')" class="btn btn-verde" style="width:100%;padding:13px;margin-bottom:8px;">📱 ' + (esChofer ? 'Mandarle encuesta y reseña por WhatsApp' : 'Mandarle el link de la reseña por WhatsApp') + '</button>' : '') +
+      (esChofer ? '' : '<button onclick="imprimirCartelResena()" class="btn btn-gris" style="width:100%;padding:13px;margin-bottom:8px;">🖨️ Imprimir cartel con QR para el mostrador</button>') +
+      '<div style="font-size:10px;color:#9A938C;margin-bottom:10px;">No ofrezcas regalos ni descuentos por la reseña: Google lo prohíbe y puede borrar las reseñas del negocio.</div>' +
+      '<button onclick="document.getElementById(\'modal-valoracion\').remove()" class="btn btn-gris" style="width:100%;">Cerrar</button>' +
+    '</div>';
+  document.body.appendChild(m);
+}
+
+function valoracionPorWhatsApp(conEncuesta) {
+  var p = window._valoracionPedido;
+  if(!p) return;
+  var via = (window._valoracionOrigen === 'chofer' ? 'chofer' : 'mostrador') + '-whatsapp';
+  if(conEncuesta) {
+    enviarEncuestaPostEntrega(p);
+    if(p._docId) marcarValoracionPedida(p._docId, via);
+    return;
+  }
+  var tel = String(p.telefono || '').replace(/[^0-9]/g, '');
+  if(!tel) { showToast('⚠️ La nota no tiene teléfono'); return; }
+  var num = tel.indexOf('52') === 0 ? tel : '52' + tel;
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(mensajeValoracionWA()), '_blank');
+  if(p._docId) marcarValoracionPedida(p._docId, via);
+}
+
+function valoracionYaPedida() {
+  var p = window._valoracionPedido;
+  if(p && p._docId) marcarValoracionPedida(p._docId, (window._valoracionOrigen === 'chofer' ? 'chofer' : 'mostrador') + '-qr');
+  var m = document.getElementById('modal-valoracion');
+  if(m) m.remove();
+  showToast('✅ Anotado: ya se pidió la valoración');
+}
+
+function abrirPedirValoracionDesdeNota(docId) {
+  var p = pedidosCache.find(function(x){ return x._docId === docId; });
+  if(!p) return;
+  abrirPedirValoracion(p, 'mostrador');
+}
+
+// Cartel para imprimir y pegar junto a la caja
+function imprimirCartelResena() {
+  var w = window.open('', '_blank');
+  if(!w) { showToast('⚠️ El navegador bloqueó la ventana. Permite las ventanas emergentes.'); return; }
+  w.document.write(
+    '<!doctype html><html><head><meta charset="utf-8"><title>Cartel de reseña — Materiales Troncoso</title><style>' +
+    '@page{size:letter;margin:12mm;}*{box-sizing:border-box;}' +
+    'body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#1A1A1A;text-align:center;}' +
+    '.marca{font-family:Impact,\'Arial Narrow\',sans-serif;font-size:26pt;letter-spacing:2px;margin-top:6mm;}.marca span{color:#E8500A;}' +
+    '.titulo{font-family:Impact,\'Arial Narrow\',sans-serif;font-size:44pt;line-height:1.05;margin:8mm 0 3mm;}' +
+    '.sub{font-size:18pt;margin-bottom:6mm;}' +
+    '.qr{width:105mm;height:105mm;margin:0 auto;border:3mm solid #1A1A1A;border-radius:6mm;padding:4mm;}' +
+    '.pie{font-size:18pt;margin-top:6mm;font-weight:700;}.pie small{display:block;font-size:13pt;font-weight:400;margin-top:3mm;color:#555;}' +
+    '</style></head><body>' +
+    '<div class="marca">MATERIALES <span>TRONCOSO</span></div>' +
+    '<div class="titulo">¿TE ATENDIMOS BIEN?</div>' +
+    '<div class="sub">Cuéntaselo a Google. Abre la cámara de tu celular<br>y apunta al código.</div>' +
+    '<div class="qr">' + QR_RESENA_SVG + '</div>' +
+    '<div class="pie">Son solo 30 segundos. ¡Gracias!<small>Tu reseña ayuda a que más personas nos encuentren.</small></div>' +
+    '</body></html>');
+  w.document.close();
+  w.focus();
+  setTimeout(function(){ w.print(); }, 500);
+}
+
 // Genera mensaje de encuesta para WhatsApp (post-entrega)
 function mensajeEncuestaWA(pedido) {
   var linkEncuesta = 'jmgcapga.github.io/encuesta-troncoso?pedido='+
@@ -2292,9 +2407,8 @@ function mensajeEncuestaWA(pedido) {
     '⭐ ¿Nos regala 30 segundos?\n'+
     'Su opinión nos ayuda a mejorar:\n'+
     '👉 '+linkEncuesta+'\n\n'+
-    '🎁 Si quedó satisfecho y nos deja una reseña en Google,\n'+
-    '¡le damos un regalo Materiales Troncoso!\n'+
-    '👉 https://maps.app.goo.gl/Usi4bN3xMT2SsWz17\n\n'+
+    '¿Nos deja también su reseña en Google? Ayuda a que más personas nos encuentren:\n'+
+    '👉 '+GOOGLE_RESENA_URL+'\n\n'+
     '📞 5555906802\n'+
     'materialestroncoso.com';
 }
@@ -11084,6 +11198,7 @@ async function cargarDashboard() {
       document.getElementById('dash-evaluaciones-section').style.display = 'none';
     }
 
+    cargarTableroChoferes();
     console.log('Dashboard cargado exitosamente');
     console.log('Datos: Entradas:', entradas, 'Ventas semana:', ventasSem, 'Acumulado mes:', acumulado);
     showToast('✅ Dashboard actualizado - Ventas: $' + fmtNumero(acumulado));
@@ -11091,6 +11206,134 @@ async function cargarDashboard() {
     console.error('Error en dashboard:', err);
     console.error('Stack:', err.stack);
     showToast('⚠️ Error: ' + err.message);
+  }
+}
+
+// ════ DASHBOARD — Desempeño por chofer (Director y Gerencia) ════
+// Cruza las entregas registradas en el CRM (pedidos), su evidencia (remisión con firma y foto) y las encuestas
+// del cliente (se unen por el folio de la nota). Solo cuenta lo que quedó registrado en el CRM.
+var BONO_POSITIVAS_POR_BLOQUE = 5;    // cada 5 encuestas positivas = 1 bloque de bono de servicio
+var BONO_MAX_BLOQUES = 2;             // máximo de bloques por mes
+var ENCUESTA_POSITIVA_MIN = 5;        // puntuación (de 5) para contar como positiva
+var BONO_MIN_EVIDENCIA_PCT = 90;      // % de entregas con firma y foto para poder cobrar el bono
+var TABLERO_SIN_CHOFER = 'Sin chofer (marcadas desde Ventas)';
+var tableroSolicitud = 0;
+
+function llenarMesesTableroChoferes() {
+  var sel = document.getElementById('dash-choferes-mes');
+  if(!sel || sel.options.length) return;
+  var d = new Date();
+  for(var i = 0; i < 6; i++) {
+    var o = document.createElement('option');
+    o.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    o.textContent = MESES_HISTORICO[d.getMonth()] + ' ' + d.getFullYear() + (i === 0 ? ' (este mes)' : '');
+    sel.appendChild(o);
+    d = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  }
+}
+
+async function cargarTableroChoferes() {
+  var sec = document.getElementById('dash-choferes-section');
+  if(!sec) return;
+  if(!db || !(currentPin === '9900' || currentPin === '5678')) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  llenarMesesTableroChoferes();
+  var cont = document.getElementById('dash-choferes-contenido');
+  var solicitud = ++tableroSolicitud;
+  cont.innerHTML = '<div style="padding:14px;color:#888;font-size:12px;">Cargando...</div>';
+  try {
+    var partes = document.getElementById('dash-choferes-mes').value.split('-');
+    var ini = new Date(parseInt(partes[0], 10), parseInt(partes[1], 10) - 1, 1);
+    var fin = new Date(ini.getFullYear(), ini.getMonth() + 1, 1);
+    var primerISO = fechaLocalISO(ini);
+    var ultimoISO = fechaLocalISO(new Date(fin.getTime() - 86400000));
+    var res = await Promise.all([
+      db.collection('pedidos').where('fecha', '>=', primerISO).where('fecha', '<=', ultimoISO).get(),
+      db.collection('pedidos').where('timestampEntrega', '>=', ini.getTime()).where('timestampEntrega', '<', fin.getTime()).get(),
+      db.collection('encuestas').where('fecha', '>=', primerISO).where('fecha', '<=', ultimoISO).get()
+    ]);
+    if(solicitud !== tableroSolicitud) return;
+    var creadas = res[0].docs.map(function(d){ var x = d.data(); x._docId = d.id; return x; }).filter(function(p){ return normStatusPedido(p) !== 'cancelado'; });
+    var entregadas = res[1].docs.map(function(d){ var x = d.data(); x._docId = d.id; return x; }).filter(function(p){ return normStatusPedido(p) === 'entregado'; });
+    var encuestas = res[2].docs.map(function(d){ return d.data(); });
+
+    var choferes = Object.keys(USERS).filter(function(id){ return USERS[id].role === 'Operador'; }).map(function(id){ return USERS[id].name; });
+    function claveChofer(p){ return choferes.indexOf(p.entregadoPor) !== -1 ? p.entregadoPor : TABLERO_SIN_CHOFER; }
+    var grupos = {};
+    choferes.concat([TABLERO_SIN_CHOFER]).forEach(function(n){
+      grupos[n] = { entregas: 0, evidencia: 0, sinFoto: 0, sinRemision: 0, incompletas: 0, elegibles: 0, pedidas: 0, enc: 0, positivas: 0, suma: 0 };
+    });
+    var porFolio = {};
+    creadas.concat(entregadas).forEach(function(p){ if(p.id) porFolio[p.id] = p; });
+    entregadas.forEach(function(p){
+      var g = grupos[claveChofer(p)];
+      g.entregas++;
+      var tieneRem = !!p.remisionId;
+      var sinFoto = !!(p.sinFoto || p.fotoNoGuardada);
+      if(!tieneRem) g.sinRemision++;
+      if(sinFoto) g.sinFoto++;
+      if(tieneRem && !sinFoto) g.evidencia++;
+      if(p.entregaCompleta === false) g.incompletas++;
+      if((p.razonSocial || p.rs || 'JMG') === 'JMG' && p.entregaCompleta !== false && String(p.telefono || '').replace(/[^0-9]/g, '')) {
+        g.elegibles++;
+        if(p.valoracionPedida && p.valoracionVia !== 'no_aplica') g.pedidas++;
+      }
+    });
+    // encuestas: si la nota no vino en las consultas del mes, se busca por folio
+    var faltan = [];
+    encuestas.forEach(function(e){ if(e.pedidoId && !porFolio[e.pedidoId] && faltan.indexOf(e.pedidoId) === -1) faltan.push(e.pedidoId); });
+    var extra = await Promise.all(faltan.slice(0, 40).map(function(folio){
+      return db.collection('pedidos').where('id', '==', folio).limit(1).get().then(function(snap){ if(!snap.empty) porFolio[folio] = snap.docs[0].data(); }).catch(function(){});
+    }));
+    if(solicitud !== tableroSolicitud) return;
+    encuestas.forEach(function(e){
+      var p = porFolio[e.pedidoId];
+      var g = grupos[p ? claveChofer(p) : TABLERO_SIN_CHOFER];
+      g.enc++;
+      g.suma += e.puntuacion || 0;
+      if((e.puntuacion || 0) >= ENCUESTA_POSITIVA_MIN) g.positivas++;
+    });
+
+    var sinTomar = creadas.filter(function(p){ return normStatusPedido(p) === 'confirmado'; }).length;
+    var sinAsignar = creadas.filter(function(p){ var est = normStatusPedido(p); return est !== 'entregado' && (!p.operador || p.operador === 'Sin asignar'); }).length;
+    var html = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">' +
+      [['Notas del mes', creadas.length], ['Entregadas en el CRM', entregadas.length], ['Sin tomar ni entregar', sinTomar]].map(function(x){
+        return '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;">' + x[0] + '</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--naranja);">' + x[1] + '</div></div>';
+      }).join('') + '</div>' +
+      '<div style="font-size:11px;color:var(--suave);margin-bottom:12px;">Notas sin chofer asignado y sin entregar: <b>' + sinAsignar + '</b>. Si el chofer no toma y confirma la entrega en el CRM, esa entrega no cuenta para el bono.</div>';
+
+    function fila(etq, valor, color) {
+      return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed #EEF2F7;"><span style="color:#555;">' + etq + '</span><span style="font-weight:700;' + (color ? 'color:' + color + ';' : '') + '">' + valor + '</span></div>';
+    }
+    Object.keys(grupos).forEach(function(nombre){
+      var g = grupos[nombre];
+      var esSin = nombre === TABLERO_SIN_CHOFER;
+      if(esSin && !g.entregas && !g.enc) return;
+      var pct = g.entregas ? Math.round(g.evidencia * 100 / g.entregas) : 0;
+      var cumple = g.entregas > 0 && pct >= BONO_MIN_EVIDENCIA_PCT;
+      var bloques = Math.min(BONO_MAX_BLOQUES, Math.floor(g.positivas / BONO_POSITIVAS_POR_BLOQUE));
+      var prom = g.enc ? (g.suma / g.enc).toFixed(1) : '—';
+      html += '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:12px;margin-bottom:10px;">' +
+        '<div style="font-weight:700;font-size:13px;margin-bottom:6px;">🚚 ' + htmlSeguro(nombre) + '</div>' +
+        fila('Entregas registradas en el CRM', g.entregas, g.entregas ? '' : '#DC2626') +
+        fila('Con firma y foto', g.entregas ? (g.evidencia + ' de ' + g.entregas + ' (' + pct + '%)') : '—', g.entregas ? (pct >= BONO_MIN_EVIDENCIA_PCT ? '#15803D' : (pct >= 70 ? '#B45309' : '#DC2626')) : '') +
+        fila('Sin foto o foto no guardada', g.sinFoto, g.sinFoto ? '#B45309' : '') +
+        fila('Sin remisión (sin firma ni foto)', g.sinRemision, g.sinRemision ? '#DC2626' : '') +
+        fila('Entregas incompletas', g.incompletas, g.incompletas ? '#B45309' : '') +
+        fila('Valoraciones pedidas', g.elegibles ? (g.pedidas + ' de ' + g.elegibles) : '—') +
+        fila('Encuestas contestadas · promedio', g.enc + ' · ' + prom) +
+        fila('Encuestas positivas (' + ENCUESTA_POSITIVA_MIN + ' de 5)', g.positivas, g.positivas ? '#15803D' : '') +
+        (esSin ? '' :
+          '<div style="margin-top:8px;font-size:12px;font-weight:700;">' +
+            '<span style="color:' + (cumple ? '#15803D' : '#DC2626') + ';">' + (cumple ? '✅ Cumple la condición (≥ ' + BONO_MIN_EVIDENCIA_PCT + '% con firma y foto)' : '❌ No cumple la condición (≥ ' + BONO_MIN_EVIDENCIA_PCT + '% con firma y foto)') + '</span><br>' +
+            'Bono de servicio: ' + bloques + ' de ' + BONO_MAX_BLOQUES + ' bloques' + (cumple ? '' : ' (no se cobra hasta cumplir la condición)') +
+          '</div>') +
+        '</div>';
+    });
+    cont.innerHTML = html;
+  } catch(err) {
+    console.log('Error en el tablero por chofer:', err);
+    cont.innerHTML = '<div style="padding:14px;color:#DC2626;font-size:12px;">No se pudo cargar el tablero (' + htmlSeguro(err && err.message ? err.message : 'error') + ').</div>';
   }
 }
 
@@ -11998,6 +12241,74 @@ function resolverAlertaEntrega(alertaDocId) {
   }).catch(function(e){ console.log('Error resolviendo alerta:', e); showToast('⚠️ Error al resolver alerta'); });
 }
 
+// ════ VALORACIONES POR PEDIR — seguimiento de Ventas después de cada entrega ════
+// Lista las entregas COMPLETAS de JMG con teléfono de los últimos días a las que todavía no se les pide la reseña.
+// Una entrega sale de la lista cuando el chofer o Ventas la marca como pedida (valoracionPedida en la nota).
+var VALORACION_DIAS_PENDIENTE = 7;
+
+function valoracionesPorPedirLista() {
+  var desde = Date.now() - VALORACION_DIAS_PENDIENTE * 86400000;
+  return pedidosCache.filter(function(p){
+    if(normStatusPedido(p) !== 'entregado') return false;
+    if((p.razonSocial || p.rs || 'JMG') !== 'JMG') return false;
+    if(p.entregaCompleta === false) return false;
+    if(!String(p.telefono || '').replace(/[^0-9]/g, '')) return false;
+    if(p.valoracionPedida) return false;
+    return (p.timestampEntrega || 0) >= desde;
+  }).sort(function(a, b){ return (b.timestampEntrega || 0) - (a.timestampEntrega || 0); });
+}
+
+function cargarValoracionesPorPedir() {
+  var conts = ['ped-valoraciones', 'ped-valoraciones-jm'].map(function(id){ return document.getElementById(id); }).filter(function(c){ return !!c; });
+  if(!conts.length) return;
+  if(!currentUser || currentUser.role === 'Operador' || currentUser.role === 'Mecanico') { conts.forEach(function(c){ c.innerHTML = ''; }); return; }
+  var lista = valoracionesPorPedirLista();
+  var hoyIni = new Date(); hoyIni.setHours(0, 0, 0, 0);
+  var semana = Date.now() - 7 * 86400000;
+  var pedidas = pedidosCache.filter(function(p){ return p.valoracionPedida && p.valoracionVia !== 'no_aplica'; });
+  var pedidasHoy = pedidas.filter(function(p){ return (p.timestampValoracion || 0) >= hoyIni.getTime(); }).length;
+  var pedidasSemana = pedidas.filter(function(p){ return (p.timestampValoracion || 0) >= semana; }).length;
+  var resumen = 'Pedidas hoy: <b>' + pedidasHoy + '</b> · esta semana: <b>' + pedidasSemana + '</b>';
+  var html;
+  if(!lista.length) {
+    html = '<div style="background:#ECFDF5;border:1px solid #34D399;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#065F46;">⭐ <b>Valoraciones al día.</b> ' + resumen + '</div>';
+  } else {
+    html = '<div style="background:#FFFBEB;border:1px solid #F59E0B;border-radius:10px;padding:14px;margin-bottom:14px;">' +
+      '<div style="font-weight:700;color:#92400E;margin-bottom:2px;">⭐ Valoraciones por pedir (' + lista.length + ')</div>' +
+      '<div style="font-size:11px;color:var(--suave);margin-bottom:10px;">Entregas completas de JMG de los últimos ' + VALORACION_DIAS_PENDIENTE + ' días a las que todavía no se les pide su reseña. ' + resumen + '</div>';
+    lista.slice(0, 15).forEach(function(p){
+      var cuando = p.timestampEntrega ? new Date(p.timestampEntrega).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) + ' ' + new Date(p.timestampEntrega).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '';
+      html += '<div style="background:#fff;border-radius:8px;padding:10px;margin-bottom:8px;">' +
+        '<div style="font-size:12px;font-weight:700;">' + htmlSeguro(p.id || '') + ' · ' + htmlSeguro(p.cliente || p.c || '') + '</div>' +
+        '<div style="font-size:10px;color:#AAA;margin:2px 0 6px;">Entregó ' + htmlSeguro(p.entregadoPor || 'Sin chofer') + ' · ' + htmlSeguro(cuando) + '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+          '<button class="btn btn-verde" onclick="valoracionPanelWhatsApp(\'' + p._docId + '\')" style="font-size:10px;padding:5px 10px;">📱 Pedir por WhatsApp</button>' +
+          '<button class="btn btn-gris" onclick="marcarValoracionPedida(\'' + p._docId + '\',\'ventas-manual\')" style="font-size:10px;padding:5px 10px;">✓ Ya la pedí</button>' +
+          '<button class="btn btn-gris" onclick="marcarValoracionPedida(\'' + p._docId + '\',\'no_aplica\')" style="font-size:10px;padding:5px 10px;">No aplica</button>' +
+        '</div></div>';
+    });
+    if(lista.length > 15) html += '<div style="font-size:11px;color:var(--suave);text-align:center;">y ' + (lista.length - 15) + ' más…</div>';
+    html += '</div>';
+  }
+  conts.forEach(function(c){ c.innerHTML = html; });
+}
+
+// via: 'chofer-qr' | 'chofer-whatsapp' | 'mostrador-qr' | 'mostrador-whatsapp' | 'ventas-whatsapp' | 'ventas-manual' | 'no_aplica'
+function marcarValoracionPedida(docId, via) {
+  var p = pedidosCache.find(function(x){ return x._docId === docId; });
+  var datos = { valoracionPedida: true, valoracionVia: via, valoracionPor: currentUser ? currentUser.name : '', timestampValoracion: Date.now() };
+  if(p) Object.assign(p, datos);
+  if(db) db.collection('pedidos').doc(docId).update(datos).catch(function(e){ console.log('Error marcando valoración pedida:', e); showToast('⚠️ No se pudo guardar que ya se pidió. Intenta de nuevo.'); });
+  cargarValoracionesPorPedir();
+}
+
+function valoracionPanelWhatsApp(docId) {
+  var p = pedidosCache.find(function(x){ return x._docId === docId; });
+  if(!p) return;
+  enviarEncuestaPostEntrega(p);
+  marcarValoracionPedida(docId, 'ventas-whatsapp');
+}
+
 function iniciarPedidos() {
   var role = currentUser ? currentUser.role : '';
   document.getElementById('pedidos-ventas').style.display = 'none';
@@ -12009,6 +12320,7 @@ function iniciarPedidos() {
       document.getElementById('pedidos-ventas').style.display = 'block';
       filtrarPedidosFecha('hoy');
       cargarAlertasIncompletas();
+      cargarValoracionesPorPedir();
     } else if(role === 'Operador') {
       document.getElementById('pedidos-operador').style.display = 'block';
       renderPedidosOperador();
@@ -12017,6 +12329,7 @@ function iniciarPedidos() {
       document.getElementById('pedidos-jm').style.display = 'block';
       filtrarPedidosFecha('hoy');
       cargarAlertasIncompletas();
+      cargarValoracionesPorPedir();
     }
   });
 }
@@ -12424,6 +12737,8 @@ function abrirDetalleNotaVenta(docId) {
     ? '<button class="btn btn-gris" onclick="verHistorialPedido(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;">🕘 Historial</button>' : '';
   var remisionBtn = p.remisionId
     ? '<button class="btn btn-naranja" onclick="verRemisionEntrega(\''+p.remisionId+'\')" style="font-size:10px;padding:5px 10px;">✍️ Ver remisión firmada</button>' : '';
+  var valoracionBtn = (currentUser && currentUser.role !== 'Operador' && currentUser.role !== 'Mecanico' && (p.razonSocial || p.rs || 'JMG') === 'JMG' && estado !== 'cancelado')
+    ? '<button class="btn btn-gris" onclick="abrirPedirValoracionDesdeNota(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;">⭐ Pedir valoración</button>' : '';
 
   var existente = document.getElementById('modal-detalle-nv');
   if(existente) existente.remove();
@@ -12448,6 +12763,7 @@ function abrirDetalleNotaVenta(docId) {
         ${botonFacturarPedido(p)}
         ${histBtn}
         ${remisionBtn}
+        ${valoracionBtn}
       </div>
       <button class="btn btn-gris" onclick="document.getElementById('modal-detalle-nv').remove()" style="width:100%;margin-top:16px;">Cerrar</button>
     </div>`;
@@ -13897,7 +14213,7 @@ function confirmarEntregaFinal(docId) {
       // Casi siempre es una foto demasiado pesada: se guarda la remisión con la firma y sin la foto, y se avisa.
       var respaldo = Object.assign({}, remision, { fotoBase64: null, fotoNoGuardada: true });
       db.collection('remisiones').add(respaldo).then(function(ref2){
-        db.collection('pedidos').doc(docId).update({ remisionId: ref2.id }).catch(function(e2){ console.log(e2); });
+        db.collection('pedidos').doc(docId).update({ remisionId: ref2.id, fotoNoGuardada: true }).catch(function(e2){ console.log(e2); });
         showToast('⚠️ La foto no se pudo guardar; la entrega y la firma sí. Avisa a Ventas.');
       }).catch(function(e2){ console.log(e2); showToast('⚠️ No se pudo guardar la remisión. Avisa a Ventas.'); });
     });
@@ -13910,15 +14226,15 @@ function confirmarEntregaFinal(docId) {
   showToast(sinFoto ? '⚠️ Entrega confirmada SIN foto — se avisó a Ventas' : (completa ? '✅ Entrega confirmada con firma y foto' : '⚠️ Entrega parcial registrada'));
 
   if(completa && pedidosCache[idx]) {
-    // Encuesta post-entrega — solo si es JMG y hay teléfono
+    // Valoración post-entrega — solo JMG. Sale el QR de reseña en Google para mostrárselo al cliente ahí mismo;
+    // si la nota tiene teléfono, desde el mismo cuadro se manda la encuesta + reseña por WhatsApp.
     var pedido = pedidosCache[idx];
     var rs = pedido.razonSocial || pedido.rs || 'JMG';
-    var telCliente = pedido.telefono || '';
 
-    if(rs === 'JMG' && telCliente) {
+    if(rs === 'JMG') {
       setTimeout(function() {
-        enviarEncuestaPostEntrega(pedido);
-      }, 500);
+        abrirPedirValoracion(pedido, 'chofer');
+      }, 600);
     }
   } else if(!completa && db) {
     // Entrega incompleta — alerta para que Ivette le dé seguimiento al cliente

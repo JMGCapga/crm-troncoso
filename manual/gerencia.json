@@ -86,6 +86,34 @@
    ]
   },
   {
+   "id": "tablero-choferes",
+   "titulo": "Desempeño por chofer y bono (Dashboard)",
+   "cuando": "Al cierre de cada mes, para decidir el bono de los choferes; y cuando quieras ver cómo van.",
+   "pasos": [
+    {
+     "t": "En el **Dashboard**, baja hasta **🚚 Desempeño por chofer**. Con el **selector de mes** (1) eliges el mes. Arriba hay tres números (2): **notas del mes**, **entregadas en el CRM** y **sin tomar ni entregar**.",
+     "img": "40-tablero-choferes.jpg",
+     "leyenda": "1 = selector de mes · 2 = totales del mes"
+    },
+    {
+     "t": "Abajo hay **una tarjeta por chofer**: entregas registradas, cuántas **con firma y foto** (y su porcentaje), sin foto, sin remisión, incompletas, valoraciones pedidas, **encuestas** contestadas con su promedio y encuestas **positivas** (5 de 5 estrellas)."
+    },
+    {
+     "t": "Al final de cada tarjeta (3) dice si el chofer **cumple la condición** del bono (al menos **90%** de sus entregas con firma y foto) y cuántos **bloques de bono de servicio** lleva: cada **5 encuestas de 5 estrellas = 1 bloque**, máximo 2. Si no cumple la condición, no cobra el bono aunque tenga bloques.",
+     "img": "41-tablero-chofer-detalle.jpg",
+     "leyenda": "1 = entregas con firma y foto · 2 = encuestas contestadas y promedio · 3 = condición y bloques de bono"
+    }
+   ],
+   "cuidado": [
+    "Solo cuenta lo **registrado en el CRM**: si el chofer entrega y no toma ni confirma el pedido en el sistema, esa entrega no existe para el tablero ni para el bono.",
+    "Las entregas que Ventas marca como entregadas desde la nota aparecen en una tarjeta aparte, **\"Sin chofer\"**, y no cuentan para el bono de nadie.",
+    "Cada encuesta se liga al chofer por el **número de la nota**. Hay pocas encuestas porque solo se mandan en notas de JMG con teléfono.",
+    "El esquema (90%, 5 encuestas por bloque, máximo 2 bloques) es una **propuesta**: los montos los define José Manuel y los umbrales se pueden cambiar.",
+    "Antes de comparar bonos, mira cuántas **entregas registradas** tiene cada chofer: quien casi no usa el sistema aparece con pocas entregas, y eso se corrige primero."
+   ],
+   "ayuda": "Si un número no cuadra, abre la nota en Notas de Venta y revisa su historial."
+  },
+  {
    "id": "cierre",
    "titulo": "Ver el Cierre del día",
    "cuando": "Durante el día para ir cuadrando, y al final para cerrar.",
@@ -349,7 +377,8 @@
    "cuidado": [
     "**Cancelar** pide el motivo, regresa los productos al inventario y cancela la cuenta por cobrar ligada. Funciona aunque la nota ya esté entregada: úsalo solo si el material de verdad regresó.",
     "**Reasignar** pide el nombre del operador (Francisco, Agustín Lara o Carlos J. Escobar) y abre un WhatsApp para avisarle.",
-    "El **!** rojo de la pestaña Ventas se actualiza solo cada par de minutos y desaparece cuando todas están resueltas."
+    "El **!** rojo de la pestaña Ventas se actualiza solo cada par de minutos y desaparece cuando todas están resueltas.",
+    "Debajo de las entregas por revisar está el cuadro **Valoraciones por pedir** (amarillo): entregas completas de JMG a las que falta pedirles la reseña. Ver el manual de Ventas."
    ]
   },
   {
@@ -650,6 +679,8 @@
   "Rechazar una compra en efectivo no regresa el inventario. ¿Preferimos que Rechazar también cancele la compra?",
   "Nómina: al procesar solo se registra la parte en efectivo como salida. ¿La parte por transferencia y el IMSS se registran en otro lado?",
   "Evaluaciones: solo hay una encuesta registrada (13 de julio). ¿Se están mandando las encuestas después de cada entrega de JMG?",
-  "Fiscal: ¿quién captura la opinión 32-D vigente y quién da seguimiento cuando vence?"
+  "Fiscal: ¿quién captura la opinión 32-D vigente y quién da seguimiento cuando vence?",
+  "Bono por chofer: ¿montos por bloque y por cumplimiento? ¿Se paga cada mes? ¿Qué se hace con las entregas marcadas desde Ventas sin chofer?",
+  "Condición del 90%: hoy se mide sobre las entregas registradas en el CRM. ¿Debe medirse sobre todas las notas con dirección de cada chofer?"
  ]
 }

@@ -348,6 +348,61 @@
    ]
   },
   {
+   "id": "valoracion",
+   "titulo": "Pedir una valoración en Google (mostrador)",
+   "cuando": "Después de cobrar y entregar el ticket o la nota, cuando el cliente se despide y quedó conforme. Solo notas de JMG.",
+   "pasos": [
+    {
+     "t": "Entra a **Ventas** y toca la **nota de venta** del cliente para abrir su detalle. Toca **Pedir valoración** (1). El botón solo aparece en notas de **JMG**.",
+     "img": "31-pedir-valoracion-boton.jpg",
+     "leyenda": "1 = Pedir valoración"
+    },
+    {
+     "t": "Sale un **código QR** (1). Muéstraselo al cliente en tu pantalla y dile: «¿Nos ayuda con una reseña en Google? Son 30 segundos.» Que abra la **cámara de su celular** y apunte al código: se le abre directo la reseña de Materiales Troncoso. Cuando ya se la pediste, toca **Ya se la pedí al cliente** (2): queda anotado.",
+     "img": "32-pedir-valoracion-qr.jpg",
+     "leyenda": "1 = código QR · 2 = Ya se la pedí · 3 = mandar el link por WhatsApp · 4 = imprimir el cartel"
+    },
+    {
+     "t": "Si el cliente no puede escanear en ese momento, toca **Mandarle el link de la reseña por WhatsApp** (3): se abre el mensaje listo para su teléfono. Toca **Enviar** en WhatsApp. También queda anotado como pedida."
+    },
+    {
+     "t": "Para el mostrador toca **Imprimir cartel con QR para el mostrador** (4) y pégalo junto a la caja, donde el cliente lo vea al pagar. También hay un PDF listo para imprimir en el repositorio: `mostrador/Cartel-Resena-Google.pdf`."
+    }
+   ],
+   "cuidado": [
+    "**No ofrezcas regalos, descuentos ni nada a cambio de la reseña.** Google lo prohíbe y puede borrar las reseñas del negocio.",
+    "Pídela **una sola vez** y con amabilidad. Si el cliente no quiere, no insistas.",
+    "El mejor momento es **justo después de que pagó y recibió su material**, no mientras espera. Si hubo un problema con el pedido, primero se resuelve.",
+    "El cliente necesita tener **sesión de Google** en su celular para dejar la reseña; si no la tiene, que la deje después desde la computadora."
+   ],
+   "ayuda": "Cualquier duda: Viridiana."
+  },
+  {
+   "id": "valoraciones-por-pedir",
+   "titulo": "Valoraciones por pedir (seguimiento después de la entrega)",
+   "cuando": "Una o dos veces al día, por ejemplo después de comer y antes de cerrar.",
+   "pasos": [
+    {
+     "t": "Entra a **Ventas → Notas de Venta**. Debajo de \"Entregas por revisar\" está el cuadro amarillo **Valoraciones por pedir** (1). Muestra las **entregas completas de JMG de los últimos 7 días** a las que todavía no se les pide la reseña, y cuántas llevan pedidas hoy y esta semana.",
+     "img": "33-valoraciones-por-pedir.jpg",
+     "leyenda": "1 = título y conteo · 2 = pedir por WhatsApp · 3 = ya la pedí · 4 = no aplica"
+    },
+    {
+     "t": "Toca **Pedir por WhatsApp** (2): se abre el mensaje con la encuesta y el link de la reseña en Google, listo para el cliente. Toca **Enviar** en WhatsApp. La entrega sale sola de la lista."
+    },
+    {
+     "t": "Si ya se la pediste de otra forma (en persona o por teléfono), toca **Ya la pedí** (3). Si no tiene sentido pedírsela (cliente molesto, pedido especial), toca **No aplica** (4)."
+    }
+   ],
+   "cuidado": [
+    "Si el chofer tocó **Ya se la pedí al cliente** en su celular, esa entrega ya no aparece aquí: no se la repitas.",
+    "Solo salen entregas **completas**, de **JMG** y con **teléfono** en la nota. Una nota sin teléfono no aparece: por eso es obligatorio capturarlo al hacer la nota.",
+    "Una sola vez por cliente. Si no contesta o no quiere, no insistas.",
+    "**No ofrezcas regalos ni descuentos** a cambio de la reseña: Google lo prohíbe y puede borrar las reseñas del negocio."
+   ],
+   "ayuda": "Dudas: Viridiana."
+  },
+  {
    "id": "abonos",
    "titulo": "Cobrar un abono de un cliente",
    "cuando": "Cuando un cliente llega a pagar un saldo pendiente.",

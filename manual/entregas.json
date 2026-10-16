@@ -153,16 +153,21 @@
      "leyenda": "Aviso de entrega confirmada · el pedido ya no está en Mis entregas"
     },
     {
-     "t": "**Encuesta de satisfacción:** si la nota es de JMG y el cliente tiene teléfono, se abre WhatsApp con un mensaje de agradecimiento, la encuesta y la reseña en Google, listo para el cliente. Toca **Enviar**. Si la nota es de otra razón social, no se abre."
+     "t": "**Pide la valoración (solo notas de JMG):** al confirmar una entrega completa sale el cuadro **Pídele su valoración** con un código **QR** (1). Dile al cliente (2): «¿Nos ayuda con una reseña en Google? Son 30 segundos. Si puede, mencione a (tu nombre).» Que abra la **cámara de su celular** y apunte al código: se le abre directo la reseña de Materiales Troncoso. **Cuando ya se la pediste, toca Ya se la pedí al cliente** (3), para que Ventas no se la vuelva a pedir. Si la nota tiene teléfono, también puedes tocar **Mandarle encuesta y reseña por WhatsApp** (4): eso también cuenta como pedida.",
+     "img": "15-valoracion-qr.jpg",
+     "leyenda": "1 = código QR · 2 = lo que le dices al cliente · 3 = Ya se la pedí · 4 = WhatsApp (solo si la nota tiene teléfono)"
     }
    ],
    "cuidado": [
+    "Si cierras el cuadro **sin tocar** \"Ya se la pedí\", la entrega queda en la lista de **Valoraciones por pedir** de Ventas, y Ventas le mandará la reseña por WhatsApp al cliente.",
     "Sin **foto** o sin **firma**, el sistema no confirma la entrega y te avisa qué falta (\"Toma la foto de evidencia\" o \"Pide la firma del cliente\"). Si la cámara no funciona, mira la tarea \"Si la cámara no funciona\".",
     "Si tocas **Borrar** la firma, hay que firmar otra vez: un recuadro vacío no cuenta.",
     "La foto se toma **en cada pedido**: la foto de otro pedido no se reutiliza.",
     "El sistema guarda una **remisión digital** con tu nombre, la hora, la foto y la firma.",
     "El **aviso amarillo de saldo pendiente** solo informa que el cliente todavía debe una parte. El CRM del operador no tiene dónde registrar un cobro: si el cliente quiere pagarte ese saldo, pregunta a Ivette o Viridiana antes de recibirlo.",
-    "El mensaje de la encuesta sale **desde el WhatsApp de tu celular**: sin tocar Enviar, no llega al cliente.",
+    "El WhatsApp solo se abre cuando tocas el botón verde, y sale **desde el WhatsApp de tu celular**: sin tocar Enviar, no llega al cliente.",
+    "**No ofrezcas regalos, descuentos ni nada a cambio de la reseña.** Google lo prohíbe y puede borrar las reseñas del negocio. Pídela con amabilidad, una sola vez, y si el cliente no quiere, no insistas.",
+    "El cuadro del QR **no sale** si la entrega fue incompleta ni si la nota es de otra razón social. Si hubo un problema con el pedido, primero se resuelve; la valoración se pide cuando el cliente quedó conforme.",
     "Toca **ENTREGADO** hasta que el cliente tenga el material. Si te arrepientes, toca **Cancelar** en la ventana y el pedido no cambia."
    ],
    "ayuda": "Cliente que no recibe, rechaza el material o dice que no es lo que pidió: Ivette o Viridiana."
@@ -212,7 +217,7 @@
    "cuidado": [
     "Sé concreto: producto y cantidad (\"faltaron 5 varillas de 3/8\"). Ivette usa esa nota para llamarle al cliente.",
     "Al confirmar, el sistema crea una **alerta para Ivette y Viridiana** para que le den seguimiento al cliente. La nota queda en la remisión.",
-    "En una entrega incompleta **no** se manda la encuesta de satisfacción."
+    "En una entrega incompleta **no** sale el cuadro del QR ni se manda la encuesta de satisfacción."
    ],
    "ayuda": "Cómo se completa la entrega o qué se le ofrece al cliente: Ivette o Viridiana."
   },
@@ -336,8 +341,8 @@
    "r": "Revisa que el navegador tenga permiso para usar la cámara. Si no logras abrirla, usa el enlace **¿No funciona la cámara? Confirmar sin foto y avisar a Ventas** (mira la tarea \"Si la cámara no funciona\")."
   },
   {
-   "p": "No se abrió el WhatsApp de la encuesta.",
-   "r": "Solo se abre en notas de JMG cuando el cliente tiene teléfono registrado, y si la entrega fue completa. Si no sale, permite ventanas emergentes en el navegador."
+   "p": "No salió el cuadro del QR o no se abrió el WhatsApp.",
+   "r": "El cuadro con el QR sale solo en notas de **JMG** cuando la entrega fue **completa**. El WhatsApp solo se abre cuando tocas el botón verde y la nota tiene teléfono registrado; si no sale, permite ventanas emergentes en el navegador."
   },
   {
    "p": "Se cerró la ventana de Confirmar entrega antes de guardar.",
