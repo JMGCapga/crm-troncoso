@@ -378,7 +378,8 @@
     "**Cancelar** pide el motivo, regresa los productos al inventario y cancela la cuenta por cobrar ligada. Funciona aunque la nota ya esté entregada: úsalo solo si el material de verdad regresó.",
     "**Reasignar** pide el nombre del operador (Francisco, Agustín Lara o Carlos J. Escobar) y abre un WhatsApp para avisarle.",
     "El **!** rojo de la pestaña Ventas se actualiza solo cada par de minutos y desaparece cuando todas están resueltas.",
-    "Debajo de las entregas por revisar está el cuadro **Valoraciones por pedir** (amarillo): entregas completas de JMG a las que falta pedirles la reseña. Ver el manual de Ventas."
+    "Debajo de las entregas por revisar está el cuadro **Valoraciones por pedir** (amarillo): entregas completas de JMG a las que falta pedirles la reseña. Ver el manual de Ventas.",
+    "En el detalle de una nota **sin chofer** aparece el botón **Avisar a los choferes**: abre WhatsApp con el pedido para el grupo de choferes (el primero que lo toma en el CRM se lo lleva). Los choferes con el CRM abierto además reciben un aviso con sonido. Las notas sin tomar de hace más de 4 días quedan escondidas en la lista de los choferes tras el botón \"Ver anteriores\"."
    ]
   },
   {

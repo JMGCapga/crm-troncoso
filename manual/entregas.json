@@ -13,7 +13,7 @@
   "Las cancelaciones sin cargo son hasta 2 horas antes de la entrega. Tú no cancelas notas de venta en el CRM: eso lo hacen Ivette o Viridiana.",
   "Las devoluciones se hacen con la nota original y dentro de 5 días hábiles. Tú no las registras: pásaselas a Ivette.",
   "No damos crédito a clientes.",
-  "La **foto de evidencia** y la **firma del cliente** son obligatorias: sin ellas el sistema no te deja confirmar la entrega. Si la cámara falla, hay una alterna que avisa a Ventas.",
+  "La **foto de evidencia** (del **material entregado**, no de la nota de papel) y la **firma del cliente** son obligatorias: sin ellas el sistema no te deja confirmar la entrega. Si la cámara falla, hay una alterna que avisa a Ventas.",
   "Tu PIN es personal: no lo compartas ni dejes la sesión abierta en el celular."
  ],
  "tareas": [
@@ -83,21 +83,23 @@
    "cuando": "Al empezar el día y cada vez que haya entregas nuevas.",
    "pasos": [
     {
-     "t": "Toca **Ventas** (1). Se abre **Notas de Venta** con dos secciones.",
-     "img": "02-pedidos-operador.jpg",
-     "leyenda": "1 = pestaña Ventas · 2 = Tomar este pedido · 3 = Mis entregas"
+     "t": "Toca **Ventas** (1). Se abre **Notas de Venta**. Si hay pedidos nuevos sin chofer, la pestaña muestra un **número rojo** con cuántos hay disponibles.",
+     "img": "16-pedidos-disponibles-aviso.jpg",
+     "leyenda": "1 = pestaña Ventas con el número de pedidos disponibles · 2 = Notas de venta disponibles · 3 = Tomar este pedido"
     },
     {
-     "t": "**Notas de venta disponibles**: pedidos confirmados que todavía no tienen operador. Si vas a llevar uno, toca **Tomar este pedido** (2) y confirma \"¿Tomar este pedido como …?\". Pasa a tu lista."
+     "t": "**Notas de venta disponibles** (2): pedidos confirmados, con dirección de entrega, que todavía no tienen chofer. Los **más recientes** salen primero; los de hace más de 4 días quedan detrás del botón **Ver anteriores**. Si vas a llevar uno, toca **Tomar este pedido** (3) y confirma. Pasa a tu lista."
     },
     {
-     "t": "**Mis entregas** (3): tus pedidos, los que te asignaron o los que tomaste. Cada tarjeta trae el **folio**, el **cliente**, la **dirección**, el **material**, el botón para **llamar al cliente** y su estado."
+     "t": "**Mis entregas**: tus pedidos, los que te asignaron o los que tomaste. Cada tarjeta trae el **folio**, el **cliente**, la **dirección**, el **material**, el botón para **llamar al cliente** y su estado."
     }
    ],
    "cuidado": [
-    "Aquí solo salen los pedidos **Confirmados** y **En ruta**. Al entregar uno, desaparece de la lista.",
-    "Toma solo los que **tú** vas a entregar. Si dos operadores tocan el mismo pedido casi al mismo tiempo, el sistema se queda con el último: avisen de viva voz cuál toma cada quien.",
-    "Cuando Ivette o Viridiana te asignan un pedido, te llega un WhatsApp con folio, cliente, dirección y material, y el pedido aparece solo en tu lista."
+    "**Aviso de pedido nuevo:** mientras tengas el CRM **abierto**, cada minuto revisa si hay pedidos nuevos. Cuando llega uno, el celular **suena y vibra**, sale un aviso arriba y el número rojo de la pestaña **Ventas** sube. Si el CRM está cerrado o el celular bloqueado, **no avisa**: por eso Ventas también manda el aviso por **WhatsApp**.",
+    "**El primero que lo toma se lo lleva.** Si dos choferes lo tocan al mismo tiempo, el sistema se lo da al primero y al otro le sale \"Ya lo tomó …\". Pónganse de acuerdo entre ustedes quién toma cada uno.",
+    "Toma solo los que **tú** vas a entregar: cuando lo tomas, es tu responsabilidad confirmarlo en el CRM.",
+    "Aquí solo salen los pedidos **Confirmados** y **En ruta**. Al entregar uno, desaparece de la lista. Las notas sin dirección (recoge en mostrador) no salen aquí.",
+    "Cuando Ivette o Viridiana te asignan un pedido directamente, te llega un WhatsApp con folio, cliente, dirección y material, y el pedido aparece solo en tu lista."
    ],
    "ayuda": "Si un pedido no aparece o no es tuyo: Ivette o Viridiana."
   },
@@ -140,7 +142,7 @@
      "t": "Deja **SÍ** en \"¿Entrega completa?\" si entregaste todo."
     },
     {
-     "t": "Toca el recuadro de **Foto de evidencia**: se abre la cámara. Toma la foto del material ya entregado en el lugar. Cuando dice \"Foto tomada\", ya quedó; si salió mal, tócalo otra vez para repetirla. **Es obligatoria.**"
+     "t": "Toca el recuadro de **Foto de evidencia**: se abre la cámara. Toma la foto del **material ya entregado**, como quedó en el lugar (el block, la arena, las bolsas…), con el material bien a la vista. **No es la foto de la nota de venta de papel.** Cuando dice \"Foto tomada\", ya quedó; si salió mal, tócalo otra vez para repetirla. **Es obligatoria.**"
     },
     {
      "t": "Pide al cliente que **firme con el dedo** en el recuadro de **Firma del cliente** (2). Si se equivoca, toca **Borrar** y que firme otra vez. **También es obligatoria.**",
@@ -159,8 +161,9 @@
     }
    ],
    "cuidado": [
+    "La foto es del **material**, no de la nota de venta de papel: el sistema ya tiene los datos de la nota. Lo que sirve de evidencia es ver el material entregado en el lugar.",
     "Si cierras el cuadro **sin tocar** \"Ya se la pedí\", la entrega queda en la lista de **Valoraciones por pedir** de Ventas, y Ventas le mandará la reseña por WhatsApp al cliente.",
-    "Sin **foto** o sin **firma**, el sistema no confirma la entrega y te avisa qué falta (\"Toma la foto de evidencia\" o \"Pide la firma del cliente\"). Si la cámara no funciona, mira la tarea \"Si la cámara no funciona\".",
+    "Sin **foto** o sin **firma**, el sistema no confirma la entrega y te avisa qué falta (\"Toma la foto del material entregado\" o \"Pide la firma del cliente\"). Si la cámara no funciona, mira la tarea \"Si la cámara no funciona\".",
     "Si tocas **Borrar** la firma, hay que firmar otra vez: un recuadro vacío no cuenta.",
     "La foto se toma **en cada pedido**: la foto de otro pedido no se reutiliza.",
     "El sistema guarda una **remisión digital** con tu nombre, la hora, la foto y la firma.",
@@ -175,7 +178,7 @@
   {
    "id": "sinfoto",
    "titulo": "Si la cámara no funciona",
-   "cuando": "Cuando no puedes tomar la foto de evidencia (la cámara no abre, no hay permiso, el celular falla).",
+   "cuando": "Cuando no puedes tomar la foto del material entregado (la cámara no abre, no hay permiso, el celular falla).",
    "pasos": [
     {
      "t": "En la ventana **Confirmar entrega**, toca el enlace **¿No funciona la cámara? Confirmar sin foto y avisar a Ventas** (1). Aparece un aviso amarillo (2): se confirmará sin foto y Ivette y Viridiana recibirán un aviso.",
@@ -372,10 +375,10 @@
  "por_confirmar": [
   "Saldo pendiente: el sistema solo avisa. ¿El operador cobra saldos al entregar? Si sí, hoy no hay dónde registrarlo.",
   "Gasolina en efectivo: queda como salida aprobada sin que Viridiana la valide. ¿De dónde sale ese efectivo (fondo del operador o caja) y quién lo revisa?",
-  "Asignación: ¿Ivette/Viridiana asignan cada pedido o los operadores los toman libremente? Si dos tocan el mismo a la vez, se queda con el último.",
   "Turno de flota: ¿quién revisa los km recorridos cada día? El sistema ya no deja guardar un km de llegada menor al de salida.",
   "Entrega marcada por error: el operador no puede deshacerla. ¿Quién la corrige y cómo?",
   "Entregas incompletas o sin foto: ¿qué sigue después (segunda entrega, nota de crédito, descuento, llamada al cliente) y quién lo atiende? Hoy el sistema avisa a Ivette y Viridiana y se marca como resuelta.",
-  "Encuesta: el mensaje sale del WhatsApp personal de cada operador. ¿Está bien así o debe salir de un número del negocio?"
+  "Encuesta: el mensaje sale del WhatsApp personal de cada operador. ¿Está bien así o debe salir de un número del negocio?",
+  "Asignación: ahora los pedidos nuevos se avisan a todos los choferes y el primero que lo toma se lo lleva. ¿Está bien así o Ivette/Viridiana deben asignar los pedidos grandes a un chofer en particular?"
  ]
 }

@@ -2668,6 +2668,7 @@ function entrarComo(id){
       switchTab('flota', document.getElementById('tab-flota-btn'));
     }
     initApp();
+    if(role === 'Operador') iniciarAvisoPedidosNuevos();   // aviso de pedidos nuevos para los choferes
     // Si es Compras, revisar cuentas por pagar próximas a vencer y alertar por WhatsApp
     if(role === 'Compras') {
       verificarAlertasCuentasPorPagar();
@@ -2688,6 +2689,7 @@ function entrarComo(id){
 }
 function logout(){
   if(alertasEntregaTimer) { clearInterval(alertasEntregaTimer); alertasEntregaTimer = null; }
+  detenerAvisoPedidosNuevos();
   alertasEntregaConteo = null;
   quitarBadgeAlertasPedidos();   // el ! de la sesión anterior no debe quedarse para el siguiente usuario
   pinBuf=''; currentUser=null; currentPin=null;
@@ -5528,6 +5530,7 @@ function confirmarCierrePedido(docId) {
           actualizarCacheLocalInventario(inventarioDeltas, -1);
           showToast('🎯 Nota de venta '+folioBase+' creada en Sistema Operativo');
           if(operador !== 'Sin asignar') notificarOperadorPedido(pedido, operador);
+          else ofrecerAvisoChoferes(pedido);
           if(saldoFavorMontoAplicado > 0 && cot.clienteId) {
             db.collection('saldos_favor').doc(cot.clienteId).set({
               saldo: firebase.firestore.FieldValue.increment(-saldoFavorMontoAplicado)
@@ -12737,6 +12740,8 @@ function abrirDetalleNotaVenta(docId) {
     ? '<button class="btn btn-gris" onclick="verHistorialPedido(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;">🕘 Historial</button>' : '';
   var remisionBtn = p.remisionId
     ? '<button class="btn btn-naranja" onclick="verRemisionEntrega(\''+p.remisionId+'\')" style="font-size:10px;padding:5px 10px;">✍️ Ver remisión firmada</button>' : '';
+  var avisarBtn = (currentUser && currentUser.role !== 'Operador' && currentUser.role !== 'Mecanico' && estado === 'confirmado' && !String(p.operador || p.ch || '').trim().replace('Sin asignar', ''))
+    ? '<button class="btn btn-gris" onclick="avisarChoferesDesdeNota(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;">📣 Avisar a los choferes</button>' : '';
   var valoracionBtn = (currentUser && currentUser.role !== 'Operador' && currentUser.role !== 'Mecanico' && (p.razonSocial || p.rs || 'JMG') === 'JMG' && estado !== 'cancelado')
     ? '<button class="btn btn-gris" onclick="abrirPedirValoracionDesdeNota(\''+p._docId+'\')" style="font-size:10px;padding:5px 10px;">⭐ Pedir valoración</button>' : '';
 
@@ -12763,6 +12768,7 @@ function abrirDetalleNotaVenta(docId) {
         ${botonFacturarPedido(p)}
         ${histBtn}
         ${remisionBtn}
+        ${avisarBtn}
         ${valoracionBtn}
       </div>
       <button class="btn btn-gris" onclick="document.getElementById('modal-detalle-nv').remove()" style="width:100%;margin-top:16px;">Cerrar</button>
@@ -13932,16 +13938,148 @@ function pedidoCardOperador(p) {
 }
 
 // ════ PEDIDOS — autoasignación (pedidos sin operador) ════
+// ════ PEDIDO NUEVO → CHOFERES — el primero que lo toma se lo lleva ════
+var DISPONIBLES_DIAS = 4;          // en "Disponibles" solo se muestran las notas de los últimos días; las anteriores quedan tras un botón
+var PEDIDOS_NUEVOS_HORAS = (DISPONIBLES_DIAS + 1) * 24;   // ventana que consulta el aviso del chofer (luego se filtra igual que la lista)
+var PEDIDOS_NUEVOS_SEG = 60;       // cada cuánto revisa si hay pedidos nuevos (solo mientras el CRM esté abierto en su celular)
+var avisoPedidosTimer = null, avisoPedidosVistos = null, avisoAudioCtx = null, tituloOriginalCRM = '';
+var verDisponiblesViejos = false;
+
+// — Ventas: mensaje para el grupo de choferes (wa.me sin número: WhatsApp deja elegir el chat o grupo) —
+function mensajeAvisoChoferes(pedido) {
+  var material = String(pedido.p || '');
+  if(material.length > 220) material = material.slice(0, 220) + '…';
+  return '🆕 *PEDIDO NUEVO — ' + (pedido.id || '') + '*\n' +
+    '📍 ' + (pedido.direccion || 'Ver en el CRM') + '\n' +
+    (material ? '📦 ' + material + '\n' : '') +
+    (pedido.fecha ? '🗓️ ' + pedido.fecha + (pedido.h ? ' ' + pedido.h : '') + '\n' : '') +
+    '\nEl primero que lo tome en el CRM se lo lleva (Ventas → 🙋 Tomar este pedido):\n👉 ' + CRM_BASE_URL;
+}
+function avisarChoferesWhatsApp(pedido) {
+  window.open('https://wa.me/?text=' + encodeURIComponent(mensajeAvisoChoferes(pedido)), '_blank');
+  var f = document.getElementById('aviso-choferes-flotante');
+  if(f) f.remove();
+}
+function avisarChoferesDesdeNota(docId) {
+  var p = pedidosCache.find(function(x){ return x._docId === docId; });
+  if(p) avisarChoferesWhatsApp(p);
+}
+// Tarjeta flotante después de crear una nota que salió sin chofer
+function ofrecerAvisoChoferes(pedido) {
+  if(!String(pedido.direccion || '').trim()) return;   // sin dirección = recoge en mostrador, no hay entrega
+  var viejo = document.getElementById('aviso-choferes-flotante');
+  if(viejo) viejo.remove();
+  window._avisoChoferesPedido = pedido;
+  var c = document.createElement('div');
+  c.id = 'aviso-choferes-flotante';
+  c.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:9998;background:#fff;border:2px solid #E8500A;border-radius:12px;padding:12px 14px;max-width:300px;box-shadow:0 10px 30px rgba(0,0,0,0.25);';
+  c.innerHTML =
+    '<div style="font-weight:700;font-size:13px;margin-bottom:4px;">📣 La nota ' + htmlSeguro(pedido.id || '') + ' no tiene chofer</div>' +
+    '<div style="font-size:11px;color:#6B6560;margin-bottom:8px;">Avísales por WhatsApp: el primero que la tome en el CRM se la lleva.</div>' +
+    '<div style="display:flex;gap:6px;">' +
+      '<button class="btn btn-verde" onclick="avisarChoferesWhatsApp(window._avisoChoferesPedido)" style="font-size:11px;padding:7px 12px;flex:1;">📱 Avisar a los choferes</button>' +
+      '<button class="btn btn-gris" onclick="document.getElementById(\'aviso-choferes-flotante\').remove()" style="font-size:11px;padding:7px 12px;">Ahora no</button>' +
+    '</div>';
+  document.body.appendChild(c);
+  setTimeout(function(){ var f = document.getElementById('aviso-choferes-flotante'); if(f) f.remove(); }, 60000);
+}
+
+// — Chofer: aviso dentro del CRM mientras lo tenga abierto (cuadro rojo en Ventas, aviso y sonido) —
+function armarAudioAviso() {
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    if(!avisoAudioCtx) avisoAudioCtx = new AC();
+    if(avisoAudioCtx.state === 'suspended') avisoAudioCtx.resume();
+  } catch(e) {}
+}
+function reproducirAvisoPedido() {
+  try {
+    if(avisoAudioCtx) {
+      [0, 0.28].forEach(function(t){
+        var o = avisoAudioCtx.createOscillator(), g = avisoAudioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.25;
+        o.connect(g); g.connect(avisoAudioCtx.destination);
+        o.start(avisoAudioCtx.currentTime + t); o.stop(avisoAudioCtx.currentTime + t + 0.2);
+      });
+    }
+  } catch(e) {}
+  try { if(navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch(e) {}
+}
+function ponerBadgeDisponibles(n) {
+  var btn = document.getElementById('tab-ventas-btn');
+  var viejo = document.getElementById('badge-disponibles');
+  if(viejo) viejo.remove();
+  if(!btn || !n) return;
+  var b = document.createElement('span');
+  b.id = 'badge-disponibles';
+  b.style.cssText = 'background:#EF4444;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:5px;font-weight:700;';
+  b.textContent = String(n);
+  btn.appendChild(b);
+}
+function revisarPedidosNuevos() {
+  if(!db || !currentUser || currentUser.role !== 'Operador') return;
+  var desde = Date.now() - PEDIDOS_NUEVOS_HORAS * 3600000;
+  var corte = new Date(); corte.setDate(corte.getDate() - DISPONIBLES_DIAS);
+  var corteISO = fechaLocalISO(corte);
+  db.collection('pedidos').where('timestamp', '>=', desde).get().then(function(snap){
+    var libres = [];
+    snap.forEach(function(doc){
+      var p = doc.data(); p._docId = doc.id;
+      var ch = String(p.operador || p.ch || '').trim();
+      if(normStatusPedido(p) === 'confirmado' && (ch === '' || ch === 'Sin asignar') && String(p.direccion || '').trim() && (p.fecha || '') >= corteISO) libres.push(p);
+    });
+    var primera = avisoPedidosVistos === null;
+    var nuevos = primera ? [] : libres.filter(function(p){ return avisoPedidosVistos.indexOf(p._docId) === -1; });
+    var cambio = primera || nuevos.length || libres.length !== avisoPedidosVistos.length;
+    avisoPedidosVistos = libres.map(function(p){ return p._docId; });
+    ponerBadgeDisponibles(libres.length);
+    if(!tituloOriginalCRM) tituloOriginalCRM = document.title;
+    document.title = libres.length ? '(' + libres.length + ') Pedidos disponibles · Troncoso' : tituloOriginalCRM;
+    if(primera && libres.length) showToast('🆕 Hay ' + libres.length + ' pedido' + (libres.length === 1 ? '' : 's') + ' disponible' + (libres.length === 1 ? '' : 's') + ': tómalo en Ventas');
+    if(nuevos.length) {
+      showToast('🆕 Pedido nuevo disponible: ' + (nuevos[0].id || '') + (nuevos[0].direccion ? ' · ' + String(nuevos[0].direccion).slice(0, 40) : ''));
+      reproducirAvisoPedido();
+    }
+    var panel = document.getElementById('panel-pedidos');
+    if(cambio && panel && panel.classList.contains('active')) cargarPedidos(function(){ renderPedidosOperador(); renderPedidosDisponibles(); });
+  }).catch(function(e){ console.log('Error revisando pedidos nuevos:', e); });
+}
+function iniciarAvisoPedidosNuevos() {
+  detenerAvisoPedidosNuevos();
+  avisoPedidosVistos = null;
+  document.addEventListener('pointerdown', armarAudioAviso, { once: true });   // el navegador solo deja sonar tras un toque del usuario
+  revisarPedidosNuevos();
+  avisoPedidosTimer = setInterval(revisarPedidosNuevos, PEDIDOS_NUEVOS_SEG * 1000);
+}
+function detenerAvisoPedidosNuevos() {
+  if(avisoPedidosTimer) { clearInterval(avisoPedidosTimer); avisoPedidosTimer = null; }
+  avisoPedidosVistos = null;
+  ponerBadgeDisponibles(0);
+  if(tituloOriginalCRM) document.title = tituloOriginalCRM;
+}
+
+function alternarDisponiblesViejos() {
+  verDisponiblesViejos = !verDisponiblesViejos;
+  renderPedidosDisponibles();
+}
+
 function renderPedidosDisponibles() {
-  var list = pedidosCache.filter(function(p){
+  var libres = pedidosCache.filter(function(p){
     var estado = normStatusPedido(p);
     var ch = (p.operador || p.ch || '').trim();
-    return estado === 'confirmado' && (ch === '' || ch === 'Sin asignar');
+    return estado === 'confirmado' && (ch === '' || ch === 'Sin asignar') && String(p.direccion || '').trim();   // sin dirección = recoge en mostrador, no es para chofer
   });
   var cont = document.getElementById('ped-lista-disponibles');
   if(!cont) return;
-  if(!list.length) { cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">No hay notas de venta disponibles</div>'; return; }
-  cont.innerHTML = list.map(pedidoCardDisponible).join('');
+  var corte = new Date(); corte.setDate(corte.getDate() - DISPONIBLES_DIAS);
+  var corteISO = fechaLocalISO(corte);
+  var recientes = libres.filter(function(p){ return (p.fecha || '') >= corteISO; });
+  var anteriores = libres.length - recientes.length;
+  var lista = verDisponiblesViejos ? libres : recientes;
+  var html = lista.length ? lista.map(pedidoCardDisponible).join('') : '<div style="padding:20px;text-align:center;color:var(--suave);font-size:13px;">No hay notas de venta disponibles</div>';
+  if(anteriores) html += '<div style="padding:12px;text-align:center;"><button class="btn btn-gris" onclick="alternarDisponiblesViejos()" style="font-size:11px;padding:7px 14px;">' + (verDisponiblesViejos ? 'Ocultar las anteriores' : 'Ver ' + anteriores + ' anteriores sin asignar (de hace más de ' + DISPONIBLES_DIAS + ' días)') + '</button></div>';
+  cont.innerHTML = html;
 }
 
 function pedidoCardDisponible(p) {
@@ -13967,20 +14105,49 @@ function tomarPedido(docId) {
   if(!confirm('¿Tomar este pedido como ' + nombre + '?')) return;
   var idx = pedidosCache.findIndex(function(p){ return p._docId === docId; });
   if(idx < 0) return;
-  pedidosCache[idx].operador = nombre;
-  pedidosCache[idx].ch = nombre;
-  if(db) {
-    db.collection('pedidos').doc(docId).update({
-      operador: nombre,
-      ch: nombre,
-      tomadoPor: nombre,
-      timestampAsignacion: Date.now(),
-      historial: firebase.firestore.FieldValue.arrayUnion({ status: 'asignado', user: nombre, timestamp: Date.now() })
-    }).catch(function(e){ console.log(e); });
+  if(!db) {
+    pedidosCache[idx].operador = nombre;
+    pedidosCache[idx].ch = nombre;
+    showToast('✅ Pedido asignado a ' + nombre);
+    renderPedidosOperador();
+    renderPedidosDisponibles();
+    return;
   }
-  showToast('✅ Pedido asignado a ' + nombre);
-  renderPedidosOperador();
-  renderPedidosDisponibles();
+  // Transacción: si dos choferes lo tocan al mismo tiempo, solo se lo queda el primero.
+  var ref = db.collection('pedidos').doc(docId);
+  db.runTransaction(function(tx){
+    return tx.get(ref).then(function(doc){
+      if(!doc.exists) { var e1 = new Error('no-existe'); e1.motivo = 'no-existe'; throw e1; }
+      var d = doc.data();
+      var actual = String(d.operador || d.ch || '').trim();
+      if(actual && actual !== 'Sin asignar') { var e2 = new Error('ya-tomado'); e2.motivo = 'ya-tomado'; e2.tomadoPor = actual; throw e2; }
+      tx.update(ref, {
+        operador: nombre,
+        ch: nombre,
+        tomadoPor: nombre,
+        timestampAsignacion: Date.now(),
+        historial: firebase.firestore.FieldValue.arrayUnion({ status: 'asignado', user: nombre, timestamp: Date.now() })
+      });
+    });
+  }).then(function(){
+    pedidosCache[idx].operador = nombre;
+    pedidosCache[idx].ch = nombre;
+    showToast('✅ Pedido asignado a ' + nombre);
+    renderPedidosOperador();
+    renderPedidosDisponibles();
+    revisarPedidosNuevos();
+  }).catch(function(e){
+    if(e && e.motivo === 'ya-tomado') {
+      pedidosCache[idx].operador = e.tomadoPor;
+      pedidosCache[idx].ch = e.tomadoPor;
+      showToast('⚠️ Ya lo tomó ' + e.tomadoPor);
+      renderPedidosDisponibles();
+      revisarPedidosNuevos();
+    } else {
+      console.log('Error tomando pedido:', e);
+      showToast('⚠️ No se pudo tomar el pedido. Intenta de nuevo.');
+    }
+  });
 }
 
 function marcarEnRuta(docId) {
@@ -14019,9 +14186,10 @@ function marcarEntregado(docId) {
 
       <!-- FOTO -->
       <div style="margin-bottom:14px;">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:6px;">📷 Foto de evidencia</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#6B6560;margin-bottom:2px;">📷 Foto de evidencia</div>
+        <div style="font-size:11px;color:#92400E;font-weight:600;margin-bottom:6px;">Del <b>material ya entregado</b>, como quedó en el lugar. No fotografíes la nota de papel.</div>
         <label style="display:block;width:100%;padding:14px;border:2px dashed #D8D0C8;border-radius:10px;text-align:center;cursor:pointer;color:#6B6560;font-size:13px;font-weight:600;" id="foto-label">
-          Tocar para tomar foto
+          Tocar para tomar la foto del material
           <input type="file" id="foto-evidencia" accept="image/*" capture="environment" style="display:none;" onchange="previsualizarFoto(this)">
         </label>
         <img id="foto-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:180px;object-fit:cover;">
@@ -14161,7 +14329,7 @@ function confirmarEntregaFinal(docId) {
 
   // Evidencia obligatoria: sin foto, sin firma (o sin decir qué faltó) no se confirma
   var sinFoto = !fotoDataUrl && window._sinFoto === true;
-  if(!fotoDataUrl && !sinFoto) { showToast('📷 Toma la foto de evidencia (o toca "¿No funciona la cámara?")'); return; }
+  if(!fotoDataUrl && !sinFoto) { showToast('📷 Toma la foto del material entregado (o toca "¿No funciona la cámara?")'); return; }
   if(!canvas || !canvas._firmaTrazada || !canvas._firmaTrazada()) { showToast('✍️ Pide la firma del cliente para confirmar'); return; }
   if(!completa && !notaFaltante.trim()) { showToast('📝 Escribe qué faltó para confirmar'); return; }
 
