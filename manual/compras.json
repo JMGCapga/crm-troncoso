@@ -142,12 +142,15 @@
      "t": "Escribe el **motivo** y confirma."
     },
     {
-     "t": "El sistema **regresa la existencia** que había subido, descuenta el total del proveedor, marca como rechazada la salida de efectivo y cancela la cuenta por pagar si era a crédito."
+     "t": "El sistema **regresa la existencia** que había subido, descuenta el total del proveedor, marca como rechazada la salida de efectivo y cancela la cuenta por pagar si era a crédito. Al terminar te dice **qué producto bajó y en cuánto quedó** (por ejemplo \"MULTIPLAST 25KG −120, queda en 40\")."
     }
    ],
    "cuidado": [
+    "Las líneas que **no llevan clave del catálogo** (productos que escribiste a mano) o que son **servicios** (concretos) **no mueven inventario** ni al comprar ni al cancelar. El sistema te avisa cuáles son antes de confirmar.",
+    "Si registraste una compra equivocada y la volviste a registrar bien, el inventario queda con **una sola compra**: la cancelación quita la repetida. Si el inventario \"no se movió\", revisa que no hayas dejado las dos.",
     "Si parte de esa mercancía ya se vendió, el inventario puede quedar **en negativo**: el sistema te avisa y tú decides si continúas.",
-    "Un abono que ya hiciste a esa cuenta por pagar **no se deshace solo**: avisa a Viridiana."
+    "Un abono que ya hiciste a esa cuenta por pagar **no se deshace solo**: avisa a Viridiana.",
+    "Si el inventario todavía está cargando, el sistema no te deja cancelar y te pide esperar unos segundos (así no queda la compra cancelada sin mover existencia)."
    ],
    "ayuda": "Si la compra ya se pagó y hay que recuperar dinero: Viridiana o José Manuel."
   },
@@ -216,6 +219,12 @@
      "leyenda": "1 = cliente · 2 = folio de cotización · 3 = tipo de nota · 4 = forma de liquidación · 5 = motivo"
     },
     {
+     "t": "**Si la nota es para que el cliente use el dinero en su próxima compra**, elige el tipo **Crédito para próxima compra**. Las formas de pago se apagan y sale un aviso verde: se guarda como **saldo a favor** y **no sale efectivo de caja**. El cliente tiene que estar **registrado** en Clientes; si no, el sistema no te deja guardarla."
+    },
+    {
+     "t": "Si la haces desde una nota de venta (botón **Generar NC** en la nota), el sistema busca solo al cliente registrado. Si sale el aviso **\"Este cliente no está registrado\"**, dalo de alta en **Clientes** y vuelve a hacer la nota."
+    },
+    {
      "t": "Si devuelven material, toca **+ Agregar producto** (1) y captura cantidad y precio. El **total** (2) se calcula solo.",
      "img": "16-nc-guardar.jpg",
      "leyenda": "1 = + Agregar producto · 2 = total · 3 = Guardar NC · 4 = Imprimir · 5 = WhatsApp"
@@ -225,9 +234,11 @@
     }
    ],
    "cuidado": [
+    "**Devolver en efectivo y dar crédito son cosas distintas.** Si eliges un tipo distinto de \"Crédito para próxima compra\" y la forma de pago \"Efectivo\", el sistema **saca el dinero de la caja** y **no** deja saldo a favor. No uses \"Otro\" si lo que quieres es dejarle crédito.",
     "Tu nota de crédito **queda pendiente**: Viridiana la aprueba o rechaza. Hasta que la apruebe no se devuelve nada ni se mueve inventario.",
     "Las devoluciones siguen la regla: con la nota original y dentro de 5 días hábiles.",
-    "Sin conexión no se puede guardar: no repitas la nota hasta confirmar que no se guardó."
+    "Sin conexión no se puede guardar: no repitas la nota hasta confirmar que no se guardó.",
+    "Cuando el crédito se aprueba, el cliente queda con **saldo a favor**. En su siguiente nota o ticket sale el aviso **\"Este cliente tiene $… a favor. ¿Aplicar?\"** (Ivette o quien venda lo aplica)."
    ],
    "ayuda": "Devoluciones fuera de plazo o dudas del monto: Viridiana."
   },

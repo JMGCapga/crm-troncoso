@@ -345,10 +345,12 @@
     }
    ],
    "cuidado": [
+    "**Crédito para próxima compra:** al aprobar, el cliente queda con saldo a favor (aparece un aviso en su siguiente nota o ticket) y **no sale efectivo**. Solo funciona si el cliente está **registrado** en Clientes. Una nota de tipo \"Otro\" o \"Devolución en efectivo\" con forma de pago \"Efectivo\" **sí saca dinero de la caja** y no deja saldo.",
     "Al **aprobar**: los productos devueltos **regresan al inventario**; si se liquida en **efectivo** se registra la salida (con fecha de hoy); y se ajusta la cuenta por cobrar o el saldo a favor del cliente. Al **rechazar** no pasa nada de eso.",
     "Las notas de crédito que crean **tú o José Manuel** se aprueban solas al guardar.",
     "Respeta la regla: devoluciones con la nota original y dentro de 5 días hábiles.",
-    "José Manuel ve un resumen del mes por tipo y las últimas 20, sin botones de validar."
+    "José Manuel ve un resumen del mes por tipo y las últimas 20, sin botones de validar.",
+    "Las notas de crédito \"para próxima compra\" hechas **antes del 27 de agosto** (NC-001 a NC-003) quedaron sin saldo a favor cargado: el sistema todavía no tenía esa función. Revisa con José Manuel si hay que cargárselo a esos clientes."
    ]
   },
   {

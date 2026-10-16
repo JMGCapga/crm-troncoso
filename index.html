@@ -847,7 +847,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
             </div>
             <div class="field">
               <label>Tipo de nota de crédito</label>
-              <select id="nc-tipo">
+              <select id="nc-tipo" onchange="ncTipoCambio()">
                 <option value="devolucion_efectivo">Devolución en efectivo</option>
                 <option value="credito_proxima">Crédito para próxima compra</option>
                 <option value="ajuste_precio">Ajuste de precio</option>
@@ -880,6 +880,9 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
                 <option value="tarjeta">💳 Tarjeta (Morada/Naranja)</option>
                 <option value="mixto">🔀 Mixto (efectivo + transferencia)</option>
               </select>
+            </div>
+            <div id="nc-hint-credito" style="display:none;grid-column:1/-1;background:#ECFDF5;border:1px solid #34D399;border-radius:8px;padding:10px 12px;font-size:12px;color:#065F46;">
+              💰 <b>Crédito para próxima compra:</b> se guarda como <b>saldo a favor</b> del cliente. En su siguiente nota o ticket, el sistema le ofrece aplicarlo. <b>No sale efectivo de la caja.</b> El cliente debe estar <b>registrado</b> en Clientes.
             </div>
             <div class="field" style="grid-column:1/-1">
               <label>Motivo</label>
@@ -4777,6 +4780,8 @@ function usarPrecioNormalRow(idx, precio) {
   if(!puedeEditarPrecioLibre()) precioInput.readOnly = true;
   recalcular();
 }
+// Redondea a centavos: evita saldos "fantasma" como 0.0000000000018 que salen de restar decimales (11150.400000000001 - 11150.4)
+function redondearCentavos(n){ return Math.round(((n || 0) + Number.EPSILON) * 100) / 100; }
 function fmtMoney(n){ return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 // Búsqueda sin acentos ni mayúsculas — "garcia" encuentra "García", "plomeria" encuentra "Plomería"
 function normalizar(str) {
@@ -5296,7 +5301,7 @@ function registrarPagoCliente(docId, monto, metodoPago, quienTrajo) {
       if(!doc.exists) throw new Error('Cuenta por cobrar no encontrada');
       var data = doc.data();
       cuentaData = data;
-      var nuevoSaldo = Math.max(0, (data.saldo || 0) - monto);
+      var nuevoSaldo = redondearCentavos(Math.max(0, (data.saldo || 0) - monto));
       tx.update(ref, {
         saldo: nuevoSaldo,
         estado: nuevoSaldo === 0 ? 'pagado' : 'pendiente',
@@ -5357,7 +5362,7 @@ function registrarAbonoProveedor(docId, monto, formaPago) {
       return tx.get(ref).then(function(doc2){
         if(!doc2.exists) throw new Error('Cuenta por pagar no encontrada');
         var data = doc2.data();
-        var nuevoSaldo = Math.max(0, (data.saldo || 0) - monto);
+        var nuevoSaldo = redondearCentavos(Math.max(0, (data.saldo || 0) - monto));
         tx.update(ref, {
           saldo: nuevoSaldo,
           estado: nuevoSaldo === 0 ? 'pagado' : 'pendiente',
@@ -5437,7 +5442,7 @@ function confirmarCierrePedido(docId) {
   } else {
     anticipo = Math.min(parseFloat(document.getElementById('mp-anticipo').value) || 0, cot.total || 0);
   }
-  const saldoPendiente = Math.max(0, (cot.total || 0) - anticipo);
+  const saldoPendiente = redondearCentavos(Math.max(0, (cot.total || 0) - anticipo));   // a centavos: un residuo de 1e-12 creaba una cuenta por cobrar falsa
 
   // Cobro híbrido (parte ahora + resto a crédito) o 100% a crédito: en
   // ambos casos queda un saldo por cobrar. No tiene caso fiarle a "Público
@@ -5461,6 +5466,7 @@ function confirmarCierrePedido(docId) {
   Promise.resolve('NV-' + String(cot.folio).padStart(3,'0')).then(function(folioBase){
     const pedido = {
       id: folioBase,
+      clienteId: cot.clienteId || null,
       c: cot.cliente,
       p: cot.productos ? cot.productos.map(function(p){return p.cant+' '+p.desc;}).join(', ') : '',
       m: cot.total || 0,
@@ -7103,8 +7109,49 @@ function actualizarStockEnVivo(clave, contenedorId) {
 // Las demás formas de resolver una NC (devolución en efectivo ya sale de
 // caja de inmediato vía 'salidas'; transferencia/tarjeta se maneja aparte)
 // no generan saldo — solo evitar duplicar el reembolso.
+// Al elegir "Crédito para próxima compra" se apagan las formas de pago (no hay dinero que entregar) y se explica.
+function ncTipoCambio() {
+  var tipo = document.getElementById('nc-tipo').value;
+  var esCredito = tipo === 'credito_proxima';
+  var f1 = document.getElementById('nc-forma-pago'), f2 = document.getElementById('nc-forma-pago-liquidacion');
+  if(f1) { if(esCredito) f1.value = 'credito_cuenta'; f1.disabled = esCredito; }
+  if(f2) f2.disabled = esCredito;
+  var hint = document.getElementById('nc-hint-credito');
+  if(hint) hint.style.display = esCredito ? 'block' : 'none';
+}
+
+// Intenta ligar la NC al cliente registrado: por el clienteId de la nota, por la cotización de origen o, en notas
+// viejas (que solo guardaban el nombre), por teléfono o nombre exacto. Sin cliente registrado no hay dónde guardar el saldo.
+function resolverClienteDePedido(p) {
+  if(p.clienteId) {
+    var c0 = clientesCache.find(function(x){ return x.id === p.clienteId; });
+    return Promise.resolve(c0 || { id: p.clienteId, nombre: p.cliente || p.c || '', telefono: p.telefono || '' });
+  }
+  var porDatos = function() {
+    var tel = String(p.telefono || '').replace(/[^0-9]/g, '');
+    var nom = normalizar(p.cliente || p.c || '');
+    var candidatos = clientesCache.filter(function(x){
+      if(x.activo === false || !x.id) return false;
+      var okTel = tel && String(x.telefono || '').replace(/[^0-9]/g, '') === tel;
+      return okTel || (nom && normalizar(x.nombre) === nom);
+    });
+    var porTel = candidatos.filter(function(x){ return tel && String(x.telefono || '').replace(/[^0-9]/g, '') === tel; });
+    if(porTel.length === 1) return porTel[0];
+    return candidatos.length === 1 ? candidatos[0] : null;
+  };
+  if(p.cotizacionId && db) {
+    return db.collection('cotizaciones').doc(p.cotizacionId).get().then(function(doc){
+      var cid = doc.exists ? doc.data().clienteId : null;
+      if(cid) return clientesCache.find(function(x){ return x.id === cid; }) || { id: cid, nombre: p.cliente || p.c || '', telefono: p.telefono || '' };
+      return porDatos();
+    }).catch(function(){ return porDatos(); });
+  }
+  return Promise.resolve(porDatos());
+}
+
 function aplicarSaldoFavorPorNC(nc, ncId) {
   if(!db || nc.tipo !== 'credito_proxima' || !(nc.total > 0)) return Promise.resolve();
+  if(nc.saldoFavorGenerado) return Promise.resolve();   // ya se cargó: no duplicar
   if(!nc.clienteId) { console.log('NC de crédito para próxima compra sin cliente registrado — no se generó saldo a favor'); return Promise.resolve(); }
   return db.collection('saldos_favor').doc(nc.clienteId).set({
     clienteId: nc.clienteId,
@@ -7114,7 +7161,9 @@ function aplicarSaldoFavorPorNC(nc, ncId) {
     ncId: ncId,
     fecha: nc.fecha,
     timestamp: Date.now()
-  }, { merge: true }).catch(function(e){ console.log('Error generando saldo a favor:', e); });
+  }, { merge: true }).then(function(){
+    return db.collection('notas_credito').doc(ncId).update({ saldoFavorGenerado: true });
+  }).catch(function(e){ console.log('Error generando saldo a favor:', e); });
 }
 
 function ajustarCuentaCobrarPorNC(nc) {
@@ -7125,7 +7174,7 @@ function ajustarCuentaCobrarPorNC(nc) {
     var data = doc.data();
     if(!(data.saldo > 0)) return;
     var reduccion = Math.min(nc.total, data.saldo);
-    var nuevoSaldo = Math.max(0, data.saldo - reduccion);
+    var nuevoSaldo = redondearCentavos(Math.max(0, data.saldo - reduccion));
     var nuevoTotal = Math.max(0, (data.total || 0) - reduccion);
     return doc.ref.update({
       saldo: nuevoSaldo,
@@ -7162,6 +7211,10 @@ function guardarNC() {
 
   const { sub, desc, total } = recalcularNC();
   const tipo = document.getElementById('nc-tipo').value;
+  if(tipo === 'credito_proxima' && !(clienteNC && clienteNC.id)) {
+    showToast('⚠️ Para dejar crédito a próxima compra el cliente debe estar REGISTRADO: búscalo en la lista (o dalo de alta en Clientes).');
+    return;
+  }
   const rs = document.getElementById('nc-rs').value;
   const folioStr = 'NC-' + String(folioNCActual).padStart(3,'0');
   // Gerencia y Director se autoaprueban al guardar, igual que el Cierre del
@@ -7186,7 +7239,7 @@ function guardarNC() {
     subtotal: sub,
     descuento: desc,
     total: total,
-    formaPago: document.getElementById('nc-forma-pago-liquidacion').value,
+    formaPago: tipo === 'credito_proxima' ? 'saldo_favor' : document.getElementById('nc-forma-pago-liquidacion').value,
     razonSocial: rs,
     rsNombre: RAZONES[rs].nombre,
     creadoPor: currentUser ? currentUser.name : 'Desconocido',
@@ -7208,6 +7261,7 @@ function guardarNC() {
     if(cotFolioEl) cotFolioEl.value = '';
     document.getElementById('nc-motivo').value = '';
     document.getElementById('nc-notas').value = '';
+    ncTipoCambio();
     document.getElementById('nc-desc').value = '0';
     document.getElementById('nc-prod-body').innerHTML = '';
     clienteNC = null;
@@ -7250,7 +7304,7 @@ function guardarNC() {
     nc._docId = ncRef.id;
     notasCredito.unshift(nc);
     var pendientes = [];
-    if(nc.formaPago === 'efectivo') {
+    if(nc.formaPago === 'efectivo' && nc.tipo !== 'credito_proxima') {
       pendientes.push(db.collection('salidas').add({
         fecha: nc.fecha,
         timestamp: Date.now(),
@@ -7448,7 +7502,7 @@ function validarNC(docId, status) {
       actualizarCacheLocalInventario(deltasRestock, +1);
       showToast(status === 'aprobada' ? '✅ Nota de crédito aprobada' + (Object.keys(deltasRestock).length ? ' — inventario actualizado' : '') : '❌ Nota de crédito rechazada');
       if(status === 'aprobada') {
-        if(nc.formaPago === 'efectivo') {
+        if(nc.formaPago === 'efectivo' && nc.tipo !== 'credito_proxima') {
           var salida = {
             fecha: fechaISOLocal(),   // la devolución en efectivo sale el día que se aprueba, no el de la solicitud
             timestamp: Date.now(),
@@ -9043,6 +9097,8 @@ function puedeCancelarCompra() {
 function cancelarCompra(compraId) {
   if(!puedeCancelarCompra()) { showToast('⚠️ Sin permisos'); return; }
   if(!db) return;
+  // Si el inventario aún no termina de cargar, no se sabría qué revertir: la compra quedaría cancelada sin mover existencia.
+  if(!productosCargados) { showToast('⚠️ Todavía está cargando el inventario. Espera unos segundos e intenta de nuevo.'); return; }
   db.collection('compras').doc(compraId).get().then(function(doc) {
     if(!doc.exists) { showToast('⚠️ Compra no encontrada'); return; }
     var compra = doc.data();
@@ -9067,6 +9123,13 @@ function cancelarCompra(compraId) {
     var mensajeConfirm = '¿Cancelar la compra ' + compra.folio + ' de ' + compra.proveedor + ' por ' + fmtMoney(compra.total) + '? Se revierte la existencia' + (compra.formaPago === 'credito_proveedor' ? ' y la cuenta por pagar' : '') + (compra.formaPago === 'efectivo' ? ' y la salida en efectivo' : '') + '.';
     if(quedaEnNegativo) {
       mensajeConfirm = '⚠️ Parte de esta mercancía ya fue vendida. El inventario quedará en negativo — ¿deseas continuar?\n\n' + mensajeConfirm;
+    }
+    var lineasSinInventario = (compra.productos || []).filter(function(p){
+      return !(p.clave && productosIndex[p.clave] && productosIndex[p.clave].tipo !== 'servicio');
+    });
+    if(lineasSinInventario.length) {
+      mensajeConfirm += '\n\nOJO: ' + lineasSinInventario.length + ' línea(s) NO llevan inventario (sin clave de catálogo o servicio) y no se mueven: ' +
+        lineasSinInventario.slice(0, 3).map(function(p){ return p.desc || p.descripcion || '(sin descripción)'; }).join(', ') + '.';
     }
     if(!confirm(mensajeConfirm)) return;
 
@@ -9127,7 +9190,12 @@ function cancelarCompra(compraId) {
       }));
       return Promise.all(pendientes);
     }).then(function() {
-      showToast('❌ Compra cancelada — existencia y saldos revertidos');
+      var resumenInv = productosValidos.slice(0, 3).map(function(p){
+        var prod = productosIndex[p.clave];
+        var cc = prod.factorConversion ? p.cantidad * prod.factorConversion : p.cantidad;
+        return (prod.descripcion || prod.desc || p.clave) + ' −' + cc + ' (queda en ' + (prod.existencia || 0) + ')';
+      }).join(' · ') + (productosValidos.length > 3 ? ' y ' + (productosValidos.length - 3) + ' más' : '');
+      showToast('❌ Compra cancelada. ' + (productosValidos.length ? 'Inventario: ' + resumenInv : 'No se movió inventario (ninguna línea lleva inventario).'));
       if(currentUser.role === 'Compras') cargarComprasErika();
       if(currentUser.role === 'Director') cargarComprasJM();
       if(currentUser.role === 'Gerencia') filtrarComprasViri('hoy');
@@ -12834,8 +12902,14 @@ function precargarNCDesdeNV(p) {
   if(!bloqueCrear || bloqueCrear.style.display === 'none') { showToast('⚠️ Sin permisos para crear notas de crédito'); return; }
 
   ncPedidoOrigen = p;
-  clienteNC = p.clienteId ? { id: p.clienteId, nombre: p.cliente || p.c || '', telefono: p.telefono || '' } : null;
+  clienteNC = null;
   cotizacionNC = null;
+  resolverClienteDePedido(p).then(function(c){
+    if(ncPedidoOrigen !== p) return;   // el usuario ya cambió de nota
+    clienteNC = c || null;
+    var banner2 = document.getElementById('nc-nv-origen-banner');
+    if(banner2 && !c) banner2.innerHTML += '<div style="margin-top:6px;color:#B45309;font-weight:700;">⚠️ Este cliente no está registrado en Clientes: se puede hacer la NC, pero NO se le puede dejar saldo a favor.</div>';
+  });
 
   var clienteInput = document.getElementById('nc-cliente-input');
   if(clienteInput) clienteInput.value = p.cliente || p.c || '';

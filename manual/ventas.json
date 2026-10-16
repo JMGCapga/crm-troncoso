@@ -227,7 +227,8 @@
    "cuidado": [
     "Al crear la nota se **descuenta el inventario**.",
     "Si el cliente paga menos del total, el resto queda como saldo por cobrar. Como no damos crédito, hazlo **solo si Viridiana lo autoriza**.",
-    "El teléfono que captures se guarda en la nota y, si la cotización no tenía uno, también en la cotización. Es el que usa el operador para llamar y el que se usa para mandar la encuesta al entregar."
+    "El teléfono que captures se guarda en la nota y, si la cotización no tenía uno, también en la cotización. Es el que usa el operador para llamar y el que se usa para mandar la encuesta al entregar.",
+    "Si el cliente tiene **saldo a favor** de una nota de crédito, al elegirlo sale un aviso amarillo: **\"Este cliente tiene $… a favor. ¿Aplicar?\"**. Toca **Aplicar saldo** y se descuenta del total; si no, toca **No aplicar**. Lo mismo pasa en los tickets."
    ]
   },
   {
