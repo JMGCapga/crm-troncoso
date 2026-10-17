@@ -136,14 +136,18 @@
      "t": "Si cambió algo, toca **Recalcular** para volver a leer todo."
     },
     {
-     "t": "**Para ver el corte de un día anterior:** más abajo, en **Cierres anteriores**, toca el día que quieras (dice \"ver\"). O usa **Ver el corte de otro día** y elige la fecha (hay un botón **Ayer**). Se abre el mismo corte de ese día, solo para consultar: no cambia ni cierra nada. Si ese día se cerró, ves quién lo cerró, a qué hora y sus observaciones; si después del cierre se registró o cambió algo, sale un aviso amarillo."
+     "t": "**Para ver el corte de un día anterior:** más abajo, en **Cierres anteriores**, toca el día que quieras (dice \"ver\"). O usa **Ver el corte de otro día** y elige la fecha (hay un botón **Ayer**). Se abre el mismo corte de ese día. Si ese día se cerró, ves quién lo cerró, a qué hora y sus observaciones; si después del cierre se registró o cambió algo, sale un aviso amarillo."
+    },
+    {
+     "t": "**Para corregir ese día** (abajo del corte): **Guardar observaciones** cambia el comentario del día; **Recibí** confirma una entrega de efectivo que quedó sin confirmar; **Actualizar el cierre con estos números** reescribe el cierre con lo que está registrado ahora (te muestra cómo estaba y cómo quedará antes de guardar). Si ese día nunca se cerró, el botón dice **Cerrar ese día con estos números**."
     }
    ],
    "cuidado": [
     "Las salidas **pendientes** de validar ya restan de la caja; las **rechazadas** no.",
     "El **Cerrar mi turno** de Ivette y Erika no aparece aquí: les llega a ti por WhatsApp. El Cierre del día se arma con lo registrado, no con esos mensajes.",
     "Si el efectivo contado no coincide con \"Efectivo en caja\", revisa primero: salidas pendientes o mal capturadas, entregas del personal sin confirmar y retiros parciales.",
-    "Los cortes de días anteriores son **solo de consulta**. Solo tú y José Manuel pueden abrirlos; Ivette y Erika no."
+    "Corregir un día pasado **no manda mensajes** y deja anotado quién lo hizo, cuándo y cómo estaba antes. Solo tú y José Manuel pueden hacerlo; Ivette y Erika no.",
+    "Si lo que está mal son las **ventas o las salidas** de ese día, se corrigen en su propio apartado (Ventas, Salidas...) y luego aquí se toca **Actualizar el cierre**."
    ],
    "ayuda": "Dudas del cálculo: José Manuel."
   },

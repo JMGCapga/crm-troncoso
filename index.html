@@ -631,7 +631,7 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
         </div>
         <div class="card" id="corte-otro-dia-card">
           <div class="card-title">📂 Ver el corte de otro día</div>
-          <div style="font-size:12px;color:var(--suave);margin-bottom:10px;">Solo para consultar: no cambia ni cierra nada. También puedes tocar un día en "Cierres anteriores".</div>
+          <div style="font-size:12px;color:var(--suave);margin-bottom:10px;">Revisa cualquier día y, si hace falta, corrige las observaciones, confirma entregas de efectivo o actualiza el cierre. Todo queda registrado con tu nombre. También puedes tocar un día en "Cierres anteriores".</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
             <div class="field" style="margin:0;"><label>Fecha</label><input type="date" id="corte-otro-dia" onchange="verCorteDeFecha(this.value)"></div>
             <button class="btn btn-gris" onclick="verCorteDeFecha(fechaAyerCorte())" style="font-size:12px;padding:10px 14px;">Ayer</button>
@@ -5888,7 +5888,7 @@ function renderCorteAuto(d, opts) {
     });
     html += '</details>';
   }
-  if(!cats.length && !nRet) html += '<div style="font-size:12px;color:var(--suave);">' + (opts.soloLectura ? 'Sin salidas ese día' : 'Sin salidas hoy') + '</div>';
+  if(!cats.length && !nRet) html += '<div style="font-size:12px;color:var(--suave);">' + (opts.otroDia ? 'Sin salidas ese día' : 'Sin salidas hoy') + '</div>';
   html += filaCorte('TOTAL SALIDAS', fmtResta(d.totalSalidas), { bold:true, borde:true });
   if(d.salidasNoEfectivo > 0.004) html += '<div style="font-size:11px;color:var(--suave);padding-top:6px;">Aparte: ' + fmtMoney(d.salidasNoEfectivo) + ' pagados con transferencia o tarjeta — no salen de la caja.</div>';
   html += '</div>';
@@ -5914,7 +5914,6 @@ function renderCorteAuto(d, opts) {
         '<span>' + htmlSeguro(e.hora || '') + ' — ' + htmlSeguro(e.usuario || '') + (e.nota ? ' <span style="color:var(--suave);">(' + htmlSeguro(e.nota) + ')</span>' : '') + '</span>' +
         '<span><strong>' + fmtMoney(corteNum(e.monto)) + '</strong> ' +
         (recibido ? '<span style="color:#15803D;">✅ recibido</span>'
-                  : opts.soloLectura ? '<span style="color:#B45309;">⏳ sin confirmar</span>'
                   : '<button class="btn btn-naranja" style="font-size:11px;padding:5px 10px;" onclick="confirmarEntregaEfectivo(\'' + e.id + '\')">✅ Recibí</button>') + '</span></div>';
     });
     html += filaCorte('Recibido', fmtMoney(d.entregasRecibidas), { borde:true, color:'#15803D' }) +
@@ -5938,6 +5937,7 @@ function iniciarCorte() {
   });
   var otroDetalle = document.getElementById('corte-otro-dia-detalle');   // lo consultado por otra persona no se queda en pantalla
   if(otroDetalle) otroDetalle.innerHTML = '';
+  corteOtroDiaActual = null;
 
   if(role === 'Gerencia' || role === 'Director') {
     document.getElementById('corte-auto').style.display = 'block';
@@ -6138,10 +6138,13 @@ function cargarCierresDiaHistorial() {
   }).catch(function(e){ console.log(e); cont.innerHTML = '<div style="padding:12px;color:#DC2626;font-size:12px;">Error al cargar</div>'; });
 }
 
-// ════ VER EL CORTE DE OTRO DÍA — solo lectura, Gerencia (Viridiana) y Director ════
+// ════ VER (Y CORREGIR) EL CORTE DE OTRO DÍA — Gerencia (Viridiana) y Director ════
 // Recalcula el día pedido con las mismas cuentas del Cierre del Día y, si ese día se cerró, muestra lo
-// que se guardó al cerrar. No escribe nada en Firestore.
+// que se guardó al cerrar. Se puede corregir: observaciones, entregas de efectivo sin confirmar y
+// actualizar el cierre con los números actuales. Cada corrección queda en cierres_dia/{fecha}.correcciones
+// con quién, cuándo y cómo estaba antes. Nunca manda WhatsApp.
 var corteOtroDiaSolicitud = 0;
+var corteOtroDiaActual = null;   // {fecha, datos, cierre} del día que se está viendo
 
 function puedeVerCortesAnteriores() {
   return !!(currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director'));
@@ -6152,17 +6155,37 @@ function fechaAyerCorte() {
   return fechaLocalISO(new Date(h.getFullYear(), h.getMonth(), h.getDate() - 1));
 }
 
+// La cartera se calcula con lo pendiente AHORA; para un día pasado vale más lo que se guardó al cerrarlo.
+// Devuelve la nota para mostrar (o '' si es hoy).
+function ajustarCarteraDiaPasado(d, cierre, fecha) {
+  if(fecha === fechaISOLocal()) return '';
+  if(cierre && cierre.cartera !== undefined && cierre.cartera !== null) {
+    d.cartera = corteNum(cierre.cartera); d.carteraCuentas = null;
+    return 'Cartera tal como quedó al cerrar ese día.';
+  }
+  return 'Ese día no se cerró: la cartera mostrada es la de hoy.';
+}
+
+function textoCorreccionCorte(c) {
+  var cuando = new Date(c.el || 0).toLocaleString('es-MX', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+  var que = '';
+  if(c.que === 'observaciones') que = 'cambió las observaciones';
+  else if(c.que === 'numeros') que = 'actualizó los números (ventas ' + fmtMoney(corteNum((c.antes || {}).totalVentas)) + ' → ' + fmtMoney(corteNum((c.despues || {}).totalVentas)) + ', caja ' + fmtMoney(corteNum((c.antes || {}).efectivoCaja)) + ' → ' + fmtMoney(corteNum((c.despues || {}).efectivoCaja)) + ')';
+  else if(c.que === 'cierre_tardio') que = 'cerró el día después (ventas ' + fmtMoney(corteNum((c.despues || {}).totalVentas)) + ', caja ' + fmtMoney(corteNum((c.despues || {}).efectivoCaja)) + ')';
+  return htmlSeguro(cuando) + ' · ' + htmlSeguro(c.por || '') + ' ' + que;
+}
+
 function verCorteDeFecha(fecha, subir) {
   var cont = document.getElementById('corte-otro-dia-detalle');
   var inp = document.getElementById('corte-otro-dia');
   if(!cont) return;
   if(!puedeVerCortesAnteriores()) { showToast('⚠️ Sin permisos'); return; }
-  if(!fecha) { cont.innerHTML = ''; return; }
+  if(!fecha) { cont.innerHTML = ''; corteOtroDiaActual = null; return; }
   if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { cont.innerHTML = '<div style="padding:12px;color:#DC2626;font-size:12px;">Fecha no válida</div>'; return; }
   if(inp) inp.value = fecha;
   if(!db) { cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Sin conexión</div>'; return; }
   var hoy = fechaISOLocal();
-  if(fecha > hoy) { cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Esa fecha todavía no llega.</div>'; return; }
+  if(fecha > hoy) { cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Esa fecha todavía no llega.</div>'; corteOtroDiaActual = null; return; }
   var solicitud = ++corteOtroDiaSolicitud;
   cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Calculando el corte del ' + fecha + '...</div>';
   if(subir) { var card = document.getElementById('corte-otro-dia-card'); if(card) card.scrollIntoView({behavior:'smooth', block:'start'}); }
@@ -6173,33 +6196,105 @@ function verCorteDeFecha(fecha, subir) {
     if(solicitud !== corteOtroDiaSolicitud) return;   // ya pidieron otro día
     var d = res[0], cierre = res[1];
     var esHoy = fecha === hoy;
-    var opts = { soloLectura:true };
-    if(!esHoy) {
-      // La cartera se calcula con lo pendiente AHORA; para un día pasado vale más lo que se guardó al cerrarlo.
-      if(cierre && cierre.cartera !== undefined && cierre.cartera !== null) {
-        d.cartera = corteNum(cierre.cartera); d.carteraCuentas = null;
-        opts.carteraNota = 'Cartera tal como quedó al cerrar ese día.';
-      } else {
-        opts.carteraNota = 'Ese día no se cerró: la cartera mostrada es la de hoy.';
-      }
-    }
+    var opts = { otroDia:true };
+    var nota = ajustarCarteraDiaPasado(d, cierre, fecha);
+    if(nota) opts.carteraNota = nota;
+    corteOtroDiaActual = { fecha: fecha, datos: d, cierre: cierre };
+    var difiere = false;
     var html = '<div style="font-weight:700;font-size:13px;margin-bottom:8px;">' + fechaLargaCorte(fecha).replace(/^./, function(c){ return c.toUpperCase(); }) + (esHoy ? ' (hoy)' : '') + '</div>';
     if(cierre) {
       html += '<div style="background:#DCFCE7;border:1.5px solid #22C55E;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;font-weight:700;color:#15803D;">✅ Día cerrado a las ' + htmlSeguro(cierre.hora || '') + ' por ' + htmlSeguro(cierre.cerradoPor || '') + '</div>';
-      var difiere = Math.abs(corteNum(cierre.totalVentas) - d.totalVentas) > 0.005 || Math.abs(corteNum(cierre.totalSalidas) - d.totalSalidas) > 0.005 || Math.abs(corteNum(cierre.efectivoCaja) - d.efectivoCaja) > 0.005;
+      difiere = Math.abs(corteNum(cierre.totalVentas) - d.totalVentas) > 0.005 || Math.abs(corteNum(cierre.totalSalidas) - d.totalSalidas) > 0.005 || Math.abs(corteNum(cierre.efectivoCaja) - d.efectivoCaja) > 0.005;
       if(difiere) {
-        html += '<div style="background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#92400E;">⚠️ Lo que ves abajo ya no coincide con lo que se guardó al cerrar (ventas ' + fmtMoney(corteNum(cierre.totalVentas)) + ' · salidas ' + fmtMoney(corteNum(cierre.totalSalidas)) + ' · caja ' + fmtMoney(corteNum(cierre.efectivoCaja)) + '). Se registró o cambió algo después del cierre.</div>';
+        html += '<div style="background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#92400E;">⚠️ Lo que ves abajo ya no coincide con lo que se guardó al cerrar (ventas ' + fmtMoney(corteNum(cierre.totalVentas)) + ' · salidas ' + fmtMoney(corteNum(cierre.totalSalidas)) + ' · caja ' + fmtMoney(corteNum(cierre.efectivoCaja)) + '). Se registró o cambió algo después del cierre. Si lo de abajo es lo correcto, toca "Actualizar el cierre".</div>';
       }
     } else if(!esHoy) {
       html += '<div style="background:#F5F2EE;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--suave);">Ese día no quedó cerrado en el sistema; son los números calculados con lo registrado.</div>';
     }
     html += renderCorteAuto(d, opts);
-    if(cierre && cierre.observaciones) html += '<div style="margin-top:10px;font-size:12px;padding:10px;background:#F5F2EE;border-radius:8px;"><strong>📝 Observaciones:</strong> ' + htmlSeguro(cierre.observaciones) + '</div>';
+    if(cierre && cierre.correcciones && cierre.correcciones.length) {
+      html += '<div style="margin-top:10px;font-size:11px;padding:10px;background:#F5F2EE;border-radius:8px;"><strong>✏️ Correcciones a este cierre</strong>' +
+        cierre.correcciones.map(function(c){ return '<div style="padding-top:4px;">' + textoCorreccionCorte(c) + '</div>'; }).join('') + '</div>';
+    }
+    if(esHoy) {
+      html += '<div style="margin-top:12px;font-size:12px;color:var(--suave);">El día de hoy se revisa y se cierra en la tarjeta "Cierre del Día", arriba.</div>';
+    } else {
+      html += '<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--borde);">' +
+        '<div class="field"><label>📝 Observaciones de ese día</label><textarea id="corte-otro-obs" style="min-height:60px;" placeholder="Opcional: incidencias, comentarios del día...">' + htmlSeguro(cierre ? (cierre.observaciones || '') : '') + '</textarea></div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+        (cierre ? '<button class="btn btn-gris" onclick="guardarObservacionesOtroDia()" style="font-size:12px;padding:11px 14px;">💾 Guardar observaciones</button>' : '') +
+        '<button class="btn ' + (difiere || !cierre ? 'btn-naranja' : 'btn-gris') + '" onclick="actualizarCierreOtroDia()" style="font-size:12px;padding:11px 14px;flex:1;min-width:180px;">' + (cierre ? '🔄 Actualizar el cierre con estos números' : '✅ Cerrar ese día con estos números') + '</button>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--suave);margin-top:8px;">No se manda ningún mensaje. Queda anotado quién lo corrigió, cuándo y cómo estaba antes. Para cambiar ventas o salidas de ese día, se corrigen en su propio apartado (Ventas, Salidas, etc.) y aquí se actualiza el cierre.</div>' +
+        '</div>';
+    }
     cont.innerHTML = html;
   }).catch(function(e){
     console.log('Error cargando corte de otro día:', e);
     if(solicitud === corteOtroDiaSolicitud) cont.innerHTML = '<div style="padding:12px;color:#DC2626;font-size:12px;">⚠️ No se pudo cargar ese día. Intenta de nuevo.</div>';
   });
+}
+
+function guardarObservacionesOtroDia() {
+  var v = corteOtroDiaActual;
+  if(!puedeVerCortesAnteriores()) { showToast('⚠️ Sin permisos'); return; }
+  if(!db || !v || !v.cierre) return;
+  var el = document.getElementById('corte-otro-obs');
+  var obs = el ? el.value.trim() : '';
+  if(obs === (v.cierre.observaciones || '')) { showToast('Sin cambios en las observaciones'); return; }
+  var correcciones = (v.cierre.correcciones || []).concat([{ por: currentUser.name, el: Date.now(), que: 'observaciones', antes: v.cierre.observaciones || '', despues: obs }]);
+  db.collection('cierres_dia').doc(v.fecha).update({ observaciones: obs, correcciones: correcciones }).then(function(){
+    showToast('✅ Observaciones guardadas');
+    verCorteDeFecha(v.fecha);
+    cargarCierresDiaHistorial();
+  }).catch(function(e){ console.log(e); showToast('⚠️ No se pudieron guardar'); });
+}
+
+// Reescribe el cierre de un día pasado con los números de ahora (o lo crea si ese día nunca se cerró).
+// Conserva quién y a qué hora lo cerró originalmente; no manda WhatsApp.
+function actualizarCierreOtroDia() {
+  var v = corteOtroDiaActual;
+  if(!puedeVerCortesAnteriores()) { showToast('⚠️ Sin permisos'); return; }
+  if(!db || !v || v.fecha === fechaISOLocal()) return;
+  var fecha = v.fecha;
+  var el = document.getElementById('corte-otro-obs');
+  var obs = el ? el.value.trim() : ((v.cierre && v.cierre.observaciones) || '');
+  // Se recalcula justo antes de guardar, igual que cerrarDia: no se guarda nada que no se haya visto.
+  calcularCorteDelDia(fecha).then(function(d){
+    ajustarCarteraDiaPasado(d, v.cierre, fecha);
+    if(corteCambio(v.datos, d)) {
+      showToast('⚠️ Entró un movimiento nuevo — revisa los números y vuelve a tocar el botón');
+      verCorteDeFecha(fecha);
+      return;
+    }
+    var antes = v.cierre ? { totalVentas: corteNum(v.cierre.totalVentas), totalSalidas: corteNum(v.cierre.totalSalidas), efectivoCaja: corteNum(v.cierre.efectivoCaja), efectivoApartado: corteNum(v.cierre.efectivoApartado) } : null;
+    var despues = { totalVentas: d.totalVentas, totalSalidas: d.totalSalidas, efectivoCaja: d.efectivoCaja, efectivoApartado: d.efectivoApartado };
+    var msg = v.cierre
+      ? 'Se va a reescribir el cierre del ' + fecha + ' con los números de ahora:\n\nVentas ' + fmtMoney(antes.totalVentas) + ' → ' + fmtMoney(despues.totalVentas) + '\nSalidas ' + fmtMoney(antes.totalSalidas) + ' → ' + fmtMoney(despues.totalSalidas) + '\nCaja ' + fmtMoney(antes.efectivoCaja) + ' → ' + fmtMoney(despues.efectivoCaja) + '\n\nQueda anotado que lo corrigió ' + currentUser.name + '. No se manda ningún mensaje.\n¿Continuar?'
+      : 'Ese día no se cerró. ¿Cerrar el ' + fecha + ' con estos números?\n\nVentas ' + fmtMoney(despues.totalVentas) + ' · Salidas ' + fmtMoney(despues.totalSalidas) + ' · Caja ' + fmtMoney(despues.efectivoCaja) + '\n\nNo se manda ningún mensaje.';
+    if(!confirm(msg)) return;
+    var nuevo = construirCierreDia(d, obs);
+    var p = fecha.split('-');
+    var doc = Object.assign({}, v.cierre || {}, nuevo);
+    if(v.cierre) {
+      // sigue siendo el cierre de quien lo hizo ese día: solo cambian los números
+      doc.hora = v.cierre.hora || nuevo.hora;
+      doc.cerradoPor = v.cierre.cerradoPor || nuevo.cerradoPor;
+      doc.timestamp = v.cierre.timestamp || nuevo.timestamp;
+    } else {
+      doc.timestamp = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10), 23, 59).getTime();   // se ordena en su día
+      doc.cerradoDespues = true;
+      doc.cerradoEl = Date.now();
+    }
+    var pasos = (v.cierre && v.cierre.correcciones) ? v.cierre.correcciones.slice() : [];
+    pasos.push({ por: currentUser.name, el: Date.now(), que: v.cierre ? 'numeros' : 'cierre_tardio', antes: antes, despues: despues });
+    doc.correcciones = pasos;
+    return db.collection('cierres_dia').doc(fecha).set(doc).then(function(){
+      showToast(v.cierre ? '✅ Cierre actualizado' : '✅ Día cerrado');
+      verCorteDeFecha(fecha);
+      cargarCierresDiaHistorial();
+    });
+  }).catch(function(e){ console.log(e); showToast('⚠️ No se pudo guardar el cierre'); });
 }
 
 function imprimirCierreDia() {
@@ -6578,6 +6673,7 @@ function confirmarEntregaEfectivo(id) {
   }).then(function(){
     showToast('✅ Efectivo recibido');
     recalcularCorteAuto();
+    if(corteOtroDiaActual) verCorteDeFecha(corteOtroDiaActual.fecha);
   }).catch(function(e){ console.log(e); showToast('⚠️ No se pudo confirmar'); });
 }
 
