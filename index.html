@@ -629,6 +629,15 @@ body{font-family:'Barlow',sans-serif;background:var(--gris-claro);color:var(--te
           </div>
           <div id="corte-whatsapp-respaldo"></div>
         </div>
+        <div class="card" id="corte-otro-dia-card">
+          <div class="card-title">📂 Ver el corte de otro día</div>
+          <div style="font-size:12px;color:var(--suave);margin-bottom:10px;">Solo para consultar: no cambia ni cierra nada. También puedes tocar un día en "Cierres anteriores".</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+            <div class="field" style="margin:0;"><label>Fecha</label><input type="date" id="corte-otro-dia" onchange="verCorteDeFecha(this.value)"></div>
+            <button class="btn btn-gris" onclick="verCorteDeFecha(fechaAyerCorte())" style="font-size:12px;padding:10px 14px;">Ayer</button>
+          </div>
+          <div id="corte-otro-dia-detalle" style="margin-top:14px;"></div>
+        </div>
         <div class="card">
           <div class="card-title">📋 Cierres anteriores</div>
           <div id="cierres-dia-historial"></div>
@@ -5845,7 +5854,8 @@ function filaCorte(label, valor, opts) {
     '<span>' + label + '</span><span>' + valor + '</span></div>';
 }
 
-function renderCorteAuto(d) {
+function renderCorteAuto(d, opts) {
+  opts = opts || {};
   var html = '';
 
   // VENTAS DEL DÍA
@@ -5878,7 +5888,7 @@ function renderCorteAuto(d) {
     });
     html += '</details>';
   }
-  if(!cats.length && !nRet) html += '<div style="font-size:12px;color:var(--suave);">Sin salidas hoy</div>';
+  if(!cats.length && !nRet) html += '<div style="font-size:12px;color:var(--suave);">' + (opts.soloLectura ? 'Sin salidas ese día' : 'Sin salidas hoy') + '</div>';
   html += filaCorte('TOTAL SALIDAS', fmtResta(d.totalSalidas), { bold:true, borde:true });
   if(d.salidasNoEfectivo > 0.004) html += '<div style="font-size:11px;color:var(--suave);padding-top:6px;">Aparte: ' + fmtMoney(d.salidasNoEfectivo) + ' pagados con transferencia o tarjeta — no salen de la caja.</div>';
   html += '</div>';
@@ -5890,7 +5900,8 @@ function renderCorteAuto(d) {
     '<div style="font-size:10px;color:#999;padding:0 0 4px;">Cobros en efectivo − salidas − retiros parciales</div>' +
     filaCorte('🔒 Efectivo apartado', fmtMoney(d.efectivoApartado), { color:'#ddd' }) +
     '<div style="font-size:10px;color:#999;padding:0 0 4px;">Ya incluido en caja · operativo (caja − apartado): ' + fmtMoney(d.efectivoOperativo) + '</div>' +
-    filaCorte('📊 Cartera pendiente', fmtMoney(d.cartera) + ' <span style="font-size:10px;color:#999;">(' + d.carteraCuentas + ' cuenta' + (d.carteraCuentas === 1 ? '' : 's') + ')</span>', { color:'#ddd' }) +
+    filaCorte('📊 Cartera pendiente', fmtMoney(d.cartera) + (d.carteraCuentas === null ? '' : ' <span style="font-size:10px;color:#999;">(' + d.carteraCuentas + ' cuenta' + (d.carteraCuentas === 1 ? '' : 's') + ')</span>'), { color:'#ddd' }) +
+    (opts.carteraNota ? '<div style="font-size:10px;color:#999;padding:0 0 2px;">' + opts.carteraNota + '</div>' : '') +
     '</div>';
 
   // ENTREGAS DE EFECTIVO DEL PERSONAL (retiros previos de Ventas/Compras)
@@ -5903,6 +5914,7 @@ function renderCorteAuto(d) {
         '<span>' + htmlSeguro(e.hora || '') + ' — ' + htmlSeguro(e.usuario || '') + (e.nota ? ' <span style="color:var(--suave);">(' + htmlSeguro(e.nota) + ')</span>' : '') + '</span>' +
         '<span><strong>' + fmtMoney(corteNum(e.monto)) + '</strong> ' +
         (recibido ? '<span style="color:#15803D;">✅ recibido</span>'
+                  : opts.soloLectura ? '<span style="color:#B45309;">⏳ sin confirmar</span>'
                   : '<button class="btn btn-naranja" style="font-size:11px;padding:5px 10px;" onclick="confirmarEntregaEfectivo(\'' + e.id + '\')">✅ Recibí</button>') + '</span></div>';
     });
     html += filaCorte('Recibido', fmtMoney(d.entregasRecibidas), { borde:true, color:'#15803D' }) +
@@ -5924,12 +5936,16 @@ function iniciarCorte() {
     var el = document.getElementById(id);
     if(el) el.style.display = 'none';
   });
+  var otroDetalle = document.getElementById('corte-otro-dia-detalle');   // lo consultado por otra persona no se queda en pantalla
+  if(otroDetalle) otroDetalle.innerHTML = '';
 
   if(role === 'Gerencia' || role === 'Director') {
     document.getElementById('corte-auto').style.display = 'block';
     document.getElementById('corte-whatsapp-respaldo').innerHTML = '';
     recalcularCorteAuto();
     cargarCierresDiaHistorial();
+    var otroDia = document.getElementById('corte-otro-dia');
+    if(otroDia) { otroDia.max = fechaISOLocal(); otroDia.value = ''; }
   }
   if(role === 'Ventas' || role === 'Compras') {
     document.getElementById('corte-turno').style.display = 'block';
@@ -6113,13 +6129,77 @@ function cargarCierresDiaHistorial() {
     var html = '';
     snap.forEach(function(doc){
       var c = doc.data();
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #F0EDE8;">' +
-        '<div><strong style="font-size:13px;">' + c.fecha + '</strong><br><span style="font-size:11px;color:var(--suave);">' + (c.cerradoPor || '') + ' · ' + (c.hora || '') + ' · Caja ' + fmtMoney(corteNum(c.efectivoCaja)) + '</span></div>' +
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #F0EDE8;cursor:pointer;" onclick="verCorteDeFecha(\'' + doc.id + '\', true)" title="Abrir el corte de este día">' +
+        '<div><strong style="font-size:13px;">' + c.fecha + ' <span style="font-size:10px;color:var(--naranja);">ver ▸</span></strong><br><span style="font-size:11px;color:var(--suave);">' + (c.cerradoPor || '') + ' · ' + (c.hora || '') + ' · Caja ' + fmtMoney(corteNum(c.efectivoCaja)) + '</span></div>' +
         '<div style="text-align:right;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--naranja);">' + fmtMoney(corteNum(c.totalVentas)) + '</div>' +
         '<span style="font-size:10px;color:var(--suave);">Salidas ' + fmtMoney(corteNum(c.totalSalidas)) + '</span></div></div>';
     });
     cont.innerHTML = html;
   }).catch(function(e){ console.log(e); cont.innerHTML = '<div style="padding:12px;color:#DC2626;font-size:12px;">Error al cargar</div>'; });
+}
+
+// ════ VER EL CORTE DE OTRO DÍA — solo lectura, Gerencia (Viridiana) y Director ════
+// Recalcula el día pedido con las mismas cuentas del Cierre del Día y, si ese día se cerró, muestra lo
+// que se guardó al cerrar. No escribe nada en Firestore.
+var corteOtroDiaSolicitud = 0;
+
+function puedeVerCortesAnteriores() {
+  return !!(currentUser && (currentUser.role === 'Gerencia' || currentUser.role === 'Director'));
+}
+
+function fechaAyerCorte() {
+  var h = new Date();
+  return fechaLocalISO(new Date(h.getFullYear(), h.getMonth(), h.getDate() - 1));
+}
+
+function verCorteDeFecha(fecha, subir) {
+  var cont = document.getElementById('corte-otro-dia-detalle');
+  var inp = document.getElementById('corte-otro-dia');
+  if(!cont) return;
+  if(!puedeVerCortesAnteriores()) { showToast('⚠️ Sin permisos'); return; }
+  if(!fecha) { cont.innerHTML = ''; return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { cont.innerHTML = '<div style="padding:12px;color:#DC2626;font-size:12px;">Fecha no válida</div>'; return; }
+  if(inp) inp.value = fecha;
+  if(!db) { cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Sin conexión</div>'; return; }
+  var hoy = fechaISOLocal();
+  if(fecha > hoy) { cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Esa fecha todavía no llega.</div>'; return; }
+  var solicitud = ++corteOtroDiaSolicitud;
+  cont.innerHTML = '<div style="padding:12px;color:var(--suave);font-size:12px;">Calculando el corte del ' + fecha + '...</div>';
+  if(subir) { var card = document.getElementById('corte-otro-dia-card'); if(card) card.scrollIntoView({behavior:'smooth', block:'start'}); }
+  Promise.all([
+    calcularCorteDelDia(fecha),
+    db.collection('cierres_dia').doc(fecha).get().then(function(doc){ return doc.exists ? doc.data() : null; }).catch(function(){ return null; })
+  ]).then(function(res){
+    if(solicitud !== corteOtroDiaSolicitud) return;   // ya pidieron otro día
+    var d = res[0], cierre = res[1];
+    var esHoy = fecha === hoy;
+    var opts = { soloLectura:true };
+    if(!esHoy) {
+      // La cartera se calcula con lo pendiente AHORA; para un día pasado vale más lo que se guardó al cerrarlo.
+      if(cierre && cierre.cartera !== undefined && cierre.cartera !== null) {
+        d.cartera = corteNum(cierre.cartera); d.carteraCuentas = null;
+        opts.carteraNota = 'Cartera tal como quedó al cerrar ese día.';
+      } else {
+        opts.carteraNota = 'Ese día no se cerró: la cartera mostrada es la de hoy.';
+      }
+    }
+    var html = '<div style="font-weight:700;font-size:13px;margin-bottom:8px;">' + fechaLargaCorte(fecha).replace(/^./, function(c){ return c.toUpperCase(); }) + (esHoy ? ' (hoy)' : '') + '</div>';
+    if(cierre) {
+      html += '<div style="background:#DCFCE7;border:1.5px solid #22C55E;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;font-weight:700;color:#15803D;">✅ Día cerrado a las ' + htmlSeguro(cierre.hora || '') + ' por ' + htmlSeguro(cierre.cerradoPor || '') + '</div>';
+      var difiere = Math.abs(corteNum(cierre.totalVentas) - d.totalVentas) > 0.005 || Math.abs(corteNum(cierre.totalSalidas) - d.totalSalidas) > 0.005 || Math.abs(corteNum(cierre.efectivoCaja) - d.efectivoCaja) > 0.005;
+      if(difiere) {
+        html += '<div style="background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#92400E;">⚠️ Lo que ves abajo ya no coincide con lo que se guardó al cerrar (ventas ' + fmtMoney(corteNum(cierre.totalVentas)) + ' · salidas ' + fmtMoney(corteNum(cierre.totalSalidas)) + ' · caja ' + fmtMoney(corteNum(cierre.efectivoCaja)) + '). Se registró o cambió algo después del cierre.</div>';
+      }
+    } else if(!esHoy) {
+      html += '<div style="background:#F5F2EE;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--suave);">Ese día no quedó cerrado en el sistema; son los números calculados con lo registrado.</div>';
+    }
+    html += renderCorteAuto(d, opts);
+    if(cierre && cierre.observaciones) html += '<div style="margin-top:10px;font-size:12px;padding:10px;background:#F5F2EE;border-radius:8px;"><strong>📝 Observaciones:</strong> ' + htmlSeguro(cierre.observaciones) + '</div>';
+    cont.innerHTML = html;
+  }).catch(function(e){
+    console.log('Error cargando corte de otro día:', e);
+    if(solicitud === corteOtroDiaSolicitud) cont.innerHTML = '<div style="padding:12px;color:#DC2626;font-size:12px;">⚠️ No se pudo cargar ese día. Intenta de nuevo.</div>';
+  });
 }
 
 function imprimirCierreDia() {
